@@ -111,7 +111,7 @@ verfication.post("/gstin", async (req, res) => {
     const newGstin = new Gstin({
       user: userId,
       gstin: response.data.GSTIN,
-      nameOfBusiness: response.data.trade_name_of_business,
+      nameOfBusiness: response.data.trade_name_of_business || response.data.legal_name_of_business,
       referenceId: response.data.reference_id,
       legalNameOfBusiness: response.data.legal_name_of_business,
       taxPayerType: response.data.taxpayer_type,

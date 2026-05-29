@@ -748,7 +748,7 @@ async function generateInvoiceForUserMonth(userId, periodStart, periodEnd) {
   const PAN = await Pan.findOne({ user: userId });
 
   const customerInfo = {
-    name: gstin?.nameOfBusiness || user?.fullname || "N/A",
+    name: gstin?.nameOfBusiness || gstin?.legalNameOfBusiness || user?.fullname || "N/A",
     address: gstin?.address || BillingInfo?.address || "N/A",
     gstin: gstin?.gstin || "N/A",
     state: gstin?.state || BillingInfo?.state || "N/A",

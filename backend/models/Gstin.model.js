@@ -13,7 +13,7 @@ const gstinSchema = new mongoose.Schema({
     },
     nameOfBusiness: {
         type: String,
-        required: true,
+        // required: true,
     },
 
     referenceId: {
