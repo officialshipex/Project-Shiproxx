@@ -35,8 +35,13 @@ const CodRemittanceOrderSchema = new mongoose.Schema({
     enum: ["Pending", "Paid"],
     default: "Pending",
   },
-
 });
+
+CodRemittanceOrderSchema.index({ userId: 1 });
+CodRemittanceOrderSchema.index({ orderID: 1 });
+CodRemittanceOrderSchema.index({ AWB_Number: 1 });
+CodRemittanceOrderSchema.index({ status: 1 });
+CodRemittanceOrderSchema.index({ Date: -1 });
 
 const CodRemittanceOrder = mongoose.model(
   "CodRemittanceOrder",

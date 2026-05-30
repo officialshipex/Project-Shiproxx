@@ -73,7 +73,7 @@ verfication.post("/gstin", async (req, res) => {
     });
 
     let signature = getSignature();
-    console.log(signature);
+    // console.log(signature);
 
     let config = {
       method: "post",
