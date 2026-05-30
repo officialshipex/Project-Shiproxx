@@ -34,6 +34,12 @@ const {
 const {
   checkProshipServiceability,
 } = require("../../AllCouriers/Proship/Courier/couriers.controller.js");
+const {
+  checkServiceabilityShipRocket,
+} = require("../../AllCouriers/ShipRocket/Courier/couriers.controller.js");
+const {
+  checkPincodeServiceability: checkShadowfaxServiceability,
+} = require("../../AllCouriers/Shadowfax/Courier/couriers.controller.js");
 
 // Define courier IDs for each provider
 const courierIds = {
@@ -47,6 +53,8 @@ const courierIds = {
   Ekart: "08",
   BoxdLogistics: "09",
   Proship: "10",
+  Shiprocket: "11",
+  Shadowfax: "12",
 };
 
 // Input Validation Schema
@@ -72,12 +80,23 @@ const availableCourierService = async (req, res) => {
   try {
     const id = req.user._id;
 
-    // 2. Fetch Order from DB
-    const order = await Order.findOne({ orderId });
+    // Fetch Order and Plan in parallel to optimize response time
+    const [order, plan] = await Promise.all([
+      Order.findOne({ orderId }),
+      Plan.findOne({ userId: id }),
+    ]);
+
     if (!order) {
       return res.status(404).json({
         status: "failure",
         message: "Order not found.",
+      });
+    }
+
+    if (!plan || !plan.rateCard) {
+      return res.status(500).json({
+        status: "failure",
+        message: "No rate cards available for this user.",
       });
     }
 
@@ -88,25 +107,23 @@ const availableCourierService = async (req, res) => {
     const paymentType = order.paymentDetails.method; // "COD" or "Prepaid"
     const declaredValue = order.paymentDetails.amount;
 
-    // 3. Get Zone
-    const result = await getZone(pickUpPincode, deliveryPincode);
-    if (!result || !result.zone) {
+    const rateCards = plan.rateCard;
+    const rcIds = rateCards.map((r) => r._id).filter(Boolean);
+
+    // Fetch Zone and RateCard documents in parallel to optimize response time
+    const [zoneResult, rateCardDocs] = await Promise.all([
+      getZone(pickUpPincode, deliveryPincode),
+      RateCard.find({ _id: { $in: rcIds } }),
+    ]);
+
+    if (!zoneResult || !zoneResult.zone) {
       return res.status(400).json({
         status: "failure",
         message: "Could not determine zone for given pincodes.",
       });
     }
-    const currentZone = result.zone;
+    const currentZone = zoneResult.zone;
 
-    // 4. Get Plan / RateCards for user
-    const plan = await Plan.findOne({ userId: id });
-    if (!plan || !plan.rateCard) {
-      return res.status(500).json({
-        status: "failure",
-        message: "No rate cards available for this user.",
-      });
-    }
-    const rateCards = plan.rateCard;
     const order_type = paymentType === "COD" ? "cod" : "prepaid";
     const chargedWeight = applicableWeight * 1000; // grams
     const gst = 18;
@@ -114,72 +131,176 @@ const availableCourierService = async (req, res) => {
     const serviceabilityCache = {};
 
     // ✅ Build isFlatRate lookup by _id — user-specific even if two users share plan name
-    const rcIds = rateCards.map((r) => r._id).filter(Boolean);
-    const rateCardDocs = await RateCard.find({ _id: { $in: rcIds } });
     const flatRateMap = new Map(
       rateCardDocs.map((doc) => [doc._id.toString(), doc.isFlatRate === true])
     );
 
-    // Collect unique active providers
-    const activeProviders = new Set();
+    const providers = [
+      {
+        name: "EcomExpress",
+        check: async () =>
+          checkServiceabilityEcomExpress(pickUpPincode, deliveryPincode),
+      },
+      {
+        name: "Delhivery",
+        check: async () =>
+          checkPincodeServiceabilityDelhivery(
+            pickUpPincode,
+            deliveryPincode,
+            order_type,
+          ),
+      },
+      {
+        name: "Dtdc",
+        check: async () =>
+          checkServiceabilityDTDC(pickUpPincode, deliveryPincode, paymentType),
+      },
+      {
+        name: "Smartship",
+        check: async () =>
+          checkSmartshipHubServiceability({
+            source_pincode: pickUpPincode,
+            destination_pincode: deliveryPincode,
+            order_weight: applicableWeight,
+            order_value: declaredValue,
+          }),
+      },
+      {
+        name: "Amazon Shipping",
+        check: async () => {
+          const weight = order.packageDetails?.applicableWeight * 1000;
+          const payload = {
+            origin: order.pickupAddress,
+            destination: order.receiverAddress,
+            payment_type: order.paymentDetails?.method,
+            order_amount: order.paymentDetails?.amount || 0,
+            weight: weight || 0,
+            length: order.packageDetails.volumetricWeight?.length || 0,
+            breadth: order.packageDetails.volumetricWeight?.width || 0,
+            height: order.packageDetails.volumetricWeight?.height || 0,
+            productDetails: order.productDetails,
+            orderId: order.orderId,
+          };
+          const { rate, requestToken } = await checkAmazonServiceability("Amazon", payload);
+          return (rate && requestToken) ? { success: true } : { success: false };
+        },
+      },
+      {
+        name: "Shree Maruti",
+        check: async () =>
+          checkServiceabilityShreeMaruti({
+            fromPincode: parseInt(pickUpPincode),
+            toPincode: parseInt(deliveryPincode),
+            isCodOrder: order.paymentDetails.method === "COD",
+            deliveryMode: "SURFACE",
+          }),
+      },
+      {
+        name: "ZipyPost",
+        check: async () =>
+          checkZipypostServiceability({
+            source_pincode: pickUpPincode,
+            destination_pincode: deliveryPincode,
+            payment_type: order.paymentDetails?.method,
+            order_weight: order.packageDetails?.applicableWeight * 1000,
+            length: order.packageDetails.volumetricWeight?.length || 0,
+            breadth: order.packageDetails.volumetricWeight?.width || 0,
+            height: order.packageDetails.volumetricWeight?.height || 0,
+            order_value: order.paymentDetails?.amount || 0,
+          }),
+      },
+      {
+        name: "Ekart",
+        isServiceSpecific: true,
+        check: async (serviceName) =>
+          checkEkartServiceability({
+            pickUpPincode,
+            deliveryPincode,
+            paymentMethod: paymentType,
+            codAmount: declaredValue,
+            courierName: serviceName,
+          }),
+      },
+      {
+        name: "BoxdLogistics",
+        check: async () =>
+          checkServiceabilityBoxdLogistics({
+            pickupPincode: pickUpPincode,
+            shippingPincode: deliveryPincode,
+            paymentMode: paymentType === "COD" ? "cod" : "prepaid",
+            codAmount: paymentType === "COD" ? declaredValue : 0,
+            weight: applicableWeight * 1000,
+            length: 10,
+            breadth: 10,
+            height: 10,
+          }),
+      },
+      {
+        name: "Proship",
+        check: async () =>
+          checkProshipServiceability({
+            pickUpPincode: pickUpPincode,
+            deliveryPincode: deliveryPincode,
+          }),
+      },
+      {
+        name: "Shiprocket",
+        isServiceSpecific: true,
+        check: async (serviceName) =>
+          checkServiceabilityShipRocket({
+            serviceName,
+            origin: pickUpPincode,
+            destination: deliveryPincode,
+            payment_type: paymentType === "COD",
+            weight: applicableWeight,
+          }),
+      },
+      {
+        name: "Shadowfax",
+        check: async () =>
+          checkShadowfaxServiceability(deliveryPincode),
+      },
+    ];
+
+    const uniqueChecks = [];
+    const checkKeys = new Set();
+
     for (let rc of rateCards) {
       if (rc.status !== "Active") continue;
       const provider = rc.courierProviderName;
-      if (Object.keys(courierIds).includes(provider)) {
-        activeProviders.add(provider);
+      const providerCheck = providers.find((p) => p.name.toLowerCase() === provider.toLowerCase());
+      if (!providerCheck) continue;
+
+      const serviceKey = providerCheck.isServiceSpecific
+        ? `${provider}_${rc.courierServiceName}`
+        : provider;
+
+      if (!checkKeys.has(serviceKey)) {
+        checkKeys.add(serviceKey);
+        uniqueChecks.push({
+          provider,
+          serviceName: rc.courierServiceName,
+          serviceKey,
+          checkFn: providerCheck.check,
+        });
       }
     }
 
+    // Execute all serviceability checks in parallel
     const checkResults = await Promise.all(
-      Array.from(activeProviders).map(async (provider) => {
-        let result = { success: false };
+      uniqueChecks.map(async (item) => {
         try {
-          if (provider === "Amazon Shipping") {
-            const weight = order.packageDetails?.applicableWeight * 1000;
-            const payload = {
-              origin: order.pickupAddress,
-              destination: order.receiverAddress,
-              payment_type: order.paymentDetails?.method,
-              order_amount: order.paymentDetails?.amount || 0,
-              weight: weight || 0,
-              length: order.packageDetails.volumetricWeight?.length || 0,
-              breadth: order.packageDetails.volumetricWeight?.width || 0,
-              height: order.packageDetails.volumetricWeight?.height || 0,
-              productDetails: order.productDetails,
-              orderId: order.orderId,
-            };
-            const { rate, requestToken } = await checkAmazonServiceability("Amazon", payload);
-            result = (rate && requestToken) ? { success: true } : { success: false };
-          } else if (provider === "EcomExpress") {
-            result = await checkServiceabilityEcomExpress(pickUpPincode, deliveryPincode);
-          } else if (provider === "Delhivery") {
-            result = await checkPincodeServiceabilityDelhivery(pickUpPincode, deliveryPincode, order_type);
-          } else if (provider === "Dtdc") {
-            result = await checkServiceabilityDTDC(pickUpPincode, deliveryPincode, paymentType);
-          } else if (provider === "Smartship") {
-            result = await checkSmartshipHubServiceability({ source_pincode: pickUpPincode, destination_pincode: deliveryPincode, order_weight: applicableWeight, order_value: declaredValue });
-          } else if (provider === "Shree Maruti") {
-            result = await checkServiceabilityShreeMaruti({ fromPincode: parseInt(pickUpPincode), toPincode: parseInt(deliveryPincode), isCodOrder: order.paymentDetails.method === "COD", deliveryMode: "SURFACE" });
-          } else if (provider === "ZipyPost") {
-            const payload = { source_pincode: pickUpPincode, destination_pincode: deliveryPincode, payment_type: order.paymentDetails?.method, order_weight: order.packageDetails?.applicableWeight * 1000, length: order.packageDetails.volumetricWeight?.length || 0, breadth: order.packageDetails.volumetricWeight?.width || 0, height: order.packageDetails.volumetricWeight?.height || 0, order_value: order.paymentDetails?.amount || 0 };
-            result = await checkZipypostServiceability(payload);
-          } else if (provider === "Ekart") {
-            result = await checkEkartServiceability({ pickUpPincode, deliveryPincode, paymentMethod: paymentType, codAmount: declaredValue });
-          } else if (provider === "BoxdLogistics") {
-            result = await checkServiceabilityBoxdLogistics({ pickupPincode: pickUpPincode, shippingPincode: deliveryPincode, paymentMode: paymentType === "COD" ? "cod" : "prepaid", codAmount: paymentType === "COD" ? declaredValue : 0, weight: applicableWeight * 1000, length: 10, breadth: 10, height: 10 });
-          } else if (provider === "Proship") {
-            result = await checkProshipServiceability({ pickUpPincode, deliveryPincode });
-          }
+          const result = await item.checkFn(item.serviceName);
+          return { serviceKey: item.serviceKey, result };
         } catch (err) {
-          console.error(`Serviceability check failed for ${provider}:`, err);
-          result = { success: false, error: err.message };
+          console.error(`Serviceability check failed for ${item.serviceKey}:`, err);
+          return { serviceKey: item.serviceKey, result: { success: false, error: err.message } };
         }
-        return { provider, result };
       })
     );
 
     for (const item of checkResults) {
-      serviceabilityCache[item.provider] = item.result;
+      serviceabilityCache[item.serviceKey] = item.result;
     }
 
     // 5. Loop through rateCards & calculate serviceability + charges
@@ -188,10 +309,15 @@ const availableCourierService = async (req, res) => {
       const provider = rc.courierProviderName;
       if (!Object.keys(courierIds).includes(provider)) continue;
 
-      const serviceable = serviceabilityCache[provider];
+      const providerCheck = providers.find((p) => p.name.toLowerCase() === provider.toLowerCase());
+      const serviceKey = (providerCheck && providerCheck.isServiceSpecific)
+        ? `${provider}_${rc.courierServiceName}`
+        : provider;
+
+      const serviceable = serviceabilityCache[serviceKey];
       let isServiceable = serviceable && serviceable.success !== false;
 
-      if (provider === "BoxdLogistics" && isServiceable && Array.isArray(serviceable.courier_ids)) {
+      if (provider.toLowerCase() === "boxdlogistics" && isServiceable && Array.isArray(serviceable.courier_ids)) {
         const sName = rc.courierServiceName.toLowerCase();
         if (sName.includes("flat")) {
           isServiceable = serviceable.courier_ids.includes(7);
@@ -202,7 +328,7 @@ const availableCourierService = async (req, res) => {
         }
       }
 
-      if (provider === "Proship" && isServiceable && serviceable.couriers) {
+      if (provider.toLowerCase() === "proship" && isServiceable && serviceable.couriers) {
         const sName = rc.courierServiceName.toLowerCase();
         if (sName.includes("shadowfax")) {
           isServiceable = !!serviceable.couriers.shadowfax;

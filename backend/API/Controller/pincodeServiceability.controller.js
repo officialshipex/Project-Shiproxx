@@ -217,6 +217,7 @@ const pincodeServiceability = async (req, res) => {
       },
       {
         name: "Ekart",
+        isServiceSpecific: true,
         check: async (courierName) =>
           checkEkartServiceability({
             pickUpPincode,
@@ -250,6 +251,7 @@ const pincodeServiceability = async (req, res) => {
       },
       {
         name: "Shiprocket",
+        isServiceSpecific: true,
         check: async (serviceName) =>
           checkServiceabilityShipRocket({
             serviceName,
@@ -280,7 +282,10 @@ const pincodeServiceability = async (req, res) => {
       const providerCheck = providers.find((p) => p.name.toLowerCase() === provider.toLowerCase());
       if (!providerCheck) continue;
 
-      const serviceKey = `${provider}_${rc.courierServiceName}`;
+      const serviceKey = providerCheck.isServiceSpecific
+        ? `${provider}_${rc.courierServiceName}`
+        : provider;
+
       if (!checkKeys.has(serviceKey)) {
         checkKeys.add(serviceKey);
         uniqueChecks.push({
@@ -317,7 +322,10 @@ const pincodeServiceability = async (req, res) => {
       const providerCheck = providers.find((p) => p.name.toLowerCase() === provider.toLowerCase());
       if (!providerCheck) continue;
 
-      const serviceKey = `${provider}_${rc.courierServiceName}`;
+      const serviceKey = (providerCheck && providerCheck.isServiceSpecific)
+        ? `${provider}_${rc.courierServiceName}`
+        : provider;
+
       const serviceable = serviceabilityCache[serviceKey];
       // console.log("serviceable",serviceable)
       // console.log(`Serviceability for ${provider}:`, serviceable);

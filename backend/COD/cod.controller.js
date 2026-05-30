@@ -732,6 +732,29 @@ const processAndRemit = async (plan, session) => {
 
   // Save to adminCodRemittance
   await new adminCodRemittance(adminEntry).save({ session });
+
+  // Sync corresponding orders status to Paid in CodRemittanceOrdersModel if the remittance is Paid immediately
+  if (adminEntry.status === "Paid" && plan.orderDetails?.orders) {
+    const orderIds = plan.orderDetails.orders.filter(Boolean);
+    if (orderIds.length > 0) {
+      const orders = await Order.find({ _id: { $in: orderIds } }).session(session).lean().select("orderId awb_number");
+      const customOrderIds = orders.map(o => String(o.orderId)).filter(Boolean);
+      const awbs = orders.map(o => String(o.awb_number)).filter(Boolean);
+
+      if (customOrderIds.length > 0 || awbs.length > 0) {
+        await CodRemittanceOrdersModel.updateMany(
+          {
+            $or: [
+              { orderID: { $in: customOrderIds } },
+              { AWB_Number: { $in: awbs } }
+            ]
+          },
+          { $set: { status: "Paid" } },
+          { session }
+        );
+      }
+    }
+  }
 };
 
 const fetchExtraData = async () => {
@@ -3150,6 +3173,29 @@ const transferCOD = async (req, res) => {
         },
         { new: true, session }
       );
+
+      // Sync corresponding orders status to Paid in CodRemittanceOrdersModel
+      if (status === "Paid" && entry?.orderDetails?.orders) {
+        const orderIds = entry.orderDetails.orders.filter(Boolean);
+        if (orderIds.length > 0) {
+          const orders = await Order.find({ _id: { $in: orderIds } }).session(session).lean().select("orderId awb_number");
+          const customOrderIds = orders.map(o => String(o.orderId)).filter(Boolean);
+          const awbs = orders.map(o => String(o.awb_number)).filter(Boolean);
+
+          if (customOrderIds.length > 0 || awbs.length > 0) {
+            await CodRemittanceOrdersModel.updateMany(
+              {
+                $or: [
+                  { orderID: { $in: customOrderIds } },
+                  { AWB_Number: { $in: awbs } }
+                ]
+              },
+              { $set: { status: "Paid" } },
+              { session }
+            );
+          }
+        }
+      }
     }
 
     await session.commitTransaction();
@@ -3601,6 +3647,29 @@ const uploadBankResponse = async (req, res) => {
         { new: true, session }
       );
 
+      // Sync corresponding orders status to Paid in CodRemittanceOrdersModel
+      if (matchedEntry?.orderDetails?.orders) {
+        const orderIds = matchedEntry.orderDetails.orders.filter(Boolean);
+        if (orderIds.length > 0) {
+          const orders = await Order.find({ _id: { $in: orderIds } }).session(session).lean().select("orderId awb_number");
+          const customOrderIds = orders.map(o => String(o.orderId)).filter(Boolean);
+          const awbs = orders.map(o => String(o.awb_number)).filter(Boolean);
+
+          if (customOrderIds.length > 0 || awbs.length > 0) {
+            await CodRemittanceOrdersModel.updateMany(
+              {
+                $or: [
+                  { orderID: { $in: customOrderIds } },
+                  { AWB_Number: { $in: awbs } }
+                ]
+              },
+              { $set: { status: "Paid" } },
+              { session }
+            );
+          }
+        }
+      }
+
       results.push({ beneficiaryAccount, amount: paymentAmount, remittanceId, status: "success", utr: utrNumber });
     }
 
@@ -3895,4 +3964,5 @@ module.exports = {
   validateExportedStatus,
   saveCustomCodPlan,
   correctRemittanceData,
+  remittanceScheduleData,
 };
