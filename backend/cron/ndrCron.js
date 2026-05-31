@@ -79,42 +79,48 @@ if (process.env.NODE_ENV === "production") {
       console.log(`Found ${eligibleOrders.length} new orders for daily re-attempt.`);
 
       for (const order of eligibleOrders) {
-        const actionDetails = {
-          action: "RE-ATTEMPT",
-          remarks: "Kindly Reattempt on priority basis.",
-          comments: "Kindly Reattempt on priority basis.",
-        };
-
-        console.log(`Triggering daily re-attempt for AWB: ${order.awb_number}`);
-        const result = await runNdrTask(order._id, actionDetails);
-
-        // Always set reattempt to false once processed
-        order.reattempt = false;
-        await order.save();
-
-        if (!result.success) {
-          order.ndrStatus = "Action_Requested";
-          order.status = "Action_Requested";
-          if (!Array.isArray(order.ndrHistory)) order.ndrHistory = [];
-          const autoEntry = {
+        try {
+          const actionDetails = {
             action: "RE-ATTEMPT",
-            actionBy: "ShipexIndia",
-            remark: "Kindly Reattempt on priority basis.",
-            source: "ShipexIndia",
-            date: new Date(),
+            remarks: "Kindly Reattempt on priority basis.",
+            comments: "Kindly Reattempt on priority basis.",
           };
-          order.ndrHistory.push({ actions: [autoEntry] });
-          await order.save();
 
-          await FailedNdrAction.create({
-            orderId: order._id,
-            awb_number: order.awb_number,
-            action: "RE-ATTEMPT",
-            payload: actionDetails,
-            lastError: result.message || result.error,
-            lastAttemptAt: new Date(),
-            status: "failed"
-          });
+          console.log(`Triggering daily re-attempt for AWB: ${order.awb_number}`);
+          const result = await runNdrTask(order._id, actionDetails);
+
+          // If runNdrTask was successful, it has already updated and saved the order document in the DB.
+          // If it failed, we reload a fresh copy of the document to update it, avoiding version conflicts.
+          if (!result || !result.success) {
+            const freshOrder = await Order.findById(order._id);
+            if (freshOrder) {
+              freshOrder.ndrStatus = "Action_Requested";
+              freshOrder.status = "Action_Requested";
+              freshOrder.reattempt = false;
+              if (!Array.isArray(freshOrder.ndrHistory)) freshOrder.ndrHistory = [];
+              const autoEntry = {
+                action: "RE-ATTEMPT",
+                actionBy: "ShipexIndia",
+                remark: "Kindly Reattempt on priority basis.",
+                source: "ShipexIndia",
+                date: new Date(),
+              };
+              freshOrder.ndrHistory.push({ actions: [autoEntry] });
+              await freshOrder.save();
+            }
+
+            await FailedNdrAction.create({
+              orderId: order._id,
+              awb_number: order.awb_number,
+              action: "RE-ATTEMPT",
+              payload: actionDetails,
+              lastError: result?.message || result?.error || "Re-attempt failed",
+              lastAttemptAt: new Date(),
+              status: "failed"
+            });
+          }
+        } catch (orderError) {
+          console.error(`Error processing daily re-attempt for AWB ${order.awb_number}:`, orderError);
         }
       }
     } catch (error) {
