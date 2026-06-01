@@ -5,6 +5,6 @@ const router = express.Router();
 
 
 router.post('/ndr-process', ndrProcessController);
-router.post('/bulk',ndrBulkProcessController)
+router.post('/bulk',ndrBulkProcessController);
 
 module.exports = router;

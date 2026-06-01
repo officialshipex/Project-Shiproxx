@@ -202,13 +202,14 @@ const codToBeRemitteds = async () => {
           { upsert: true, new: true, session }
         );
 
-        // 2️⃣ Prevent duplicate orders
-        const isDuplicate = sameDateEntry.orderDetails.some(
-          (d) => String(d.customOrderId) === customOrderId
-        );
+        // 2️⃣ Prevent duplicate orders (Global check across all SameDateDelivered documents for the user)
+        const globalDuplicate = await SameDateDelivered.findOne({
+          userId: order.userId,
+          orderIds: order._id
+        }).session(session);
 
-        if (isDuplicate) {
-          if (sameDateEntry.status === "Completed") {
+        if (globalDuplicate) {
+          if (globalDuplicate.status === "Completed") {
             const userRemittance = remittanceMap.get(order.userId.toString());
             const userAfterPlans = afterPlanMap.get(order.userId.toString()) || [];
 
@@ -222,13 +223,13 @@ const codToBeRemitteds = async () => {
             if (!alreadyRemittedOrderIds.has(order._id.toString()) && !alreadyInAfterPlanOrderIds.has(order._id.toString())) {
               console.log(`♻️ Stranded order detected: ${order.orderId}. Resetting SameDateDelivered to Pending.`);
               await SameDateDelivered.updateOne(
-                { _id: sameDateEntry._id },
+                { _id: globalDuplicate._id },
                 { $set: { status: "Pending" } },
                 { session }
               );
             }
           }
-          console.log(`⛔ Duplicate order ignored: ${order.orderId}`);
+          console.log(`⛔ Duplicate order ignored (already exists globally): ${order.orderId}`);
           return; // nothing to update
         }
 
@@ -286,6 +287,13 @@ if (process.env.NODE_ENV === "production") {
 }
 // codToBeRemitteds();
 
+const getStartOfDayIST = (date = new Date()) => {
+  const utcTime = date.getTime() + (date.getTimezoneOffset() * 60000);
+  const istTime = new Date(utcTime + (5.5 * 3600 * 1000));
+  istTime.setUTCHours(0, 0, 0, 0);
+  return istTime;
+};
+
 const remittanceScheduleData = async () => {
   try {
     const [existingSameDateDelivered, afterCodPlans] = await Promise.all([
@@ -297,8 +305,8 @@ const remittanceScheduleData = async () => {
       `Found ${existingSameDateDelivered.length} pending SameDateDelivered entries and ${afterCodPlans.length} afterPlan entries.`
     );
 
-    const todayIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-    const day = todayIST.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+    const startOfTodayIST = getStartOfDayIST(new Date());
+    const day = startOfTodayIST.getUTCDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
     const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const todayDayName = DAY_NAMES[day];
     const isTodayMWF = [1, 3, 5].includes(day); // Mon, Wed, Fri
@@ -331,14 +339,12 @@ const remittanceScheduleData = async () => {
 
       for (const remittance of userSameDateEntries) {
         const deliveryDate = remittance.deliveryDate;
-        const orderDateIST = new Date(deliveryDate.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-        const startOfTodayIST = new Date(todayIST.getFullYear(), todayIST.getMonth(), todayIST.getDate());
-        const startOfOrderIST = new Date(orderDateIST.getFullYear(), orderDateIST.getMonth(), orderDateIST.getDate());
-        const dayDiff = Math.floor((startOfTodayIST - startOfOrderIST) / (1000 * 60 * 60 * 24));
+        const startOfOrderIST = getStartOfDayIST(deliveryDate);
+        const dayDiff = Math.round((startOfTodayIST.getTime() - startOfOrderIST.getTime()) / (1000 * 60 * 60 * 24));
 
         const shouldRemitToday = codPlan.isCustom
-          ? (codPlan.remittanceDay === todayDayName && dayDiff > planDays)
-          : (isTodayMWF && dayDiff > planDays);
+          ? (codPlan.remittanceDay === todayDayName && dayDiff >= planDays)
+          : (isTodayMWF && dayDiff >= planDays);
 
         if (shouldRemitToday) {
           eligibleSameDate.push(remittance);
@@ -356,16 +362,14 @@ const remittanceScheduleData = async () => {
       for (const plan of userAfterPlanEntries) {
         const deliveryDate =
           plan.deliveryDate ||
-          (plan.orderDetails?.date ? new Date(plan.orderDetails.date) : todayIST);
+          (plan.orderDetails?.date ? new Date(plan.orderDetails.date) : new Date());
 
-        const orderDateIST = new Date(deliveryDate.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-        const startOfTodayIST = new Date(todayIST.getFullYear(), todayIST.getMonth(), todayIST.getDate());
-        const startOfOrderIST = new Date(orderDateIST.getFullYear(), orderDateIST.getMonth(), orderDateIST.getDate());
-        const dayDiff = Math.floor((startOfTodayIST - startOfOrderIST) / (1000 * 60 * 60 * 24));
+        const startOfOrderIST = getStartOfDayIST(deliveryDate);
+        const dayDiff = Math.round((startOfTodayIST.getTime() - startOfOrderIST.getTime()) / (1000 * 60 * 60 * 24));
 
         const shouldMoveToAdmin = codPlan.isCustom
-          ? (codPlan.remittanceDay === todayDayName && dayDiff > planDays)
-          : (isTodayMWF && dayDiff > planDays);
+          ? (codPlan.remittanceDay === todayDayName && dayDiff >= planDays)
+          : (isTodayMWF && dayDiff >= planDays);
 
         if (shouldMoveToAdmin) {
           eligibleAfterPlan.push(plan);
@@ -590,12 +594,10 @@ const processAndRemit = async (plan, session) => {
   const deliveryDate =
     plan.deliveryDate ||
     (plan.orderDetails?.date ? new Date(plan.orderDetails.date) : new Date());
-  const todayIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-  const orderDateIST = new Date(deliveryDate.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-  const startOfTodayIST = new Date(todayIST.getFullYear(), todayIST.getMonth(), todayIST.getDate());
-  const startOfOrderIST = new Date(orderDateIST.getFullYear(), orderDateIST.getMonth(), orderDateIST.getDate());
-  const dayDiff = Math.floor(
-    (startOfTodayIST - startOfOrderIST) / (1000 * 60 * 60 * 24)
+  const startOfTodayIST = getStartOfDayIST(new Date());
+  const startOfOrderIST = getStartOfDayIST(deliveryDate);
+  const dayDiff = Math.round(
+    (startOfTodayIST.getTime() - startOfOrderIST.getTime()) / (1000 * 60 * 60 * 24)
   );
 
   // CodRemittance logic as per your initial approach
@@ -790,14 +792,13 @@ const fetchExtraData = async () => {
           plan.deliveryDate ||
           (plan.orderDetails?.date ? new Date(plan.orderDetails.date) : todayIST);
 
-        const orderDateIST = new Date(deliveryDate.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-        const startOfTodayIST = new Date(todayIST.getFullYear(), todayIST.getMonth(), todayIST.getDate());
-        const startOfOrderIST = new Date(orderDateIST.getFullYear(), orderDateIST.getMonth(), orderDateIST.getDate());
-        const dayDiff = Math.floor((startOfTodayIST - startOfOrderIST) / (1000 * 60 * 60 * 24));
+        const startOfTodayIST = getStartOfDayIST(new Date());
+        const startOfOrderIST = getStartOfDayIST(deliveryDate);
+        const dayDiff = Math.round((startOfTodayIST.getTime() - startOfOrderIST.getTime()) / (1000 * 60 * 60 * 24));
 
         const shouldMoveToAdmin = codPlan.isCustom
-          ? (codPlan.remittanceDay === todayDayName && dayDiff > planDays)
-          : (isTodayMWF && dayDiff > planDays);
+          ? (codPlan.remittanceDay === todayDayName && dayDiff >= planDays)
+          : (isTodayMWF && dayDiff >= planDays);
 
         if (shouldMoveToAdmin) {
           eligiblePlans.push(plan);
@@ -3124,6 +3125,8 @@ const transferCOD = async (req, res) => {
       (remRecord.RemittanceInitiated || 0) - totalPayable - totalAdjusted;
     remRecord.TotalCODRemitted =
       (Number(remRecord.TotalCODRemitted) || 0) + totalPayable;
+    remRecord.TotalDeductionfromCOD =
+      (Number(remRecord.TotalDeductionfromCOD) || 0) + totalAdjusted;
 
     await remRecord.save({ session });
 
