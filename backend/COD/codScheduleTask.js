@@ -35,7 +35,7 @@ const processCourierCodRemittance = async () => {
         courierServiceName: 1,
         awb_number: 1,
         paymentDetails: 1,
-        tracking: 1,
+        tracking: { $slice: [ "$tracking", -1 ] },
         updatedAt: 1,
       },
     },
@@ -46,7 +46,7 @@ const processCourierCodRemittance = async () => {
 
   // Step 3: Filter unremitted orders
   const newCodDeliveredOrders = codDeliveredOrders.filter(
-    (order) => !remittedOrders.includes(order.orderId?.toString())
+    (order) => !remittedOrders.includes(Number(order.orderId))
   );
 
   // Step 4: Decide what orders to process
@@ -86,8 +86,7 @@ const processCourierCodRemittance = async () => {
         : order.updatedAt;
 
     const exists = await CourierCodRemittance.findOne({
-      orderID: order.orderId,
-      AwbNumber: order.awb_number,
+      orderID: Number(order.orderId),
     });
     if (exists) {
       console.log(`Skipping duplicate entry for order ${order.orderId}`);
@@ -107,7 +106,15 @@ const processCourierCodRemittance = async () => {
       status: "Pending",
     });
 
-    await newRemittance.save();
+    try {
+      await newRemittance.save();
+    } catch (err) {
+      if (err.code === 11000) {
+        console.warn(`Skipping duplicate key error on saving CourierCodRemittance for order ${order.orderId}`);
+      } else {
+        throw err;
+      }
+    }
   }
 
   console.log(
@@ -160,7 +167,7 @@ const processCodRemittanceOrder = async () => {
         courierServiceName: 1,
         awb_number: 1,
         paymentDetails: 1,
-        tracking: 1,
+        tracking: { $slice: [ "$tracking", -1 ] },
         updatedAt: 1,
       },
     },
@@ -209,8 +216,7 @@ const processCodRemittanceOrder = async () => {
 
     // Avoid duplicates just in case
     const exists = await CodRemittanceOrders.findOne({
-      orderID: order.orderId,
-      AWB_Number: order.awb_number,
+      orderID: order.orderId?.toString(),
     });
     if (exists) {
       console.log(`Skipping duplicate entry for order ${order.orderId}`);
@@ -220,7 +226,7 @@ const processCodRemittanceOrder = async () => {
     const newRemittanceOrder = new CodRemittanceOrders({
       userId: order.userId,
       Date: lastTrackingUpdate || new Date(),
-      orderID: order.orderId,
+      orderID: order.orderId?.toString(),
       userName: userData.fullname || "",
       PhoneNumber: userData.phoneNumber || "",
       Email: userData.email || "",
@@ -230,7 +236,15 @@ const processCodRemittanceOrder = async () => {
       status: "Pending",
     });
 
-    await newRemittanceOrder.save();
+    try {
+      await newRemittanceOrder.save();
+    } catch (err) {
+      if (err.code === 11000) {
+        console.warn(`Skipping duplicate key error on saving CodRemittanceOrder for order ${order.orderId}`);
+      } else {
+        throw err;
+      }
+    }
   }
 
   console.log(`Processed ${ordersToProcess.length} COD remittance orders.`);

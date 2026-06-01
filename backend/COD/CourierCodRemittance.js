@@ -6,7 +6,8 @@ const CourierCodRemittanceSchema = new mongoose.Schema({
     type: Date,
   },
   orderID: {
-    type:Number ,
+    type: Number,
+    unique: true,
   },
   userName: {
     type: String,
@@ -32,6 +33,10 @@ const CourierCodRemittanceSchema = new mongoose.Schema({
     default: "Pending",
   },
 });
+
+CourierCodRemittanceSchema.index({ orderID: 1 }, { unique: true });
+CourierCodRemittanceSchema.index({ userId: 1 });
+CourierCodRemittanceSchema.index({ status: 1 });
 
 const CourierCodRemittance = mongoose.model(
   "CourierCodRemittance",

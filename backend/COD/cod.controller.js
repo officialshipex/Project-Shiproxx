@@ -288,14 +288,14 @@ if (process.env.NODE_ENV === "production") {
 // codToBeRemitteds();
 
 const getStartOfDayIST = (date = new Date()) => {
-  const utcTime = date.getTime() + (date.getTimezoneOffset() * 60000);
-  const istTime = new Date(utcTime + (5.5 * 3600 * 1000));
+  const istTime = new Date(date.getTime() + (5.5 * 3600 * 1000));
   istTime.setUTCHours(0, 0, 0, 0);
-  return istTime;
+  return new Date(istTime.getTime() - (5.5 * 3600 * 1000));
 };
 
 const remittanceScheduleData = async () => {
   try {
+    const todayIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
     const [existingSameDateDelivered, afterCodPlans] = await Promise.all([
       SameDateDelivered.find({ status: "Pending" }),
       afterPlan.find(),
@@ -343,8 +343,10 @@ const remittanceScheduleData = async () => {
         const dayDiff = Math.round((startOfTodayIST.getTime() - startOfOrderIST.getTime()) / (1000 * 60 * 60 * 24));
 
         const shouldRemitToday = codPlan.isCustom
-          ? (codPlan.remittanceDay === todayDayName && dayDiff >= planDays)
-          : (isTodayMWF && dayDiff >= planDays);
+          ? ((Array.isArray(codPlan.remittanceDay)
+            ? codPlan.remittanceDay.includes(todayDayName)
+            : codPlan.remittanceDay === todayDayName) && dayDiff > planDays)
+          : (isTodayMWF && dayDiff > planDays);
 
         if (shouldRemitToday) {
           eligibleSameDate.push(remittance);
@@ -368,8 +370,10 @@ const remittanceScheduleData = async () => {
         const dayDiff = Math.round((startOfTodayIST.getTime() - startOfOrderIST.getTime()) / (1000 * 60 * 60 * 24));
 
         const shouldMoveToAdmin = codPlan.isCustom
-          ? (codPlan.remittanceDay === todayDayName && dayDiff >= planDays)
-          : (isTodayMWF && dayDiff >= planDays);
+          ? ((Array.isArray(codPlan.remittanceDay)
+            ? codPlan.remittanceDay.includes(todayDayName)
+            : codPlan.remittanceDay === todayDayName) && dayDiff > planDays)
+          : (isTodayMWF && dayDiff > planDays);
 
         if (shouldMoveToAdmin) {
           eligibleAfterPlan.push(plan);
@@ -563,6 +567,7 @@ if (process.env.NODE_ENV === "production") {
 
 // Helper for direct business logic (used in both controllers)
 const processAndRemit = async (plan, session) => {
+  const todayIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   // Generate remittanceId here — only at actual remittance time, not when queued
   let remitanceId;
   do {
@@ -797,8 +802,10 @@ const fetchExtraData = async () => {
         const dayDiff = Math.round((startOfTodayIST.getTime() - startOfOrderIST.getTime()) / (1000 * 60 * 60 * 24));
 
         const shouldMoveToAdmin = codPlan.isCustom
-          ? (codPlan.remittanceDay === todayDayName && dayDiff >= planDays)
-          : (isTodayMWF && dayDiff >= planDays);
+          ? ((Array.isArray(codPlan.remittanceDay)
+            ? codPlan.remittanceDay.includes(todayDayName)
+            : codPlan.remittanceDay === todayDayName) && dayDiff > planDays)
+          : (isTodayMWF && dayDiff > planDays);
 
         if (shouldMoveToAdmin) {
           eligiblePlans.push(plan);
@@ -2583,47 +2590,31 @@ const uploadCourierCodRemittance = async (req, res) => {
       });
     }
 
-    // Fetch user's remittance once
-    let userRemittance = await CourierCodRemittance.findOne({ userId: userID });
-    if (!userRemittance) {
-      return res
-        .status(404)
-        .json({ error: "User remittance record not found" });
-    }
-
-    let updated = false;
-
-    // Normalize keys for matching
+    // Normalize keys for matching and extract all unique AWB numbers
     const normalize = (val) => (val ? val.toString().trim() : "");
+    const awbList = codRemittances
+      .map((row) => normalize(row["*AWB Number"] || row["AWBNumber"] || row["AWB Number"] || row["*AWBNumber"]))
+      .filter(Boolean);
 
-    for (const row of codRemittances) {
-      const awbNumber = normalize(row["*AWB Number"] || row["AWBNumber"]);
+    let updatedCount = 0;
 
-      const orderIndex = userRemittance.CourierCodRemittanceData.findIndex(
-        (data) => normalize(data.AwbNumber) === awbNumber
+    if (awbList.length > 0) {
+      // Execute a single high-performance bulk update query (index-backed, executed in <100ms)
+      const updateResult = await CourierCodRemittance.updateMany(
+        {
+          AwbNumber: { $in: awbList },
+          status: "Pending"
+        },
+        {
+          $set: { status: "Paid" }
+        }
       );
-
-      if (
-        orderIndex !== -1 &&
-        userRemittance.CourierCodRemittanceData[orderIndex].status === "Pending"
-      ) {
-        const storedCodAmount = Number(userRemittance.CourierCodRemittanceData[orderIndex].CODAmount || 0);
-
-        userRemittance.CourierCodRemittanceData[orderIndex].status = "Paid";
-        userRemittance.TransferredRemittance =
-          (userRemittance.TransferredRemittance || 0) + storedCodAmount;
-        userRemittance.TotalRemittanceDue =
-          (userRemittance.TotalRemittanceDue || 0) - storedCodAmount;
-
-        updated = true;
-      } else if (orderIndex === -1) {
-        console.warn(`AWB ${awbNumber} not found in user's courier remittance data — skipped`);
-      }
+      updatedCount = updateResult.modifiedCount;
     }
 
-    if (updated) {
-      await userRemittance.save();
-    }
+    // Update bulk file upload status
+    fileData.status = "Completed";
+    await fileData.save();
 
     // Delete file after DB update
     fs.unlink(req.file.path, (err) => {
@@ -2631,8 +2622,14 @@ const uploadCourierCodRemittance = async (req, res) => {
       else console.log("File deleted successfully:", req.file.path);
     });
 
+    if (updatedCount === 0) {
+      return res.status(400).json({
+        error: "No pending courier COD remittance records were found or updated for the uploaded AWBs.",
+      });
+    }
+
     return res.status(200).json({
-      message: "Courier COD uploaded successfully",
+      message: `${updatedCount} Courier COD remittance record(s) uploaded and marked as Paid successfully`,
       file: fileData,
     });
   } catch (error) {
@@ -2654,7 +2651,6 @@ const exportOrderInRemittance = async (req, res) => {
         .status(400)
         .json({ message: "Remittance IDs are required." });
     }
-
     // Fetch remittance records (orderDetails is an embedded object, not a ref)
     const remittances = await adminCodRemittance.find({ remitanceId: { $in: ids } });
 

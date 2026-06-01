@@ -11,6 +11,7 @@ const CodRemittanceOrderSchema = new mongoose.Schema({
   },
   orderID: {
     type: String,
+    unique: true,
   },
   userName: {
     type: String,
@@ -38,7 +39,7 @@ const CodRemittanceOrderSchema = new mongoose.Schema({
 });
 
 CodRemittanceOrderSchema.index({ userId: 1 });
-CodRemittanceOrderSchema.index({ orderID: 1 });
+CodRemittanceOrderSchema.index({ orderID: 1 }, { unique: true });
 CodRemittanceOrderSchema.index({ AWB_Number: 1 });
 CodRemittanceOrderSchema.index({ status: 1 });
 CodRemittanceOrderSchema.index({ Date: -1 });

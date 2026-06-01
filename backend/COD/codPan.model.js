@@ -20,8 +20,7 @@ const codPlanSchema = new mongoose.Schema({
     default: false,
   },
   remittanceDay: {
-    type: String,
-    enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+    type: [String],
   },
 });
 

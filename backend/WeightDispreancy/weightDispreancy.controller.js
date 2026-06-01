@@ -11,6 +11,9 @@ const { calculateRateForDispute } = require("../Rate/calculateRateController");
 const Plan = require("../models/Plan.model");
 const mongoose = require("mongoose");
 const WalletTransaction = require("../models/WalletTransaction.model");
+const RateCard = require("../models/rateCards");
+const { getZone } = require("../Rate/zoneManagementController");
+
 const downloadExcel = async (req, res) => {
   try {
     const workbook = new ExcelJS.Workbook();
@@ -60,31 +63,293 @@ const downloadExcel = async (req, res) => {
   }
 };
 
+// ─── Background worker ────────────────────────────────────────────────────────
+// Called AFTER the HTTP response is already sent so the client is never blocked.
+async function _processDiscrepancyBatch(awbNumbers, chargeWeightMap, filePath) {
+  try {
+    // 1. already existing discrepancies (batch query)
+    const existing = await WeightDiscrepancy.find({
+      awbNumber: { $in: awbNumbers },
+    }).select("awbNumber").lean();
+    const existingSet = new Set(existing.map((e) => e.awbNumber));
+
+    // 2. Fetch orders in one query with only the fields we need
+    const orders = await Order.find({ awb_number: { $in: awbNumbers } })
+      .select(
+        "awb_number orderId userId status courierServiceName provider " +
+        "productDetails pickupAddress receiverAddress packageDetails paymentDetails"
+      )
+      .lean();
+    const orderMap = new Map(orders.map((o) => [o.awb_number, o]));
+
+    // 3. Collect unique userIds + unique pincode pairs in one pass
+    const userIdsSet = new Set();
+    const uniquePincodePairs = [];
+    const seenPairs = new Set();
+
+    for (const awb of awbNumbers) {
+      if (existingSet.has(awb)) continue;
+      const chargeData = chargeWeightMap[awb];
+      if (!chargeData) continue;
+      const order = orderMap.get(awb);
+      if (!order) continue;
+      if (
+        order.status === "Booked" ||
+        order.status === "Not Picked" ||
+        order.status === "Ready To Ship"
+      ) continue;
+
+      if (order.userId) userIdsSet.add(order.userId.toString());
+
+      const pickupPincode = order.pickupAddress?.pinCode;
+      const deliveryPincode = order.receiverAddress?.pinCode;
+      if (pickupPincode && deliveryPincode) {
+        const cacheKey = `${pickupPincode}_${deliveryPincode}`;
+        if (!seenPairs.has(cacheKey)) {
+          seenPairs.add(cacheKey);
+          uniquePincodePairs.push({ pickupPincode, deliveryPincode, cacheKey });
+        }
+      }
+    }
+
+    const userIds = Array.from(userIdsSet);
+    if (userIds.length === 0) {
+      fs.promises.unlink(filePath).catch(() => {});
+      return;
+    }
+
+    // 4. Zone cache — pre-resolve all unique pincode pairs in parallel batches of 20
+    const zoneCache = new Map();
+    const ZONE_BATCH = 20;
+    for (let i = 0; i < uniquePincodePairs.length; i += ZONE_BATCH) {
+      const chunk = uniquePincodePairs.slice(i, i + ZONE_BATCH);
+      await Promise.all(
+        chunk.map(async (pair) => {
+          try {
+            const zoneResult = await getZone(pair.pickupPincode, pair.deliveryPincode);
+            zoneCache.set(pair.cacheKey, zoneResult?.zone || null);
+          } catch (_) {
+            zoneCache.set(pair.cacheKey, null);
+          }
+        })
+      );
+    }
+
+    // 5. Parallel fetch: plans + users
+    const [allPlans, allUsers] = await Promise.all([
+      Plan.find({ userId: { $in: userIds } }).lean(),
+      User.find({ _id: { $in: userIds } }).select("Wallet").lean(),
+    ]);
+
+    const planMap = new Map(allPlans.map((p) => [p.userId.toString(), p]));
+    const userMap = new Map(allUsers.map((u) => [u._id.toString(), u]));
+
+    // 6. Fetch isFlatRate flags for all relevant rate cards in one query
+    const rateCardIdsSet = new Set();
+    for (const plan of allPlans) {
+      if (plan.rateCard && Array.isArray(plan.rateCard)) {
+        for (const rc of plan.rateCard) {
+          if (rc && rc._id) rateCardIdsSet.add(rc._id.toString());
+        }
+      }
+    }
+    const rateCardsList = await RateCard.find({
+      _id: { $in: Array.from(rateCardIdsSet) },
+    }).select("_id isFlatRate").lean();
+    const rateCardFlatRateMap = new Map(
+      rateCardsList.map((rc) => [rc._id.toString(), rc.isFlatRate === true])
+    );
+
+    // 7. Build discrepancies — fully synchronous now (no await in loop)
+    const discrepancies = [];
+    const gstRate = 18;
+
+    for (const awb of awbNumbers) {
+      if (existingSet.has(awb)) continue;
+
+      const chargeData = chargeWeightMap[awb];
+      if (!chargeData) continue;
+
+      const order = orderMap.get(awb);
+      if (!order) continue;
+      if (
+        order.status === "Booked" ||
+        order.status === "Not Picked" ||
+        order.status === "Ready To Ship"
+      ) continue;
+
+      const userId = order.userId.toString();
+      const userPlan = planMap.get(userId);
+      if (!userPlan || !userPlan.rateCard) continue;
+
+      const matchedRateCard = userPlan.rateCard.find(
+        (r) => r.courierServiceName === order.courierServiceName
+      );
+      if (
+        !matchedRateCard ||
+        !matchedRateCard.weightPriceBasic?.length ||
+        !matchedRateCard.weightPriceAdditional?.length
+      ) continue;
+
+      const basicWeightSlabGrams = matchedRateCard.weightPriceBasic[0].weight;
+      const additionalWeightSlabGrams = matchedRateCard.weightPriceAdditional[0].weight;
+
+      const deadWeightKg = order.packageDetails.deadWeight || 0;
+      const volumetricWeightKg =
+        ((order.packageDetails.volumetricWeight?.length || 0) *
+          (order.packageDetails.volumetricWeight?.width || 0) *
+          (order.packageDetails.volumetricWeight?.height || 0)) /
+        5000;
+      const actualWeightKg = order.packageDetails.applicableWeight || 0;
+      const applicableWeightKg = Math.max(volumetricWeightKg, actualWeightKg);
+
+      const roundedApplicableGrams =
+        Math.ceil((applicableWeightKg * 1000) / basicWeightSlabGrams) * basicWeightSlabGrams;
+      const chargedGrams =
+        Math.ceil((chargeData.chargeWeight * 1000) / additionalWeightSlabGrams) * additionalWeightSlabGrams;
+
+      if (chargedGrams <= basicWeightSlabGrams) continue;
+      if (chargedGrams <= roundedApplicableGrams) continue;
+
+      let excessGrams = chargedGrams - roundedApplicableGrams;
+      excessGrams = Math.ceil(excessGrams / additionalWeightSlabGrams) * additionalWeightSlabGrams;
+      const excessWeight = parseFloat((excessGrams / 1000).toFixed(2));
+      if (excessWeight <= 0) continue;
+
+      const pickupPincode = order.pickupAddress.pinCode;
+      const deliveryPincode = order.receiverAddress.pinCode;
+      const cacheKey = `${pickupPincode}_${deliveryPincode}`;
+      const currentZone = zoneCache.get(cacheKey);
+      if (!currentZone) continue;
+
+      const services = userPlan.rateCard.filter(
+        (rate) => rate.courierServiceName === order.courierServiceName
+      );
+      if (services.length === 0) continue;
+
+      const firstRc = services[0];
+      const additionalRate = firstRc.weightPriceAdditional?.[0];
+      if (!additionalRate || !additionalRate.weight || !additionalRate[currentZone]) continue;
+
+      const disputeIsFlatRate =
+        firstRc.isFlatRate === true ||
+        (firstRc._id && rateCardFlatRateMap.get(firstRc._id.toString()) === true);
+
+      const extraWeightInGrams = Math.ceil(excessWeight * 1000);
+      const count = Math.ceil(extraWeightInGrams / additionalRate.weight);
+      let totalForwardCharge = parseFloat((count * parseFloat(additionalRate[currentZone])).toFixed(2));
+
+      let codCharge = 0;
+      if (order.paymentDetails.method === "COD" && !disputeIsFlatRate) {
+        const orderValue = Number(order.paymentDetails.amount) || 0;
+        if (typeof firstRc.codCharge === "number" && typeof firstRc.codPercent === "number") {
+          codCharge = parseFloat(
+            Math.max(firstRc.codCharge, orderValue * (firstRc.codPercent / 100)).toFixed(2)
+          );
+        }
+      }
+
+      const gstAmountForward = parseFloat(
+        ((totalForwardCharge + codCharge) * (gstRate / 100)).toFixed(2)
+      );
+
+      discrepancies.push(
+        new WeightDiscrepancy({
+          userId,
+          awbNumber: order.awb_number,
+          orderId: order.orderId,
+          productDetails: order.productDetails,
+          courierServiceName: order.courierServiceName || order.provider,
+          provider: order.provider,
+          enteredWeight: {
+            applicableWeight: roundedApplicableGrams / 1000,
+            deadWeight: deadWeightKg,
+            volumetricWeight: order.packageDetails.volumetricWeight,
+          },
+          chargedWeight: {
+            applicableWeight: chargedGrams / 1000,
+            deadWeight: chargeData.chargeWeight,
+          },
+          chargeDimension: {
+            length: chargeData.length,
+            breadth: chargeData.breadth,
+            height: chargeData.height,
+          },
+          excessWeightCharges: {
+            excessWeight,
+            excessCharges: totalForwardCharge + gstAmountForward,
+            pendingAmount: totalForwardCharge + gstAmountForward,
+            priceBreakup: {
+              freight: totalForwardCharge,
+              gst: gstAmountForward,
+            },
+          },
+          status: "new",
+          adminStatus: "pending",
+        })
+      );
+    }
+
+    // 8. Save discrepancies + update wallets
+    if (discrepancies.length > 0) {
+      const walletUpdates = new Map();
+      for (const d of discrepancies) {
+        const userDetails = userMap.get(d.userId.toString());
+        if (!userDetails?.Wallet) continue;
+        const amount = Number(d.excessWeightCharges.pendingAmount || 0);
+        if (amount <= 0) continue;
+        const wid = userDetails.Wallet.toString();
+        walletUpdates.set(wid, (walletUpdates.get(wid) || 0) + amount);
+      }
+
+      const walletBulkOps = [];
+      for (const [walletId, amount] of walletUpdates.entries()) {
+        walletBulkOps.push({
+          updateOne: {
+            filter: { _id: walletId },
+            update: { $inc: { holdAmount: amount } },
+          },
+        });
+      }
+
+      await Promise.all([
+        WeightDiscrepancy.insertMany(discrepancies, { ordered: false }),
+        walletBulkOps.length > 0 ? Wallet.bulkWrite(walletBulkOps) : Promise.resolve(),
+      ]);
+    }
+  } catch (err) {
+    console.error("[uploadDispreancy background] Error:", err);
+  } finally {
+    fs.promises.unlink(filePath).catch(() => {});
+  }
+}
+
 const uploadDispreancy = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: "No file uploaded",
-      });
+      return res.status(400).json({ success: false, error: "No file uploaded" });
     }
 
     const filePath = req.file.path;
+
+    // Parse Excel synchronously — this is fast and uses no DB connections
     const workbook = xlsx.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
     const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
-
-    const discrepancies = [];
 
     const awbNumbers = sheetData
       .map((row) => row["*AWB Number"]?.toString().trim())
       .filter(Boolean);
 
+    if (awbNumbers.length === 0) {
+      fs.promises.unlink(filePath).catch(() => {});
+      return res.status(400).json({ success: false, error: "No valid AWB numbers found in file" });
+    }
+
     const chargeWeightMap = {};
     for (const row of sheetData) {
       const awb = row["*AWB Number"]?.toString().trim();
       const chargeWeight = parseFloat(row["*Charge Weight"]);
-
       if (awb && !isNaN(chargeWeight)) {
         chargeWeightMap[awb] = {
           chargeWeight,
@@ -95,184 +360,23 @@ const uploadDispreancy = async (req, res) => {
       }
     }
 
-    // already existing discrepancies
-    const existing = await WeightDiscrepancy.find({
-      awbNumber: { $in: awbNumbers },
-    }).select("awbNumber");
-
-    const existingSet = new Set(existing.map((e) => e.awbNumber));
-
-    const orders = await Order.find({ awb_number: { $in: awbNumbers } });
-    const orderMap = new Map(orders.map((o) => [o.awb_number, o]));
-
-    const planCache = new Map();
-
-    for (const awb of awbNumbers) {
-      // 🚫 Skip AWB if discrepancy already exists
-      if (existingSet.has(awb)) continue;
-
-      const chargeData = chargeWeightMap[awb];
-      if (!chargeData) continue;
-
-      const order = orderMap.get(awb);
-      if (!order) continue;
-      if (order.status === "Booked" || order.status === "Not Picked" || order.status === "Ready To Ship") continue;
-
-      const userId = order.userId.toString();
-      let userPlan = planCache.get(userId);
-
-      if (!userPlan) {
-        userPlan = await Plan.findOne({ userId });
-        if (!userPlan) continue;
-        planCache.set(userId, userPlan);
-      }
-
-      const matchedRateCard = userPlan.rateCard.find(
-        (r) => r.courierServiceName === order.courierServiceName
-      );
-
-      if (
-        !matchedRateCard ||
-        !matchedRateCard.weightPriceBasic?.length ||
-        !matchedRateCard.weightPriceAdditional?.length
-      )
-        continue;
-
-      const basicWeightSlabGrams = matchedRateCard.weightPriceBasic[0].weight;
-      const additionalWeightSlabGrams =
-        matchedRateCard.weightPriceAdditional[0].weight;
-
-      const deadWeightKg = order.packageDetails.deadWeight || 0;
-      const volumetricWeightKg =
-        ((order.packageDetails.volumetricWeight.length || 0) *
-          (order.packageDetails.volumetricWeight.width || 0) *
-          (order.packageDetails.volumetricWeight.height || 0)) /
-        5000;
-
-      const actualWeightKg = order.packageDetails.applicableWeight || 0;
-      const applicableWeightKg = Math.max(volumetricWeightKg, actualWeightKg);
-
-      const roundedApplicableGrams =
-        Math.ceil((applicableWeightKg * 1000) / basicWeightSlabGrams) *
-        basicWeightSlabGrams;
-
-      const chargedGrams =
-        Math.ceil(
-          (chargeData.chargeWeight * 1000) / additionalWeightSlabGrams
-        ) * additionalWeightSlabGrams;
-
-      if (chargedGrams <= basicWeightSlabGrams) continue;
-      if (chargedGrams <= roundedApplicableGrams) continue;
-
-      let excessGrams = chargedGrams - roundedApplicableGrams;
-
-      excessGrams =
-        Math.ceil(excessGrams / additionalWeightSlabGrams) *
-        additionalWeightSlabGrams;
-
-      const excessWeight = parseFloat((excessGrams / 1000).toFixed(2));
-      if (excessWeight <= 0) continue;
-
-      const payload = {
-        pickupPincode: order.pickupAddress.pinCode,
-        deliveryPincode: order.receiverAddress.pinCode,
-        length: order.packageDetails.volumetricWeight.length,
-        breadth: order.packageDetails.volumetricWeight.width,
-        height: order.packageDetails.volumetricWeight.height,
-        weight: excessWeight,
-        cod: order.paymentDetails.method === "COD" ? "Yes" : "No",
-        valueInINR: order.paymentDetails.amount,
-        userID: order.userId,
-        filteredServices: order.courierServiceName,
-      };
-
-      const additionalCharges = await calculateRateForDispute(payload);
-      if (!additionalCharges || !additionalCharges[0]) continue;
-
-      // Create discrepancy entry
-      const discrepancy = new WeightDiscrepancy({
-        userId,
-        awbNumber: order.awb_number,
-        orderId: order.orderId,
-        productDetails: order.productDetails,
-        courierServiceName: order.courierServiceName || order.provider,
-        provider: order.provider,
-        enteredWeight: {
-          applicableWeight: roundedApplicableGrams / 1000,
-          deadWeight: deadWeightKg,
-          volumetricWeight: order.packageDetails.volumetricWeight,
-        },
-        chargedWeight: {
-          applicableWeight: chargedGrams / 1000,
-          deadWeight: chargeData.chargeWeight,
-        },
-        chargeDimension: {
-          length: chargeData.length,
-          breadth: chargeData.breadth,
-          height: chargeData.height,
-        },
-        excessWeightCharges: {
-          excessWeight,
-          excessCharges:
-            additionalCharges[0].forward.charges +
-            additionalCharges[0].forward.gst,
-          pendingAmount:
-            additionalCharges[0].forward.charges +
-            additionalCharges[0].forward.gst,
-          priceBreakup: {
-            freight: additionalCharges[0].forward.charges,
-            gst: additionalCharges[0].forward.gst,
-          },
-        },
-        status: "new",
-        adminStatus: "pending",
-      });
-
-      discrepancies.push(discrepancy);
-    }
-
-    // 🚫 If NO new discrepancies found → Do NOT update wallet at all
-    if (discrepancies.length > 0) {
-      const walletUpdates = new Map();
-
-      for (const discrepancy of discrepancies) {
-        const userId = discrepancy.userId;
-        const userDetails = await User.findById(userId).select("Wallet");
-
-        if (!userDetails || !userDetails.Wallet) continue;
-
-        const walletId = userDetails.Wallet.toString();
-        const amount = Number(
-          discrepancy.excessWeightCharges.pendingAmount || 0
-        );
-        if (amount <= 0) continue;
-
-        walletUpdates.set(
-          walletId,
-          (walletUpdates.get(walletId) || 0) + amount
-        );
-      }
-
-      // apply holdAmount updates
-      for (const [walletId, amount] of walletUpdates.entries()) {
-        await Wallet.updateOne(
-          { _id: walletId },
-          { $inc: { holdAmount: amount } }
-        );
-      }
-
-      await WeightDiscrepancy.insertMany(discrepancies);
-    }
-
-    fs.promises.unlink(filePath).catch(() => { });
-
+    // ✅ Release the HTTP connection IMMEDIATELY — UI is unblocked
     res.status(200).json({
       success: true,
-      message: "Discrepancies processed successfully",
+      message: "File received. Discrepancies are being processed in the background.",
+    });
+
+    // 🔄 Run all heavy DB work AFTER response is sent
+    setImmediate(() => {
+      _processDiscrepancyBatch(awbNumbers, chargeWeightMap, filePath).catch((err) => {
+        console.error("[uploadDispreancy] Background batch failed:", err);
+      });
     });
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ success: false, error: "Internal Server Error" });
+    console.error("Error parsing upload:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: "Internal Server Error" });
+    }
   }
 };
 
