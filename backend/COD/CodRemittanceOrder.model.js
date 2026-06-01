@@ -11,7 +11,6 @@ const CodRemittanceOrderSchema = new mongoose.Schema({
   },
   orderID: {
     type: String,
-    unique: true,
   },
   userName: {
     type: String,

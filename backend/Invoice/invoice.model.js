@@ -49,4 +49,6 @@ const InvoiceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+InvoiceSchema.index({ userId: 1, periodStart: 1, periodEnd: 1 }, { unique: true });
+
 module.exports = mongoose.model("Invoice", InvoiceSchema);

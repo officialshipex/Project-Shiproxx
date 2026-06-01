@@ -7,7 +7,6 @@ const CourierCodRemittanceSchema = new mongoose.Schema({
   },
   orderID: {
     type: Number,
-    unique: true,
   },
   userName: {
     type: String,

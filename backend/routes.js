@@ -179,6 +179,9 @@ const { saveZipypost } = require("./AllCouriers/Zipypost/Authorize/zipyPost.cont
 const announcementRouter = require("./announcement/announcement.route");
 router.use("/announcement", announcementRouter);
 
+const agreementRoutes = require("./agreement/agreement.routes");
+router.use("/agreement", agreementRoutes);
+
 router.use("/api", api);
 
 module.exports = router;
