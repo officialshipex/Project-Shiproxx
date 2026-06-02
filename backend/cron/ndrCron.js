@@ -34,7 +34,7 @@ const processFailedNdrActions = async () => {
           if (order) {
             order.ndrStatus = "Undelivered";
             order.status = "Undelivered";
-            order.reattempt = true;
+            order.reattempt = false;
             await order.save();
           }
         }

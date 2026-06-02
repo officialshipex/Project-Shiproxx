@@ -1,0 +1,5 @@
+{
+  "watch": ["."],
+  "ignore": ["node_modules/", "public/", "data/", "uploads/", ".git/"],
+  "delay": "1000"
+}

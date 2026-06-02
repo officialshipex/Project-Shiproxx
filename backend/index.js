@@ -5,7 +5,7 @@ const { warmPool } = require("./AllCouriers/Delhivery/Authorize/waybillPool");
 const { getZone } = require("./Rate/zoneManagementController");
 
 const PORT = process.env.PORT || 5000;
-// console.log("hello")
+
 (async function () {
   try {
     await connection();
