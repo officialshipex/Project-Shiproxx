@@ -13,6 +13,31 @@ const { getZone } = require("../../Rate/zoneManagementController");
 const estimatedDeliveryDate = require("../../models/EDDMap.model");
 const { assignPickupManifest } = require("../../Orders/scheduledPickup.controller");
 
+function sanitizeAddress(str) {
+  if (!str) return "";
+  return str
+    .replace(/[^a-zA-Z0-9\s,\/.\-#&]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeState(state) {
+  if (!state) return "";
+  const cleaned = state
+    .replace(/[^a-zA-Z\s]/g, "")
+    .trim()
+    .toLowerCase();
+  if (
+    cleaned === "jammu kashmir" ||
+    cleaned === "jammu and kashmir" ||
+    cleaned === "jammu  kashmir" ||
+    cleaned === "jammu   kashmir"
+  ) {
+    return "Jammu and Kashmir";
+  }
+  return state.trim();
+}
+
 const createShreeMarutiShipment = async ({
   id,
   provider,
@@ -25,44 +50,63 @@ const createShreeMarutiShipment = async ({
   walletHoldAmount,
   walletCreditLimit,
 }) => {
+  const OID = id.toString().slice(-6);
+  const t = (label) => `⏱ [SM-${OID}] ${label}`;
+  console.time(t("total"));
+
   const API_URL = `${BASE_URL}/fulfillment/public/seller/order/ecomm/push-order`;
   const MANIFEST_API = `${BASE_URL}/fulfillment/public/seller/order/create-manifest`;
+
+  console.time(t("getToken"));
   const token = await getToken();
+  console.timeEnd(t("getToken"));
+
+  console.time(t("startSession"));
   const session = await mongoose.startSession();
+  console.timeEnd(t("startSession"));
 
   try {
     session.startTransaction();
 
+    console.time(t("findService"));
     const services = await Services.findOne({
       name: courierServiceName,
     }).session(session);
+    console.timeEnd(t("findService"));
 
     // Atomically lock the order
+    console.time(t("lockOrder"));
     let currentOrder = await Order.findOneAndUpdate(
       { _id: id, status: "new" },
       { $set: { status: "processing" } },
       { new: true, session }
     );
+    console.timeEnd(t("lockOrder"));
 
     if (!currentOrder) {
       await session.abortTransaction();
       session.endSession();
+      console.timeEnd(t("total"));
       return {
         success: false,
         message: "Order is already being processed or not in 'new' status.",
       };
     }
 
+    console.time(t("getZone"));
     const zone = await getZone(
       currentOrder.pickupAddress.pinCode,
       currentOrder.receiverAddress.pinCode
     );
+    console.timeEnd(t("getZone"));
 
     // Step 5️⃣ Fetch estimated delivery date from DB
+    console.time(t("findEDD"));
     const eddData = await estimatedDeliveryDate.findOne({
       courier: "Shree Maruti",
       serviceName: courierServiceName.trim(),
     });
+    console.timeEnd(t("findEDD"));
 
     let estimateDate = null;
     if (eddData) {
@@ -88,6 +132,7 @@ const createShreeMarutiShipment = async ({
       await session.abortTransaction();
       await Order.findByIdAndUpdate(id, { status: "new" });
       session.endSession();
+      console.timeEnd(t("total"));
       return { success: false, message: "Insufficient Wallet Balance" };
     }
 
@@ -127,38 +172,38 @@ const createShreeMarutiShipment = async ({
       width: Number(currentOrder.packageDetails?.volumetricWeight?.width) || 1,
 
       billingAddress: {
-        name: currentOrder.pickupAddress.contactName,
+        name: sanitizeAddress(currentOrder.pickupAddress.contactName),
         phone: currentOrder.pickupAddress.phoneNumber.toString(),
-        address1: currentOrder.pickupAddress.address,
-        city: currentOrder.pickupAddress.city,
-        state: currentOrder.pickupAddress.state,
+        address1: sanitizeAddress(currentOrder.pickupAddress.address),
+        city: sanitizeAddress(currentOrder.pickupAddress.city),
+        state: normalizeState(currentOrder.pickupAddress.state),
         country: "India",
         zip: currentOrder.pickupAddress.pinCode,
       },
       shippingAddress: {
-        name: currentOrder.receiverAddress.contactName,
+        name: sanitizeAddress(currentOrder.receiverAddress.contactName),
         phone: currentOrder.receiverAddress.phoneNumber.toString(),
-        address1: currentOrder.receiverAddress.address,
-        city: currentOrder.receiverAddress.city,
-        state: currentOrder.receiverAddress.state,
+        address1: sanitizeAddress(currentOrder.receiverAddress.address),
+        city: sanitizeAddress(currentOrder.receiverAddress.city),
+        state: normalizeState(currentOrder.receiverAddress.state),
         country: "India",
         zip: currentOrder.receiverAddress.pinCode,
       },
       pickupAddress: {
-        name: currentOrder.pickupAddress.contactName,
+        name: sanitizeAddress(currentOrder.pickupAddress.contactName),
         phone: currentOrder.pickupAddress.phoneNumber.toString(),
-        address1: currentOrder.pickupAddress.address,
-        city: currentOrder.pickupAddress.city,
-        state: currentOrder.pickupAddress.state,
+        address1: sanitizeAddress(currentOrder.pickupAddress.address),
+        city: sanitizeAddress(currentOrder.pickupAddress.city),
+        state: normalizeState(currentOrder.pickupAddress.state),
         country: "India",
         zip: currentOrder.pickupAddress.pinCode,
       },
       returnAddress: {
-        name: currentOrder.pickupAddress.contactName,
+        name: sanitizeAddress(currentOrder.pickupAddress.contactName),
         phone: currentOrder.pickupAddress.phoneNumber.toString(),
-        address1: currentOrder.pickupAddress.address,
-        city: currentOrder.pickupAddress.city,
-        state: currentOrder.pickupAddress.state,
+        address1: sanitizeAddress(currentOrder.pickupAddress.address),
+        city: sanitizeAddress(currentOrder.pickupAddress.city),
+        state: normalizeState(currentOrder.pickupAddress.state),
         country: "India",
         zip: currentOrder.pickupAddress.pinCode,
       },
@@ -170,24 +215,30 @@ const createShreeMarutiShipment = async ({
     // --- Call Shipment API ---
     let response;
     try {
+      console.time(t("shreemarutiAPI"));
       response = await axios.post(API_URL, payload, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        timeout: 30000,
       });
+      console.timeEnd(t("shreemarutiAPI"));
     } catch (shipmentErr) {
+      console.timeEnd(t("shreemarutiAPI"));
       await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
-      console.error(
-        "Shipment API failed:",
-        shipmentErr.response?.data || shipmentErr.message
-      );
+      const errMsg =
+        shipmentErr.response?.data?.message ||
+        shipmentErr.response?.data ||
+        shipmentErr.message;
+      console.error("Shipment API failed:", errMsg);
+      console.timeEnd(t("total"));
       return {
         success: false,
         message: "Shipment creation failed",
-        details: shipmentErr.response?.data || shipmentErr.message,
+        details: typeof errMsg === "string" ? errMsg : JSON.stringify(errMsg),
       };
     }
 
@@ -256,6 +307,7 @@ const createShreeMarutiShipment = async ({
 
       // --- Call Manifest API (outside transaction) ---
       try {
+        console.time(t("manifestAPI"));
         const manifestResponse = await axios.post(
           MANIFEST_API,
           { awbNumber: [result.awbNumber] },
@@ -264,16 +316,20 @@ const createShreeMarutiShipment = async ({
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
+            timeout: 15000,
           }
         );
+        console.timeEnd(t("manifestAPI"));
         console.log("Manifest Created:", manifestResponse.data);
       } catch (manifestErr) {
+        console.timeEnd(t("manifestAPI"));
         console.error(
           "Error creating manifest:",
           manifestErr.response?.data || manifestErr.message
         );
       }
 
+      console.timeEnd(t("total"));
       return {
         success: true,
         message: "Shipment & Manifest Created Successfully",
@@ -283,6 +339,7 @@ const createShreeMarutiShipment = async ({
       await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
+      console.timeEnd(t("total"));
       return {
         success: false,
         message: "Error creating shipment",
@@ -293,6 +350,7 @@ const createShreeMarutiShipment = async ({
     await Order.findByIdAndUpdate(id, { status: "new" });
     await session.abortTransaction();
     session.endSession();
+    console.timeEnd(t("total"));
     console.error("Error:", error.response?.data || error.message);
     return {
       success: false,

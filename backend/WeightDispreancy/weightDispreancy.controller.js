@@ -1258,20 +1258,31 @@ const exportWeightDiscrepancy = async (req, res) => {
       {
         $project: {
           _id: 1,
-          userId: "$user.userId", // Use 5-digit userId from users collection
+          userId: "$user.userId",
           awbNumber: 1,
           orderId: 1,
           courierServiceName: 1,
           provider: 1,
 
-          // Keep full productDetails array for processing in JS
           productDetails: 1,
 
           enteredWeightApplicable: "$enteredWeight.applicableWeight",
+          enteredWeightDead: "$enteredWeight.deadWeight",
+          enteredWeightVolL: "$enteredWeight.volumetricWeight.length",
+          enteredWeightVolB: "$enteredWeight.volumetricWeight.breadth",
+          enteredWeightVolH: "$enteredWeight.volumetricWeight.height",
+
           chargedWeightApplicable: "$chargedWeight.applicableWeight",
+          chargedWeightDead: "$chargedWeight.deadWeight",
+
+          chargeDimensionL: "$chargeDimension.length",
+          chargeDimensionB: "$chargeDimension.breadth",
+          chargeDimensionH: "$chargeDimension.height",
 
           excessWeight: "$excessWeightCharges.excessWeight",
           excessCharges: "$excessWeightCharges.excessCharges",
+          pendingAmount: "$excessWeightCharges.pendingAmount",
+          priceBreakup: "$excessWeightCharges.priceBreakup",
 
           status: 1,
           adminStatus: 1,
@@ -1280,6 +1291,10 @@ const exportWeightDiscrepancy = async (req, res) => {
           updatedAt: 1,
           text: 1,
           imageUrl: 1,
+          discrepancyRaisedAt: 1,
+          discrepancyAcceptedAt: 1,
+          discrepancyDeclinedAt: 1,
+          discrepancyDeclinedReason: 1,
 
           user: {
             name: "$user.fullname",
@@ -1301,7 +1316,6 @@ const exportWeightDiscrepancy = async (req, res) => {
 
     // Process results for CSV export
     const csvData = results.map((item) => ({
-      // DiscrepancyID: item._id.toString(),
       UserID: item.userId || "",
       UserName: item.user.name || "",
       UserEmail: item.user.email || "",
@@ -1311,26 +1325,44 @@ const exportWeightDiscrepancy = async (req, res) => {
       CourierServiceName: item.courierServiceName || "",
       Provider: item.provider || "",
 
-      // Join product names by comma
       ProductNames: Array.isArray(item.productDetails)
-        ? item.productDetails
-          .map((pd) => pd.name)
-          .filter(Boolean)
-          .join(", ")
+        ? item.productDetails.map((pd) => pd.name).filter(Boolean).join(", ")
         : "",
 
+      // Entered Weight (declared)
       EnteredWeightApplicable: item.enteredWeightApplicable || "",
+      EnteredWeightDead: item.enteredWeightDead || "",
+      EnteredVolumetricL: item.enteredWeightVolL || "",
+      EnteredVolumetricB: item.enteredWeightVolB || "",
+      EnteredVolumetricH: item.enteredWeightVolH || "",
+
+      // Charged Weight (by courier)
       ChargedWeightApplicable: item.chargedWeightApplicable || "",
+      ChargedWeightDead: item.chargedWeightDead || "",
+
+      // Charge Dimensions
+      ChargeDimensionL: item.chargeDimensionL || "",
+      ChargeDimensionB: item.chargeDimensionB || "",
+      ChargeDimensionH: item.chargeDimensionH || "",
+
+      // Excess Weight & Charges
       ExcessWeight: item.excessWeight || "",
       ExcessCharges: item.excessCharges || "",
+      PendingAmount: item.pendingAmount || "",
+      PriceBreakup: item.priceBreakup ? JSON.stringify(item.priceBreakup) : "",
 
-      Status: item.status || "",
-      // AdminStatus: item.adminStatus || "",
-      // ClientStatus: item.clientStatus || "",
-      // CreatedAt: item.createdAt ? item.createdAt.toISOString() : "",
-      // UpdatedAt: item.updatedAt ? item.updatedAt.toISOString() : "",
-      // Text: item.text || "",
-      // ImageUrl: item.imageUrl || "",
+      // Status
+      DiscrepancyStatus: item.status || "",
+      AdminStatus: item.adminStatus || "",
+      ClientStatus: item.clientStatus || "",
+
+      // Timestamps
+      CreatedAt: item.createdAt ? new Date(item.createdAt).toLocaleString() : "",
+      UpdatedAt: item.updatedAt ? new Date(item.updatedAt).toLocaleString() : "",
+      DiscrepancyRaisedAt: item.discrepancyRaisedAt ? new Date(item.discrepancyRaisedAt).toLocaleString() : "",
+      DiscrepancyAcceptedAt: item.discrepancyAcceptedAt ? new Date(item.discrepancyAcceptedAt).toLocaleString() : "",
+      DiscrepancyDeclinedAt: item.discrepancyDeclinedAt ? new Date(item.discrepancyDeclinedAt).toLocaleString() : "",
+      DiscrepancyDeclinedReason: item.discrepancyDeclinedReason || "",
     }));
 
     const csvHeaders = Object.keys(csvData[0]);

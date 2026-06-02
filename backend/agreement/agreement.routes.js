@@ -10,6 +10,7 @@ const {
   acceptAgreement,
   getPendingAgreements,
   previewAgreement,
+  downloadAgreement,
 } = require("./agreement.controller");
 
 // Admin routes
@@ -27,5 +28,6 @@ router.get("/user/read/:agreementId", isAuthorized, markAsRead);
 router.get("/user/accept/:agreementId", isAuthorized, acceptAgreement);
 router.get("/user/pending", isAuthorized, getPendingAgreements);
 router.get("/user/preview/:agreementId", isAuthorized, previewAgreement);
+router.get("/user/download/:agreementId", isAuthorized, downloadAgreement);
 
 module.exports = router;

@@ -75,8 +75,9 @@ const createShipmentFunctionShreeMaruti = async (
     }
 
     function sanitizeAddress(str) {
+      if (!str) return "";
       return str
-        .replace(/[^a-zA-Z0-9\s,\/.-]/g, "") // keep letters, numbers, comma, slash, dot, hyphen
+        .replace(/[^a-zA-Z0-9\s,\/.\-#&]/g, " ")
         .replace(/\s+/g, " ")
         .trim();
     }
@@ -206,6 +207,7 @@ const createShipmentFunctionShreeMaruti = async (
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
+      timeout: 30000,
     });
     console.log("ShreeMaruti Response:", response.data);
     // Handle response
