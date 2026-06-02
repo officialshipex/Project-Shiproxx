@@ -9,6 +9,7 @@ const {
   markAsRead,
   acceptAgreement,
   getPendingAgreements,
+  previewAgreement,
 } = require("./agreement.controller");
 
 // Admin routes
@@ -25,5 +26,6 @@ router.get("/user/list", isAuthorized, getUserAgreements);
 router.get("/user/read/:agreementId", isAuthorized, markAsRead);
 router.get("/user/accept/:agreementId", isAuthorized, acceptAgreement);
 router.get("/user/pending", isAuthorized, getPendingAgreements);
+router.get("/user/preview/:agreementId", isAuthorized, previewAgreement);
 
 module.exports = router;

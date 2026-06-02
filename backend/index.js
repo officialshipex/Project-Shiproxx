@@ -16,9 +16,10 @@ const PORT = process.env.PORT || 5000;
     // Pre-warm the pincodes CSV parser on startup
     getZone("110001", "110001").catch((err) => console.error("❌ Failed to pre-warm pincodes:", err.message));
 
-    app.listen(PORT, "0.0.0.0", () => {
+    const server = app.listen(PORT, "0.0.0.0", () => {
       console.log(`✅ Server running on http://65.1.105.160:${PORT}`);
     });
+    server.timeout = 120000;
   } catch (err) {
     console.error("❌ Database connection error:", err);
   }

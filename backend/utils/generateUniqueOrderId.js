@@ -12,6 +12,17 @@ const Order = require("../models/newOrder.model");
 async function generateUniqueOrderIds(countNeeded = 1) {
   if (countNeeded <= 0) return [];
 
+  // Fast path: single ID — just pick a random 6-digit and verify
+  if (countNeeded === 1) {
+    const min = 100000, max = 999999;
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const candidate = Math.floor(min + Math.random() * 900000);
+      const exists = await Order.findOne({ orderId: candidate }).select("_id").lean();
+      if (!exists) return candidate;
+    }
+    // Fall through to full logic if 50 attempts fail
+  }
+
   let d = 6;
   const uniqueIds = new Set();
 
