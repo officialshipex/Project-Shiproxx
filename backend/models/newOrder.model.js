@@ -190,6 +190,7 @@ const orderSchema = new mongoose.Schema(
         Instructions: { type: String },
       },
     ],
+    codProcessed: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

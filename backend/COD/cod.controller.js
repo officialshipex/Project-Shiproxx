@@ -118,6 +118,7 @@ const codToBeRemitteds = async () => {
         $match: {
           status: "Delivered",
           "paymentDetails.method": "COD",
+          codProcessed: { $ne: true },
         },
       },
       {
@@ -306,7 +307,7 @@ const remittanceScheduleData = async () => {
     );
 
     const startOfTodayIST = getStartOfDayIST(new Date());
-    const day = startOfTodayIST.getUTCDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+    const day = todayIST.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat (using IST day)
     const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const todayDayName = DAY_NAMES[day];
     const isTodayMWF = [1, 3, 5].includes(day); // Mon, Wed, Fri
@@ -594,6 +595,51 @@ const processAndRemit = async (plan, session) => {
     return;
   }
 
+  const rawOrderIds = plan.orderDetails?.orders || [];
+  if (rawOrderIds.length === 0) {
+    console.log("No orders to remit, skipping...");
+    return;
+  }
+
+  // Find any order IDs that are already remitted globally in adminCodRemittance
+  const objectIds = rawOrderIds.filter(Boolean).map(id => new mongoose.Types.ObjectId(id));
+  const duplicateAdminRecords = await adminCodRemittance.find({
+    "orderDetails.orders": { $in: objectIds }
+  }).session(session).lean().select("orderDetails.orders");
+
+  const globallyRemittedIds = new Set();
+  duplicateAdminRecords.forEach(rec => {
+    rec.orderDetails?.orders?.forEach(id => {
+      globallyRemittedIds.add(id.toString());
+    });
+  });
+
+  // Filter out globally remitted order IDs
+  const cleanOrderIds = rawOrderIds.filter(id => {
+    const idStr = id.toString();
+    if (globallyRemittedIds.has(idStr)) {
+      console.warn(`🚨 Skipping duplicate order ID during processAndRemit: ${idStr}`);
+      return false;
+    }
+    return true;
+  });
+
+  if (cleanOrderIds.length === 0) {
+    console.log("All orders in this plan were already remitted globally. Skipping processAndRemit.");
+    return;
+  }
+
+  // Fetch the clean orders to calculate the correct totalCod
+  const actualOrders = await Order.find({ _id: { $in: cleanOrderIds } }).session(session).lean().select("paymentDetails");
+  const calculatedTotalCod = Number(
+    actualOrders.reduce((sum, o) => sum + Number(o.paymentDetails?.amount || 0), 0).toFixed(2)
+  );
+
+  // Update the plan object with clean orders and recalculated totalCod
+  plan.orderDetails.orders = cleanOrderIds;
+  plan.totalCod = calculatedTotalCod;
+  plan.orderDetails.codcal = calculatedTotalCod;
+
   const planDays = parseInt(codPlan.planName.replace(/\D/g, ""), 10);
   const planCharges = codPlan.planCharges || 0;
   const deliveryDate =
@@ -739,6 +785,18 @@ const processAndRemit = async (plan, session) => {
 
   // Save to adminCodRemittance
   await new adminCodRemittance(adminEntry).save({ session });
+
+  // Mark all remitted orders as codProcessed: true
+  if (plan.orderDetails?.orders) {
+    const orderIds = plan.orderDetails.orders.filter(Boolean);
+    if (orderIds.length > 0) {
+      await Order.updateMany(
+        { _id: { $in: orderIds } },
+        { $set: { codProcessed: true } },
+        { session }
+      );
+    }
+  }
 
   // Sync corresponding orders status to Paid in CodRemittanceOrdersModel if the remittance is Paid immediately
   if (adminEntry.status === "Paid" && plan.orderDetails?.orders) {
@@ -3222,12 +3280,15 @@ const transferCOD = async (req, res) => {
 
 const checkOrderDuplicates = async () => {
   try {
+    console.log("🔍 Starting comprehensive COD remittance duplicate check...");
     const allRemittances = await codRemittance.find({});
-    const orderInstancesMap = {}; // { mongoOrderId: [{ userId, remittanceId }, ...] }
+    
+    // Map to track: mongoId -> array of occurrences: { userId, remittanceId }
+    const orderIdOccurrences = {}; 
     const mongoIds = new Set();
 
     allRemittances.forEach((doc) => {
-      const userId = doc.userId;
+      const userId = doc.userId.toString();
       if (doc.remittanceData && Array.isArray(doc.remittanceData)) {
         doc.remittanceData.forEach((remittance) => {
           const remittanceId = remittance.remittanceId;
@@ -3237,22 +3298,25 @@ const checkOrderDuplicates = async () => {
             Array.isArray(remittance.orderDetails.orders)
           ) {
             remittance.orderDetails.orders.forEach((mId) => {
-              const mIdStr = mId.toString();
-              if (!orderInstancesMap[mIdStr]) {
-                orderInstancesMap[mIdStr] = [];
+              if (mId) {
+                const mIdStr = mId.toString();
+                mongoIds.add(mIdStr);
+                
+                if (!orderIdOccurrences[mIdStr]) {
+                  orderIdOccurrences[mIdStr] = [];
+                }
+                orderIdOccurrences[mIdStr].push({ userId, remittanceId });
               }
-              orderInstancesMap[mIdStr].push({ userId, remittanceId });
-              mongoIds.add(mIdStr);
             });
           }
         });
       }
     });
 
-    // Fetch order details for status/method validation
+    // Fetch order details for status, method, custom orderId, and awb_number (include paymentDetails.amount)
     const orders = await Order.find(
       { _id: { $in: Array.from(mongoIds) } },
-      { orderId: 1, awb_number: 1, status: 1, "paymentDetails.method": 1, userId: 1 }
+      { orderId: 1, awb_number: 1, status: 1, "paymentDetails.method": 1, "paymentDetails.amount": 1, userId: 1 }
     ).lean();
 
     const orderDetailsMap = {};
@@ -3260,48 +3324,125 @@ const checkOrderDuplicates = async () => {
       orderDetailsMap[o._id.toString()] = o;
     });
 
-    let duplicatesFound = false;
-    let mismatchesFound = false;
+    // Grouping by custom orderId and AWB to detect duplicates based on values, not just mongo _ids
+    const customOrderIdGroups = {}; // { customOrderId: { mongoId: [{userId, remittanceId}] } }
+    const awbGroups = {};           // { awbNumber: { mongoId: [{userId, remittanceId}] } }
 
-    for (const mIdStr in orderInstancesMap) {
-      const instances = orderInstancesMap[mIdStr];
+    let missingOrdersCount = 0;
+    let mismatchesCount = 0;
+    let mismatchAmount = 0;
+    
+    for (const mIdStr of mongoIds) {
+      const instances = orderIdOccurrences[mIdStr];
       const orderData = orderDetailsMap[mIdStr];
 
       if (!orderData) {
-        // console.log(`Order not found in DB: ${mIdStr}`);
+        missingOrdersCount++;
+        console.log(`⚠️ Remitted Order _id ${mIdStr} not found in Orders collection. Occurrences in Remittances:`, 
+          instances.map(i => `(User: ${i.userId}, Rem: ${i.remittanceId})`).join(", ")
+        );
         continue;
       }
 
+      const amount = Number(orderData.paymentDetails?.amount || 0);
+
+      // Validate status / method
       const isCOD = orderData.paymentDetails?.method === "COD";
       const isDelivered = orderData.status === "Delivered";
-
       if (!isCOD || !isDelivered) {
-        mismatchesFound = true;
-        instances.forEach((inst) => {
-          console.log(
-            `Mismatch Found - OrderId: ${orderData.orderId}, AWB: ${orderData.awb_number}, User: ${inst.userId}, RemittanceId: ${inst.remittanceId}, Status: ${orderData.status}, Method: ${orderData.paymentDetails?.method}`
-          );
+        mismatchesCount++;
+        mismatchAmount += amount * instances.length;
+        console.log(`❌ Mismatch - OrderId: ${orderData.orderId}, AWB: ${orderData.awb_number}, Status: ${orderData.status}, Method: ${orderData.paymentDetails?.method || "N/A"}, Amount: ₹${amount}. Occurrences:`,
+          instances.map(i => `(User: ${i.userId}, Rem: ${i.remittanceId})`).join(", ")
+        );
+      }
+
+      // Group by custom orderId
+      const customId = String(orderData.orderId || "").trim();
+      if (customId) {
+        if (!customOrderIdGroups[customId]) customOrderIdGroups[customId] = {};
+        if (!customOrderIdGroups[customId][mIdStr]) customOrderIdGroups[customId][mIdStr] = [];
+        customOrderIdGroups[customId][mIdStr].push(...instances);
+      }
+
+      // Group by AWB Number
+      const awb = String(orderData.awb_number || "").trim();
+      if (awb) {
+        if (!awbGroups[awb]) awbGroups[awb] = {};
+        if (!awbGroups[awb][mIdStr]) awbGroups[awb][mIdStr] = [];
+        awbGroups[awb][mIdStr].push(...instances);
+      }
+    }
+
+    console.log("\n--- Analyzing Duplicates ---");
+    let duplicateReferencesCount = 0;
+    let duplicateDocumentsCount = 0;
+    let duplicateAmount = 0;
+
+    for (const [customId, mongoIdMap] of Object.entries(customOrderIdGroups)) {
+      const mongoIdsForThisCustomId = Object.keys(mongoIdMap);
+      
+      // 1. Check if the same custom order ID has different physical Mongo IDs remitted (Database Document Duplicates)
+      if (mongoIdsForThisCustomId.length > 1) {
+        duplicateDocumentsCount++;
+        console.log(`🚨 DOCUMENT DUPLICATE: Custom Order ID '${customId}' has ${mongoIdsForThisCustomId.length} different physical order documents in DB:`);
+        mongoIdsForThisCustomId.forEach((mId) => {
+          const refs = mongoIdMap[mId];
+          console.log(`   └─ Mongo ID: ${mId} | Remitted in: ${refs.map(r => `(User: ${r.userId}, Rem: ${r.remittanceId})`).join(", ")}`);
         });
       }
 
-      if (instances.length > 1) {
-        duplicatesFound = true;
-        const details = instances.map(
-          (item) => `(User: ${item.userId}, Remittance: ${item.remittanceId})`
-        );
-        console.log(`Duplicate Order ID: ${orderData.orderId}, Details: ${details.join(", ")}`);
+      // 2. Check if a specific Mongo ID is referenced multiple times in remittance records (Reference Duplicates)
+      for (const [mId, occurrences] of Object.entries(mongoIdMap)) {
+        if (occurrences.length > 1) {
+          duplicateReferencesCount++;
+          
+          const orderData = orderDetailsMap[mId];
+          const amount = Number(orderData?.paymentDetails?.amount || 0);
+          const extraTimesPaid = occurrences.length - 1;
+          duplicateAmount += amount * extraTimesPaid;
+
+          // Check if duplicated inside the exact same remittance
+          const remMap = {};
+          occurrences.forEach(o => {
+            if (!remMap[o.remittanceId]) remMap[o.remittanceId] = 0;
+            remMap[o.remittanceId]++;
+          });
+
+          const sameRemList = [];
+          const diffRemList = [];
+          for (const [remId, count] of Object.entries(remMap)) {
+            if (count > 1) {
+              sameRemList.push(`Remittance ${remId} (referenced ${count} times)`);
+            } else {
+              diffRemList.push(`Remittance ${remId}`);
+            }
+          }
+
+          console.log(`⚠️ REFERENCE DUPLICATE: Custom Order ID '${customId}' (Mongo ID: ${mId}) is remitted multiple times (COD Amount: ₹${amount}):`);
+          if (sameRemList.length > 0) {
+            console.log(`   └─ Inner-Remittance Duplicates: ${sameRemList.join(", ")}`);
+          }
+          if (diffRemList.length > 0) {
+            console.log(`   └─ Cross-Remittance Duplicates: ${diffRemList.join(", ")}`);
+          }
+        }
       }
     }
 
-    if (!duplicatesFound) {
-      console.log("No duplicate orders found.");
-    }
-    if (!mismatchesFound) {
-      console.log("No status/method mismatches found.");
-    }
-    console.log("complete check finished");
+    console.log("\n==================================================");
+    console.log("📊 DUPLICATE CHECK SUMMARY");
+    console.log("==================================================");
+    console.log(`🔹 Total Unique Mongo IDs Scanned: ${mongoIds.size}`);
+    console.log(`🔹 Missing Orders (Not in Orders DB): ${missingOrdersCount}`);
+    console.log(`🔹 Status/Method Mismatches: ${mismatchesCount} (Total Amount: ₹${mismatchAmount.toFixed(2)})`);
+    console.log(`🔹 Reference Duplicates (Same order double-remitted): ${duplicateReferencesCount} (Total Amount: ₹${duplicateAmount.toFixed(2)})`);
+    console.log(`🔹 Document Duplicates (Different orders sharing same Custom ID): ${duplicateDocumentsCount}`);
+    console.log(`🔹 TOTAL INCORRECTLY PAID AMOUNT: ₹${(mismatchAmount + duplicateAmount).toFixed(2)}`);
+    console.log("==================================================\n");
+
   } catch (error) {
-    console.error("Error in checkOrderDuplicates:", error);
+    console.error("❌ Error in checkOrderDuplicates:", error);
   }
 };
 
