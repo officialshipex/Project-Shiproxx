@@ -243,7 +243,7 @@ const createOrder = async (req, res) => {
         status: "Booked",
         StatusLocation: sender.city || "",
         Instructions: "Order booked successfully",
-        StatusDateTime: new Date(),
+        StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
       });
       await currentOrder.save({ session });
 

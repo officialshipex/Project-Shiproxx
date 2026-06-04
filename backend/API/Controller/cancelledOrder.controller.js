@@ -169,7 +169,7 @@ const cancelOrdersAtBooked = async (req, res) => {
         status: "Cancelled",
         StatusLocation: "",
         Instructions: "Cancelled order by user",
-        StatusDateTime: new Date(),
+        StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
       });
       await currentOrderInSession.save({ session });
 

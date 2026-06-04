@@ -7,6 +7,7 @@ const Kyc = require("../models/Kyc.model");
 const Kyc2 = require("../models/Kyc2.model");
 const Pan = require("../models/Pan.model");
 const Gstin = require("../models/Gstin.model");
+const Aadhaar = require("../models/Aadhaar.model");
 
 // Admin: Upload new agreement
 const uploadAgreement = async (req, res) => {
@@ -219,15 +220,22 @@ const previewAgreement = async (req, res) => {
     const kyc2 = await Kyc2.findOne({ user: userId });
     const panDoc = await Pan.findOne({ user: userId });
     const gstinDoc = await Gstin.findOne({ user: userId });
+    const aadhaarDoc = await Aadhaar.findOne({ user: userId });
 
     const category = kyc?.companyCategory || kyc2?.companyCategory || "individual";
     const hasGst = !!(kyc?.gstNumber || kyc2?.gstNumber || gstinDoc?.gstin);
     const hasPan = !!(kyc?.panNumber || kyc2?.panNumber || panDoc?.pan);
 
+    const aadhaarName = aadhaarDoc?.name || "";
+    const aadhaarAddress = aadhaarDoc
+      ? [aadhaarDoc.address, aadhaarDoc.city, aadhaarDoc.state].filter(Boolean).join(", ")
+      : "";
+
     const displayName =
       kyc2?.companyDetails?.sellerName ||
       kyc?.panName ||
       kyc2?.panHolderName ||
+      aadhaarName ||
       user.fullname ||
       "";
 
@@ -268,14 +276,8 @@ const previewAgreement = async (req, res) => {
           .filter(Boolean)
           .join(", ");
       }
-    } else {
-      const BilingInfo = require("../models/billingInfo.model");
-      const billing = await BilingInfo.findOne({ user: userId });
-      if (billing) {
-        companyAddress = [billing.address, billing.city, billing.state, billing.postalCode]
-          .filter(Boolean)
-          .join(", ");
-      }
+    } else if (aadhaarAddress) {
+      companyAddress = aadhaarAddress;
     }
 
     // --- Append GSTIN or PAN to address ---
@@ -302,7 +304,7 @@ const previewAgreement = async (req, res) => {
     }
 
     // --- Build the seller party name ---
-    let sellerPartyName = companyName || displayName;
+    let sellerPartyName = hasGst ? (companyName || displayName) : (aadhaarName || displayName);
 
     // --- Build the intro paragraph ---
     const introParagraph = `This Merchant Agreement is executed on the signing date/acceptance date by and between,
@@ -347,15 +349,22 @@ const downloadAgreement = async (req, res) => {
     const kyc2 = await Kyc2.findOne({ user: userId });
     const panDoc = await Pan.findOne({ user: userId });
     const gstinDoc = await Gstin.findOne({ user: userId });
+    const aadhaarDoc = await Aadhaar.findOne({ user: userId });
 
     const category = kyc?.companyCategory || kyc2?.companyCategory || "individual";
     const hasGst = !!(kyc?.gstNumber || kyc2?.gstNumber || gstinDoc?.gstin);
     const hasPan = !!(kyc?.panNumber || kyc2?.panNumber || panDoc?.pan);
 
+    const aadhaarName = aadhaarDoc?.name || "";
+    const aadhaarAddress = aadhaarDoc
+      ? [aadhaarDoc.address, aadhaarDoc.city, aadhaarDoc.state].filter(Boolean).join(", ")
+      : "";
+
     const displayName =
       kyc2?.companyDetails?.sellerName ||
       kyc?.panName ||
       kyc2?.panHolderName ||
+      aadhaarName ||
       user.fullname ||
       "";
 
@@ -396,14 +405,8 @@ const downloadAgreement = async (req, res) => {
           .filter(Boolean)
           .join(", ");
       }
-    } else {
-      const BilingInfo = require("../models/billingInfo.model");
-      const billing = await BilingInfo.findOne({ user: userId });
-      if (billing) {
-        companyAddress = [billing.address, billing.city, billing.state, billing.postalCode]
-          .filter(Boolean)
-          .join(", ");
-      }
+    } else if (aadhaarAddress) {
+      companyAddress = aadhaarAddress;
     }
 
     if (hasGst) {
@@ -421,7 +424,7 @@ const downloadAgreement = async (req, res) => {
       businessTypeDesc = "Sole Proprietorship Firm";
     }
 
-    let sellerPartyName = companyName || displayName;
+    let sellerPartyName = hasGst ? (companyName || displayName) : (aadhaarName || displayName);
 
     const introParagraph = `This Merchant Agreement is executed on the signing date/acceptance date by and between,
 

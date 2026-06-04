@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 const saveCustomRate = async (req, res) => {
     try {
         let id = req.body.user;
-        
+
         let user = await User.findById(id);
         if (!user) {
             return res.status(404).send({ message: "User not found" });
@@ -16,14 +16,14 @@ const saveCustomRate = async (req, res) => {
         if (user.ratecards.length !== 0) {
             customPlan = await CustomRate.findById(user.ratecards[0]);
             if (!customPlan) {
-                customPlan = new CustomRate(); 
-                await customPlan.save(); 
+                customPlan = new CustomRate();
+                await customPlan.save();
             }
         } else {
-            customPlan = new CustomRate(); 
-            user.ratecards.push(customPlan._id); 
-            await customPlan.save(); 
-            await user.save(); 
+            customPlan = new CustomRate();
+            user.ratecards.push(customPlan._id);
+            await customPlan.save();
+            await user.save();
         }
 
         if (!customPlan.ratecards) {
@@ -44,13 +44,13 @@ const saveCustomRate = async (req, res) => {
 
         await ratecard.save();
 
-        customPlan.ratecards.push(ratecard._id); 
+        customPlan.ratecards.push(ratecard._id);
         if (!customPlan.users.includes(req.body.user)) {
-            customPlan.users.push(req.body.user); 
+            customPlan.users.push(req.body.user);
         }
 
-        await customPlan.save(); 
-        await user.save(); 
+        await customPlan.save();
+        await user.save();
 
         res.status(200).send({ message: "Custom rate saved successfully", ratecard });
 
@@ -61,17 +61,17 @@ const saveCustomRate = async (req, res) => {
 };
 
 const printUserCount = async () => {
-  try {
-    const count = await User.countDocuments();
-    console.log(`Total users present: ${count}`);
-    return count;
-  } catch (error) {
-    console.error("Error fetching user count:", error);
-  }
+    try {
+        const count = await User.countDocuments();
+        console.log(`Total users present: ${count}`);
+        return count;
+    } catch (error) {
+        console.error("Error fetching user count:", error);
+    }
 };
 
 
-module.exports = { saveCustomRate, printUserCount};
+module.exports = { saveCustomRate, printUserCount };
 
 
 
