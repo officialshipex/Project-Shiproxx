@@ -296,7 +296,7 @@ const getStartOfDayIST = (date = new Date()) => {
 
 const remittanceScheduleData = async () => {
   try {
-    const todayIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const todayIST = new Date();
     const [existingSameDateDelivered, afterCodPlans] = await Promise.all([
       SameDateDelivered.find({ status: "Pending" }),
       afterPlan.find(),
@@ -307,9 +307,15 @@ const remittanceScheduleData = async () => {
     );
 
     const startOfTodayIST = getStartOfDayIST(new Date());
-    const day = todayIST.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat (using IST day)
+    
+    // Get the current day name and index in Asia/Kolkata timezone reliably
+    const todayDayName = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kolkata",
+      weekday: "long"
+    }).format(new Date()); // e.g., "Friday"
+
     const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const todayDayName = DAY_NAMES[day];
+    const day = DAY_NAMES.indexOf(todayDayName);
     const isTodayMWF = [1, 3, 5].includes(day); // Mon, Wed, Fri
 
     // Gather all unique user IDs
@@ -568,7 +574,7 @@ if (process.env.NODE_ENV === "production") {
 
 // Helper for direct business logic (used in both controllers)
 const processAndRemit = async (plan, session) => {
-  const todayIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  const todayIST = new Date();
   // Generate remittanceId here — only at actual remittance time, not when queued
   let remitanceId;
   do {
@@ -824,10 +830,16 @@ const processAndRemit = async (plan, session) => {
 
 const fetchExtraData = async () => {
   try {
-    const todayIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-    const day = todayIST.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+    const todayIST = new Date();
+    
+    // Get the current day name and index in Asia/Kolkata timezone reliably
+    const todayDayName = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kolkata",
+      weekday: "long"
+    }).format(new Date()); // e.g., "Friday"
+
     const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const todayDayName = DAY_NAMES[day];
+    const day = DAY_NAMES.indexOf(todayDayName);
     const isTodayMWF = [1, 3, 5].includes(day); // Mon, Wed, Fri
 
     const afterCodPlans = await afterPlan.find();

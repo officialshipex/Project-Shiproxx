@@ -320,6 +320,9 @@ const addPassbook = async (req, res) => {
     //   status: status || "success",
     // });
 
+    const suffix = transactionType === "credit" ? "Received" : "Applied";
+    const finalDescription = `${description} ${suffix}`;
+
     await WalletTransaction.create({
       walletId: wallet._id,
       channelOrderId: orderId,
@@ -327,7 +330,7 @@ const addPassbook = async (req, res) => {
       amount: parseFloat(amount),
       balanceAfterTransaction: newBalance,
       awb_number: awbNumber,
-      description,
+      description: finalDescription,
     });
 
     // Update wallet balance
