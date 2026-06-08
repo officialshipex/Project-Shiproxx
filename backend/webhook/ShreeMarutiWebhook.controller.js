@@ -62,8 +62,8 @@ const ShreeMarutiWebhook = async (req, res) => {
       const tTime = new Date(t.StatusDateTime).getTime();
       const normTime = new Date(normalizedData.StatusDateTime).getTime();
 
-      // 1. Time must match exactly
-      if (tTime !== normTime) return false;
+      // 1. Time must be within 10 seconds (10000 ms)
+      if (Math.abs(tTime - normTime) > 10000) return false;
 
       // 2. If time matches, check if status, instructions or location matches (case-insensitive)
       const normStatus = (normalizedData.Status || "").toLowerCase().trim();

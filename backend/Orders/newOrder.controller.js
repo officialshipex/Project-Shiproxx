@@ -454,7 +454,7 @@ const getOrders = async (req, res) => {
         statusCondition?.status === "new"
         ? { createdAt: -1 }
         : { updatedAt: -1 };
-    let query = Order.find(filter).sort(sortOption);
+    let query = Order.find(filter).sort(sortOption).allowDiskUse(true);
     if (limit) query = query.skip(skip).limit(limit);
 
     const orders = await query.lean();
@@ -612,7 +612,7 @@ const getShippingOrders = async (req, res) => {
 
     const totalCount = await Order.countDocuments(filter);
 
-    let query = Order.find(filter).sort({ createdAt: -1 });
+    let query = Order.find(filter).sort({ createdAt: -1 }).allowDiskUse(true);
     if (limit) query = query.skip(skip).limit(limit);
 
     const orders = await query.lean();
@@ -804,7 +804,7 @@ const getOrdersByNdrStatus = async (req, res) => {
     let query = Order.find(filter).sort({
       "ndrReason.date": -1,
       createdAt: -1,
-    });
+    }).allowDiskUse(true);
 
     if (limit) query = query.skip(skip).limit(limit);
 
@@ -2418,6 +2418,7 @@ const masterSearch = async (req, res) => {
       .select("orderId awb_number status courierServiceName provider paymentDetails createdAt")
       .sort({ updatedAt: -1 })
       .limit(10)
+      .allowDiskUse(true)
       .lean();
 
     res.json({ orders });

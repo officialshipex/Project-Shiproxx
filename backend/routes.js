@@ -83,9 +83,11 @@ router.use("/label", LabelSettings);
 
 const adminOrderRoute = require("./routes/adminOrder.router");
 const adminBilling = require("./Admin/adminRouter");
+const misReportRouter = require("./MisReport/misReport.route");
 
 router.use("/admin", adminOrderRoute);
 router.use("/adminBilling", adminBilling);
+router.use("/mis-report", isAuthorized, misReportRouter);
 
 router.use("/channel", channel);
 const ndrRoutes = require("./routes/ndr.router");

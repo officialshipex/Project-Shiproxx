@@ -307,15 +307,13 @@ const remittanceScheduleData = async () => {
     );
 
     const startOfTodayIST = getStartOfDayIST(new Date());
-    
-    // Get the current day name and index in Asia/Kolkata timezone reliably
-    const todayDayName = new Intl.DateTimeFormat("en-US", {
-      timeZone: "Asia/Kolkata",
-      weekday: "long"
-    }).format(new Date()); // e.g., "Friday"
 
+    // Get the current day name and index in Asia/Kolkata timezone (manual math, avoids ICU dependency)
+    const IST_OFFSET = 5.5 * 3600 * 1000;
+    const istDate = new Date(new Date().getTime() + IST_OFFSET);
     const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const day = DAY_NAMES.indexOf(todayDayName);
+    const day = istDate.getUTCDay();
+    const todayDayName = DAY_NAMES[day];
     const isTodayMWF = [1, 3, 5].includes(day); // Mon, Wed, Fri
 
     // Gather all unique user IDs
@@ -831,15 +829,13 @@ const processAndRemit = async (plan, session) => {
 const fetchExtraData = async () => {
   try {
     const todayIST = new Date();
-    
-    // Get the current day name and index in Asia/Kolkata timezone reliably
-    const todayDayName = new Intl.DateTimeFormat("en-US", {
-      timeZone: "Asia/Kolkata",
-      weekday: "long"
-    }).format(new Date()); // e.g., "Friday"
 
+    // Get the current day name and index in Asia/Kolkata timezone (manual math, avoids ICU dependency)
+    const IST_OFFSET = 5.5 * 3600 * 1000;
+    const istDate = new Date(new Date().getTime() + IST_OFFSET);
     const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const day = DAY_NAMES.indexOf(todayDayName);
+    const day = istDate.getUTCDay();
+    const todayDayName = DAY_NAMES[day];
     const isTodayMWF = [1, 3, 5].includes(day); // Mon, Wed, Fri
 
     const afterCodPlans = await afterPlan.find();
@@ -3294,9 +3290,9 @@ const checkOrderDuplicates = async () => {
   try {
     console.log("🔍 Starting comprehensive COD remittance duplicate check...");
     const allRemittances = await codRemittance.find({});
-    
+
     // Map to track: mongoId -> array of occurrences: { userId, remittanceId }
-    const orderIdOccurrences = {}; 
+    const orderIdOccurrences = {};
     const mongoIds = new Set();
 
     allRemittances.forEach((doc) => {
@@ -3313,7 +3309,7 @@ const checkOrderDuplicates = async () => {
               if (mId) {
                 const mIdStr = mId.toString();
                 mongoIds.add(mIdStr);
-                
+
                 if (!orderIdOccurrences[mIdStr]) {
                   orderIdOccurrences[mIdStr] = [];
                 }
@@ -3343,14 +3339,14 @@ const checkOrderDuplicates = async () => {
     let missingOrdersCount = 0;
     let mismatchesCount = 0;
     let mismatchAmount = 0;
-    
+
     for (const mIdStr of mongoIds) {
       const instances = orderIdOccurrences[mIdStr];
       const orderData = orderDetailsMap[mIdStr];
 
       if (!orderData) {
         missingOrdersCount++;
-        console.log(`⚠️ Remitted Order _id ${mIdStr} not found in Orders collection. Occurrences in Remittances:`, 
+        console.log(`⚠️ Remitted Order _id ${mIdStr} not found in Orders collection. Occurrences in Remittances:`,
           instances.map(i => `(User: ${i.userId}, Rem: ${i.remittanceId})`).join(", ")
         );
         continue;
@@ -3393,7 +3389,7 @@ const checkOrderDuplicates = async () => {
 
     for (const [customId, mongoIdMap] of Object.entries(customOrderIdGroups)) {
       const mongoIdsForThisCustomId = Object.keys(mongoIdMap);
-      
+
       // 1. Check if the same custom order ID has different physical Mongo IDs remitted (Database Document Duplicates)
       if (mongoIdsForThisCustomId.length > 1) {
         duplicateDocumentsCount++;
@@ -3408,7 +3404,7 @@ const checkOrderDuplicates = async () => {
       for (const [mId, occurrences] of Object.entries(mongoIdMap)) {
         if (occurrences.length > 1) {
           duplicateReferencesCount++;
-          
+
           const orderData = orderDetailsMap[mId];
           const amount = Number(orderData?.paymentDetails?.amount || 0);
           const extraTimesPaid = occurrences.length - 1;

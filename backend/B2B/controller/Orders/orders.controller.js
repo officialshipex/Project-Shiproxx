@@ -167,6 +167,7 @@ const adminB2BOrders = async (req, res) => {
       .populate("userId", "fullname email phoneNumber company userId")
       .skip(skip)
       .limit(parseInt(limit))
+      .allowDiskUse(true)
       .lean();
 
     const totalPages = Math.ceil(totalCount / limit);
@@ -349,7 +350,7 @@ const userB2BOrders = async (req, res) => {
     } else if (filter.status === "new") {
       sortOption = { createdAt: -1 };
     }
-    let query = Order.find(filter).sort(sortOption);
+    let query = Order.find(filter).sort(sortOption).allowDiskUse(true);
     if (limit) query = query.skip(skip).limit(limit);
 
     const orders = await query.lean();

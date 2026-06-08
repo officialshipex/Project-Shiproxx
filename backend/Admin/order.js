@@ -173,6 +173,7 @@ const filterOrdersForEmployee = async (req, res) => {
       .populate("userId", "fullname email phoneNumber company userId")
       .skip(skip)
       .limit(parseInt(limit))
+      .allowDiskUse(true)
       .lean();
 
     const totalPages = Math.ceil(totalCount / limit);
@@ -384,6 +385,7 @@ const filterDelayDeliveredOrders = async (req, res) => {
       .populate("userId", "fullname email phoneNumber company userId")
       .skip(skip)
       .limit(parseInt(limit))
+      .allowDiskUse(true)
       .lean();
     // console.log("hi")
     // -------------------------------------------
@@ -637,6 +639,7 @@ const filterNdrOrdersForEmployee = async (req, res) => {
       .populate("userId", "fullname email phoneNumber company userId")
       .skip(skip)
       .limit(parseInt(limit))
+      .allowDiskUse(true)
       .lean();
 
     const totalPages = Math.ceil(totalCount / limit);
@@ -757,7 +760,8 @@ const getAllOrdersByManualRtoStatusForEmployee = async (req, res) => {
 
     let query = Order.find(filter)
       .sort({ "ndrReason.date": -1, createdAt: -1 })
-      .populate("userId", "fullname email phoneNumber company userId");
+      .populate("userId", "fullname email phoneNumber company userId")
+      .allowDiskUse(true);
 
     if (limit) query = query.skip(skip).limit(limit);
 
@@ -880,7 +884,8 @@ const getOrdersByStatus = async (req, res) => {
 
     let query = Order.find(filter)
       .sort({ createdAt: -1 })
-      .populate("userId", "fullname email phoneNumber company userId");
+      .populate("userId", "fullname email phoneNumber company userId")
+      .allowDiskUse(true);
 
     if (limit) query = query.skip(skip).limit(limit);
 
@@ -1088,7 +1093,8 @@ const getAllOrdersByNdrStatus = async (req, res) => {
 
     let query = Order.find(filter)
       .sort({ "ndrReason.date": -1, createdAt: -1 })
-      .populate("userId", "fullname email phoneNumber company userId");
+      .populate("userId", "fullname email phoneNumber company userId")
+      .allowDiskUse(true);
 
     if (limit) query = query.skip(skip).limit(limit);
 
@@ -1187,7 +1193,8 @@ const getAllOrdersByManualRtoStatus = async (req, res) => {
 
     let query = Order.find(filter)
       .sort({ "ndrReason.date": -1, createdAt: -1 })
-      .populate("userId", "fullname email phoneNumber company userId");
+      .populate("userId", "fullname email phoneNumber company userId")
+      .allowDiskUse(true);
 
     if (limit) query = query.skip(skip).limit(limit);
 
@@ -1286,7 +1293,8 @@ const filterOrders = async (req, res) => {
 
     let query = Order.find(filter)
       .sort({ createdAt: -1 })
-      .populate("userId", "fullname email phoneNumber company userId");
+      .populate("userId", "fullname email phoneNumber company userId")
+      .allowDiskUse(true);
 
     query = query.skip(skip).limit(parseInt(limit));
 
@@ -1378,7 +1386,8 @@ const filterNdrOrders = async (req, res) => {
 
     let query = Order.find(filter)
       .sort({ createdAt: -1 })
-      .populate("userId", "fullname email phoneNumber company userId");
+      .populate("userId", "fullname email phoneNumber company userId")
+      .allowDiskUse(true);
 
     query = query.skip(skip).limit(parseInt(limit));
 

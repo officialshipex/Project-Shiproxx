@@ -197,6 +197,13 @@ const orderSchema = new mongoose.Schema(
 
 // Compound index
 orderSchema.index({ userId: 1, createdAt: -1 });
+orderSchema.index({ userId: 1, updatedAt: -1 });
+orderSchema.index({ userId: 1, "ndrReason.date": -1, createdAt: -1 });
+orderSchema.index({ userId: 1, invoiceDate: -1 });
+orderSchema.index({ createdAt: -1 });
+orderSchema.index({ invoiceDate: -1 });
+orderSchema.index({ shipmentCreatedAt: -1 });
+orderSchema.index({ "ndrReason.date": -1, createdAt: -1 });
 // ✅ PERF FIX: Index for direct orderId lookups (bookOrder API, tracking, etc.)
 orderSchema.index({ orderId: 1 });
 // ✅ PERF FIX: Index for AWB-based lookups (tracking, webhooks, etc.)
@@ -280,11 +287,11 @@ orderSchema.post("findOneAndUpdate", async function (doc) {
     // If status is being updated, trigger notification
     if (status) {
       const { triggerStatusNotification } = require("../utils/statusNotification");
-      
+
       const notificationDoc = doc ? (doc.toObject ? doc.toObject() : doc) : {};
       if (update.$set) Object.assign(notificationDoc, update.$set);
       else if (update.status) Object.assign(notificationDoc, { status: update.status });
-      
+
       if (notificationDoc.status && notificationDoc.userId) {
         triggerStatusNotification(notificationDoc);
       }

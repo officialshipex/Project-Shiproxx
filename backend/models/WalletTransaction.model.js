@@ -21,5 +21,8 @@ const walletTransactionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+walletTransactionSchema.index({ walletId: 1, date: -1 });
+walletTransactionSchema.index({ date: -1 });
+
 const WalletTransaction = mongoose.model("WalletTransaction", walletTransactionSchema);
 module.exports = WalletTransaction;
