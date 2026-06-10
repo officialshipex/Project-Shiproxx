@@ -69,18 +69,78 @@ router.put("/updateStatus/:id", async (req, res) => {
   }
 });
 
+// Background helper for cascading updates
+const cascadeProviderChange = async (serviceName, targetProvider) => {
+  try {
+    console.log(`[Background-Cascade] Starting provider update cascade for service: ${serviceName} -> target: ${targetProvider}`);
+    const startTime = Date.now();
+
+    // 1. Update global RateCard collection
+    const rateCardResult = await RateCard.updateMany(
+      { courierServiceName: serviceName },
+      { $set: { courierProviderName: targetProvider } }
+    );
+    console.log(`[Background-Cascade] RateCard collection updated. Matched/Modified: ${rateCardResult.matchedCount}/${rateCardResult.modifiedCount}`);
+
+    // 2. Update all Plans in one atomic updateMany query
+    const result = await Plan.updateMany(
+      { "rateCard.courierServiceName": serviceName },
+      {
+        $set: {
+          "rateCard.$[rc].courierProviderName": targetProvider,
+        },
+      },
+      {
+        arrayFilters: [{ "rc.courierServiceName": serviceName }],
+      }
+    );
+
+    console.log(`[Background-Cascade] Successfully updated plans. Matched: ${result.matchedCount}, Modified: ${result.modifiedCount} in ${Date.now() - startTime}ms.`);
+  } catch (error) {
+    console.error("[Background-Cascade] Error in cascading provider change:", error);
+  }
+};
+
+// Background helper for bulk provider updates cascade
+const cascadeBulkProviderChange = async (serviceNames, targetProvider) => {
+  try {
+    console.log(`[Background-Cascade] Starting bulk provider update cascade for services: [${serviceNames.join(", ")}] -> target: ${targetProvider}`);
+    const startTime = Date.now();
+
+    // 1. Update global RateCard collection
+    const rateCardResult = await RateCard.updateMany(
+      { courierServiceName: { $in: serviceNames } },
+      { $set: { courierProviderName: targetProvider } }
+    );
+    console.log(`[Background-Cascade] Bulk RateCard updated. Matched/Modified: ${rateCardResult.matchedCount}/${rateCardResult.modifiedCount}`);
+
+    // 2. Update all Plans in one atomic updateMany query
+    const result = await Plan.updateMany(
+      { "rateCard.courierServiceName": { $in: serviceNames } },
+      {
+        $set: {
+          "rateCard.$[rc].courierProviderName": targetProvider,
+        },
+      },
+      {
+        arrayFilters: [{ "rc.courierServiceName": { $in: serviceNames } }],
+      }
+    );
+
+    console.log(`[Background-Cascade] Successfully completed bulk update for plans. Matched: ${result.matchedCount}, Modified: ${result.modifiedCount} in ${Date.now() - startTime}ms.`);
+  } catch (error) {
+    console.error("[Background-Cascade] Error in bulk cascading provider change:", error);
+  }
+};
+
 // ✅ Update Courier Service
 router.put("/couriers/:id", async (req, res) => {
-  const session = await mongoose.startSession();
   try {
-    session.startTransaction();
     const { id } = req.params;
     const updateData = req.body;
 
-    const oldService = await CourierService.findById(id).session(session);
+    const oldService = await CourierService.findById(id);
     if (!oldService) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(404).json({ message: "Courier not found" });
     }
 
@@ -89,45 +149,21 @@ router.put("/couriers/:id", async (req, res) => {
     const updatedCourier = await CourierService.findByIdAndUpdate(
       id,
       updateData,
-      { new: true, session }
+      { new: true }
     );
 
     if (providerChanged) {
       const serviceName = updatedCourier.name;
       const targetProvider = updateData.provider;
 
-      // Update global RateCard collection
-      await RateCard.updateMany(
-        { courierServiceName: serviceName },
-        { $set: { courierProviderName: targetProvider } },
-        { session }
-      );
-
-      // Update all Plans
-      const affectedPlans = await Plan.find({ "rateCard.courierServiceName": serviceName }).session(session);
-      for (const plan of affectedPlans) {
-        let modified = false;
-        if (Array.isArray(plan.rateCard)) {
-          plan.rateCard.forEach(rc => {
-            if (rc.courierServiceName === serviceName) {
-              rc.courierProviderName = targetProvider;
-              modified = true;
-            }
-          });
-        }
-        if (modified) {
-          plan.markModified("rateCard");
-          await plan.save({ session });
-        }
-      }
+      // Trigger background cascade
+      cascadeProviderChange(serviceName, targetProvider).catch(err => {
+        console.error("[Background-Cascade] Trigger error:", err);
+      });
     }
 
-    await session.commitTransaction();
-    session.endSession();
     res.status(200).json(updatedCourier);
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
     console.error("Update Courier Error:", error);
     res.status(400).json({ error: error.message });
   }
@@ -135,9 +171,7 @@ router.put("/couriers/:id", async (req, res) => {
 
 // ✅ Bulk Change Provider
 router.post("/changeProvider", async (req, res) => {
-  const session = await mongoose.startSession();
   try {
-    session.startTransaction();
     const { serviceIds, targetProvider } = req.body;
 
     if (!serviceIds || !Array.isArray(serviceIds) || serviceIds.length === 0) {
@@ -149,7 +183,7 @@ router.post("/changeProvider", async (req, res) => {
     }
 
     // 1. Fetch services to get names and check current providers
-    const services = await CourierService.find({ _id: { $in: serviceIds } }).session(session);
+    const services = await CourierService.find({ _id: { $in: serviceIds } });
     if (services.length === 0) {
       return res.status(404).json({ success: false, message: "Selected services not found" });
     }
@@ -157,55 +191,27 @@ router.post("/changeProvider", async (req, res) => {
     const firstProvider = services[0].provider;
     const allSame = services.every(s => s.provider === firstProvider);
     if (!allSame) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({ success: false, message: "All selected services must have the same provider" });
     }
 
     const serviceNames = services.map(s => s.name);
 
-    // 2. Update CourierService collection
+    // 2. Update CourierService collection immediately
     await CourierService.updateMany(
       { _id: { $in: serviceIds } },
-      { $set: { provider: targetProvider } },
-      { session }
+      { $set: { provider: targetProvider } }
     );
 
-    // 3. Update global RateCard collection
-    await RateCard.updateMany(
-      { courierServiceName: { $in: serviceNames } },
-      { $set: { courierProviderName: targetProvider } },
-      { session }
-    );
+    // 3. Trigger cascading updates in the background
+    cascadeBulkProviderChange(serviceNames, targetProvider).catch(err => {
+      console.error("[Background-Cascade] Bulk trigger error:", err);
+    });
 
-    // 4. Update all Plans (including user-specific rates)
-    // Since Plan.rateCard is Mixed, we must update documents individually or use a complex update
-    const affectedPlans = await Plan.find({ "rateCard.courierServiceName": { $in: serviceNames } }).session(session);
-
-    for (const plan of affectedPlans) {
-      let modified = false;
-      if (Array.isArray(plan.rateCard)) {
-        plan.rateCard.forEach(rc => {
-          if (serviceNames.includes(rc.courierServiceName)) {
-            rc.courierProviderName = targetProvider;
-            modified = true;
-          }
-        });
-      }
-
-      if (modified) {
-        plan.markModified("rateCard");
-        await plan.save({ session });
-      }
-    }
-
-    await session.commitTransaction();
-    session.endSession();
-
-    res.status(200).json({ success: true, message: `Successfully switched ${services.length} services to ${targetProvider}` });
+    res.status(200).json({ 
+      success: true, 
+      message: `Provider update initiated. Switched ${services.length} services to ${targetProvider}. System is updating user plans in the background.` 
+    });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
     console.error("Change Provider Error:", error);
     res.status(500).json({ success: false, message: "Internal server error", error: error.message });
   }

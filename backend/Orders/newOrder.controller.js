@@ -310,10 +310,16 @@ const newReciveAddress = async (req, res) => {
 const deletePickupAddress = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user._id;
+    const isAdmin = req.user?.isAdmin === true && req.user?.adminTab === true;
+    const isEmployee = req.isEmployee === true || !!req.employee;
+
+    let query = { _id: id };
+    if (!isAdmin && !isEmployee) {
+      query.userId = req.user?._id;
+    }
 
     // Find the pickup address and ensure it belongs to the user
-    const pickupAddress = await pickAddress.findOne({ _id: id, userId });
+    const pickupAddress = await pickAddress.findOne(query);
 
     if (!pickupAddress) {
       return res
@@ -841,15 +847,19 @@ const getOrdersByNdrStatus = async (req, res) => {
     console.error("Error fetching paginated orders:", error);
     res.status(500).json({ error: "Internal server error" });
   }
-};
-
-const setPrimaryPickupAddress = async (req, res) => {
+};const setPrimaryPickupAddress = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user._id;
+    const isAdmin = req.user?.isAdmin === true && req.user?.adminTab === true;
+    const isEmployee = req.isEmployee === true || !!req.employee;
+
+    let query = { _id: id };
+    if (!isAdmin && !isEmployee) {
+      query.userId = req.user?._id;
+    }
 
     // 1. Check if the pickup address exists and belongs to the user
-    const pickupAddress = await pickAddress.findOne({ _id: id, userId });
+    const pickupAddress = await pickAddress.findOne(query);
     if (!pickupAddress) {
       return res
         .status(404)
@@ -857,7 +867,8 @@ const setPrimaryPickupAddress = async (req, res) => {
     }
 
     // 2. Set all other pickup addresses' isPrimary to false
-    await pickAddress.updateMany({ userId }, { $set: { isPrimary: false } });
+    const ownerUserId = pickupAddress.userId;
+    await pickAddress.updateMany({ userId: ownerUserId }, { $set: { isPrimary: false } });
 
     // 3. Set the selected address as primary
     pickupAddress.isPrimary = true;
@@ -872,17 +883,24 @@ const setPrimaryPickupAddress = async (req, res) => {
     res.status(500).json({ message: "Internal server error." });
   }
 };
+
 const updatePickupAddress = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user._id; // Ensure you have authentication middleware that sets req.user
+    const isAdmin = req.user?.isAdmin === true && req.user?.adminTab === true;
+    const isEmployee = req.isEmployee === true || !!req.employee;
+
+    let query = { _id: id };
+    if (!isAdmin && !isEmployee) {
+      query.userId = req.user?._id;
+    }
 
     console.log("Updating pickup address ID:", id);
 
     const { contactName, email, phoneNumber, address, pinCode, city, state } =
       req.body;
 
-    const pickupAddress = await pickAddress.findOne({ _id: id, userId });
+    const pickupAddress = await pickAddress.findOne(query);
 
     if (!pickupAddress) {
       return res
@@ -1250,34 +1268,46 @@ const bulkCloneOrders = async (req, res) => {
 
 const getpickupAddress = async (req, res) => {
   try {
-    // console.log("req.query.userId:", req.query.userId);
-    // console.log("req.user._id:", req.user?._id);
+    const isAdmin = req.user?.isAdmin === true && req.user?.adminTab === true;
+    const isEmployee = req.isEmployee === true || !!req.employee;
 
-    // ✅ Proper fallback handling (covers undefined, null, empty, and string "undefined")
-    const userId =
-      req.query.userId &&
-        req.query.userId !== "undefined" &&
-        req.query.userId !== "null" &&
-        req.query.userId.trim() !== ""
-        ? req.query.userId.trim()
-        : req.user?._id?.toString();
+    const { page = 1, limit = 20 } = req.query;
 
-    if (!userId) {
+    let query = {};
+    if (!isAdmin && !isEmployee) {
+      query.userId = req.user?._id?.toString();
+    } else {
+      if (req.query.userId && req.query.userId !== "all" && req.query.userId !== "undefined" && req.query.userId !== "null" && req.query.userId.trim() !== "") {
+        query.userId = req.query.userId.trim();
+      }
+    }
+
+    if (!query.userId && !isAdmin && !isEmployee) {
       return res.status(400).json({
         success: false,
         message: "User ID is missing or invalid",
       });
     }
 
-    // console.log("✅ Final userId used:", userId);
+    const parsedPage = Math.max(1, parseInt(page));
+    const parsedLimit = (isAdmin || isEmployee) ? Math.max(1, parseInt(limit)) : 1000;
+    const skip = (parsedPage - 1) * parsedLimit;
 
-    const pickupAddresses = await pickAddress.find({ userId });
+    const total = await pickAddress.countDocuments(query);
 
-    if (!pickupAddresses.length) {
-      return res.status(404).json({ message: "No pickup addresses found" });
-    }
+    const pickupAddresses = await pickAddress.find(query)
+      .populate("userId", "fullname company email userId")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parsedLimit)
+      .lean();
 
-    res.status(200).json({ success: true, data: pickupAddresses });
+    res.status(200).json({ 
+      success: true, 
+      data: pickupAddresses || [],
+      totalPages: Math.ceil(total / parsedLimit),
+      total
+    });
   } catch (error) {
     console.error("Error fetching pickup addresses:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
@@ -2429,6 +2459,82 @@ const masterSearch = async (req, res) => {
   }
 };
 
+const downloadPickupAddressesExcel = async (req, res) => {
+  try {
+    const query = {};
+    
+    // Check if the requesting user is an Admin or an Employee
+    const isAdmin = req.user?.isAdmin === true && req.user?.adminTab === true;
+    const isEmployee = req.isEmployee === true || !!req.employee;
+
+    // If NOT an admin/employee, force filtering by their own userId
+    if (!isAdmin && !isEmployee) {
+      const userId = req.user?._id?.toString();
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: "User ID is missing or invalid",
+        });
+      }
+      query.userId = userId;
+    } else if (req.query.userId && req.query.userId !== "all") {
+      query.userId = req.query.userId;
+    }
+
+    const pickupAddresses = await pickAddress.find(query)
+      .populate("userId", "fullname company email userId")
+      .lean();
+
+    if (!pickupAddresses.length) {
+      return res.status(404).json({ message: "No pickup addresses found" });
+    }
+
+    const ExcelJS = require("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Pickup Addresses");
+
+    worksheet.columns = [
+      { header: "id", key: "id", width: 30 },
+      { header: "Contact Name", key: "contactName", width: 25 },
+      { header: "Email Address", key: "email", width: 25 },
+      { header: "Phone Number", key: "phoneNumber", width: 15 },
+      { header: "Address", key: "address", width: 40 },
+      { header: "Pincode", key: "pinCode", width: 15 },
+      { header: "City", key: "city", width: 20 },
+      { header: "State", key: "state", width: 20 },
+    ];
+
+    pickupAddresses.forEach((item) => {
+      const details = item.pickupAddress || {};
+      worksheet.addRow({
+        id: item._id ? item._id.toString() : "N/A",
+        contactName: details.contactName || "N/A",
+        email: details.email || "N/A",
+        phoneNumber: details.phoneNumber || "N/A",
+        address: details.address || "N/A",
+        pinCode: details.pinCode || "N/A",
+        city: details.city || "N/A",
+        state: details.state || "N/A",
+      });
+    });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=pickup-addresses.xlsx"
+    );
+
+    await workbook.xlsx.write(res);
+    res.status(200).end();
+  } catch (error) {
+    console.error("Error exporting pickup addresses:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 
 module.exports = {
   newOrder,
@@ -2438,6 +2544,7 @@ module.exports = {
   bulkCloneOrders,
   getOrdersById,
   getpickupAddress,
+  downloadPickupAddressesExcel,
   getreceiverAddress,
   searchReceiver,
   newPickupAddress,

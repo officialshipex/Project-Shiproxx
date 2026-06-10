@@ -197,18 +197,15 @@ const getPickupManifests = async (req, res) => {
       }
     }
 
-    // To get filter options (locations/couriers), we need to check all manifests for this user
-    let filterOptionsQuery = { userId };
+    // To get filter options (locations/couriers), we get unique distinct values directly from PickupManifest
+    let filterOptionsQuery = {};
+    if (userId) filterOptionsQuery.userId = userId;
     if (orderType) filterOptionsQuery.orderType = orderType;
 
-    const allMatchingManifests = await PickupManifest.find(filterOptionsQuery)
-      .populate({
-        path: "orderIds",
-        select: "pickupAddress courierServiceName",
-      });
-
-    const pickupLocations = [...new Set(allMatchingManifests.flatMap(m => m.orderIds.map(o => o.pickupAddress?.contactName)).filter(Boolean))];
-    const courierServices = [...new Set(allMatchingManifests.flatMap(m => m.orderIds.map(o => o.courierServiceName)).filter(Boolean))];
+    const [pickupLocations, courierServices] = await Promise.all([
+      PickupManifest.distinct("pickupAddress.contactName", filterOptionsQuery),
+      PickupManifest.distinct("courierServiceNames", filterOptionsQuery),
+    ]);
 
     const manifests = await PickupManifest.find(query)
       .sort({ createdAt: -1 })
@@ -405,15 +402,11 @@ const filterPickupManifestsForAdmin = async (req, res) => {
 
     const total = await PickupManifest.countDocuments(query);
 
-    // Get all manifests for the same query (without pagination) to extract unique filter options
-    const allMatchingManifests = await PickupManifest.find(query)
-      .populate({
-        path: "orderIds",
-        select: "pickupAddress courierServiceName",
-      });
-
-    const pickupLocations = [...new Set(allMatchingManifests.flatMap(m => m.orderIds.map(o => o.pickupAddress?.contactName)).filter(Boolean))];
-    const courierServices = [...new Set(allMatchingManifests.flatMap(m => m.orderIds.map(o => o.courierServiceName)).filter(Boolean))];
+    // Get distinct filter options from matching manifests directly without populating orders
+    const [pickupLocations, courierServices] = await Promise.all([
+      PickupManifest.distinct("pickupAddress.contactName", query),
+      PickupManifest.distinct("courierServiceNames", query),
+    ]);
 
     return res.status(200).json({
       success: true,

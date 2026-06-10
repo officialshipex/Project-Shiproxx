@@ -206,6 +206,77 @@ const getUsersWithPlans = async (req, res) => {
   }
 };
 
+// Background helper for cascading rate card updates to all user plans
+const cascadeRateCardUpdate = async (rateCardId, rateCardData, planName) => {
+  try {
+    console.log(`[Background-Cascade] Starting global rate card update cascade for ID: ${rateCardId}, Plan: ${planName}`);
+    const startTime = Date.now();
+
+    const targetId = mongoose.Types.ObjectId.isValid(rateCardId)
+      ? new mongoose.Types.ObjectId(rateCardId.toString())
+      : rateCardId;
+
+    const result = await Plan.updateMany(
+      { 
+        planName,
+        $or: [
+          { "rateCard._id": targetId },
+          { "rateCard._id": rateCardId.toString() }
+        ]
+      },
+      {
+        $set: {
+          "rateCard.$[rc]": rateCardData,
+        },
+      },
+      {
+        arrayFilters: [
+          { 
+            $or: [
+              { "rc._id": targetId },
+              { "rc._id": rateCardId.toString() }
+            ]
+          }
+        ],
+      }
+    );
+
+    console.log(`[Background-Cascade] Successfully updated plans globally. Matched: ${result.matchedCount}, Modified: ${result.modifiedCount} in ${Date.now() - startTime}ms.`);
+  } catch (error) {
+    console.error("[Background-Cascade] Error in cascading rate card update:", error);
+  }
+};
+
+// Background helper for cascading rate card deletions to all user plans
+const cascadeRateCardDelete = async (rateCardId, planName) => {
+  try {
+    console.log(`[Background-Cascade] Starting global rate card delete cascade for ID: ${rateCardId}, Plan: ${planName}`);
+    const startTime = Date.now();
+
+    const targetId = mongoose.Types.ObjectId.isValid(rateCardId)
+      ? new mongoose.Types.ObjectId(rateCardId.toString())
+      : rateCardId;
+
+    const result = await Plan.updateMany(
+      { planName },
+      {
+        $pull: {
+          rateCard: {
+            $or: [
+              { _id: targetId },
+              { _id: rateCardId.toString() }
+            ]
+          }
+        }
+      }
+    );
+
+    console.log(`[Background-Cascade] Successfully deleted rate card from plans globally. Matched: ${result.matchedCount}, Modified: ${result.modifiedCount} in ${Date.now() - startTime}ms.`);
+  } catch (error) {
+    console.error("[Background-Cascade] Error in cascading rate card delete:", error);
+  }
+};
+
 // Update Rate Card
 const updateRateCard = async (req, res) => {
   try {
@@ -257,28 +328,10 @@ const updateRateCard = async (req, res) => {
       return res.status(404).json({ message: "Rate Card not found" });
     }
 
-    // Step 2: Update plans globally
-    const plans = await Plan.find({ planName: updatedRateCard.plan });
-
-    for (const plan of plans) {
-      let modified = false;
-
-      plan.rateCard = plan.rateCard.map((rc) => {
-        if (rc._id.toString() === id) {
-          modified = true;
-          return {
-            ...rc._doc || rc,
-            ...updatedRateCard.toObject(),
-          };
-        }
-        return rc;
-      });
-
-      if (modified) {
-        plan.markModified("rateCard");
-        await plan.save();
-      }
-    }
+    // Step 2: Trigger background cascade to update all user plans asynchronously
+    cascadeRateCardUpdate(id, updatedRateCard.toObject(), updatedRateCard.plan).catch(err => {
+      console.error("[Background-Cascade] Trigger error for update:", err);
+    });
  
     // Log the action
     const performerId = req.user?._id || req.employee?._id;
@@ -329,18 +382,10 @@ const deleteRateCard = async (req, res) => {
       return res.status(404).json({ message: "Rate Card not found" });
     }
 
-    // Step 2: Remove from all plans with the same plan name
-    const plans = await Plan.find({ planName: deletedRateCard.plan });
-
-    for (const plan of plans) {
-      const originalLength = plan.rateCard.length;
-      plan.rateCard = plan.rateCard.filter((rc) => rc._id.toString() !== id);
-
-      if (plan.rateCard.length !== originalLength) {
-        plan.markModified("rateCard");
-        await plan.save();
-      }
-    }
+    // Step 2: Trigger background cascade to remove from all user plans asynchronously
+    cascadeRateCardDelete(id, deletedRateCard.plan).catch(err => {
+      console.error("[Background-Cascade] Trigger error for delete:", err);
+    });
 
     // Log the action
     const performerId = req.user?._id || req.employee?._id;

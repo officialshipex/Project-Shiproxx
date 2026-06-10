@@ -35,6 +35,9 @@ const pickupAddress = new mongoose.Schema({
   },
 });
 
+pickupAddress.index({ userId: 1, createdAt: -1 });
+pickupAddress.index({ createdAt: -1 });
+
 const Shipment = mongoose.model("pickupAddress", pickupAddress);
 
 module.exports = Shipment;

@@ -55,6 +55,7 @@ const courierIds = {
   Proship: "10",
   Shiprocket: "11",
   Shadowfax: "12",
+  Losung360: "13",
 };
 
 // Input Validation Schema
@@ -259,6 +260,10 @@ const availableCourierService = async (req, res) => {
         name: "Shadowfax",
         check: async () =>
           checkShadowfaxServiceability(deliveryPincode),
+      },
+      {
+        name: "Losung360",
+        check: async () => ({ success: true }),
       },
     ];
 

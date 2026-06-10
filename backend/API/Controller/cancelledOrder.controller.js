@@ -97,6 +97,8 @@ const cancelOrdersAtBooked = async (req, res) => {
       provider = "BoxdLogistics";
     } else if (currentOrder.partner === "Proship") {
       provider = "Proship";
+    } else if (currentOrder.partner === "Losung360") {
+      provider = "Losung360";
     } else if (currentOrder.partner === "Shadowfax" || currentOrder.provider === "Shadowfax") {
       provider = "Shadowfax";
     } else {
@@ -134,6 +136,9 @@ const cancelOrdersAtBooked = async (req, res) => {
         break;
       case "Shadowfax":
         result = await cancelShadowfaxOrder(currentOrder.awb_number, currentOrder.courierName);
+        break;
+      case "Losung360":
+        result = { success: true };
         break;
       default:
         return res.status(400).json({

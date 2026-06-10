@@ -274,9 +274,9 @@ const codToBeRemitteds = async () => {
 };
 
 if (process.env.NODE_ENV === "production") {
-  cron.schedule("1 1 * * *", () => {
+  cron.schedule("0 6 * * *", () => {
     console.log(
-      "⏰ Running scheduled task at 1:01 AM (production): Fetching orders..."
+      "⏰ Running scheduled task at 6:00 AM IST (local): Fetching orders..."
     );
     codToBeRemitteds();
   }, {
@@ -552,10 +552,10 @@ const remittanceScheduleData = async () => {
 
 if (process.env.NODE_ENV === "production") {
   cron.schedule(
-    "45 1 * * *",
+    "0 7 * * *",
     () => {
       console.log(
-        "⏰ Running scheduled task at 1:45 AM IST (production): Fetching orders..."
+        "⏰ Running scheduled task at 7:00 AM IST (production): Fetching orders..."
       );
       remittanceScheduleData();
     },

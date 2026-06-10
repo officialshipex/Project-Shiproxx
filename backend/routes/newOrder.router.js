@@ -6,6 +6,7 @@ const {
   updatedStatusOrders,
   getOrdersById,
   getpickupAddress,
+  downloadPickupAddressesExcel,
   newPickupAddress,
   newReciveAddress,
   getreceiverAddress,
@@ -45,6 +46,7 @@ router.post("/clone", updatedStatusOrders);
 router.post("/bulkClone", bulkCloneOrders);
 router.get("/getOrderById/:id", getOrdersById);
 router.get("/pickupAddress", getpickupAddress);
+router.get("/pickupAddress/download-excel", downloadPickupAddressesExcel);
 router.get("/receiverAddress", getreceiverAddress);
 router.get("/searchReceiver", searchReceiver);
 router.post("/pickupAddress", newPickupAddress);

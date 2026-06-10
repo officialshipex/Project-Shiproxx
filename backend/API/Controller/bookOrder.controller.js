@@ -1,5 +1,8 @@
 const Joi = require("joi");
 const {
+  checkServiceabilityAll,
+} = require("../../Orders/shipment.controller");
+const {
   calculateRateForService,
 } = require("../../Rate/calculateRateController");
 const Order = require("../../models/newOrder.model");
@@ -17,6 +20,7 @@ const createBoxdLogisticsShipment = require("../Courier/boxdLogisticsShipmentCre
 const createProshipShipment = require("../Courier/proshipShipmentCreation.controller");
 const createShiprocketShipment = require("../Courier/shiprocketShipmentCreation.controller");
 const createShadowfaxShipment = require("../Courier/shadowfaxShipmentCreation.controller");
+const createLosung360Shipment = require("../Courier/losung360ShipmentCreation.controller");
 
 // Provider mapping
 const providerMap = {
@@ -32,6 +36,7 @@ const providerMap = {
   "10": "Proship",
   "11": "Shiprocket",
   "12": "Shadowfax",
+  "13": "Losung360",
 };
 
 // Validation schema
@@ -139,6 +144,26 @@ const bookOrder = async (req, res) => {
       return res.status(400).json({
         status: "failure",
         message: `Courier service '${courierServiceName}' is currently disabled.`,
+      });
+    }
+
+    // ✅ Check serviceability
+    const serviceability = await checkServiceabilityAll(
+      {
+        provider,
+        courier: courierService.courier,
+        name: courierService.name,
+      },
+      order._id,
+      order.pickupAddress?.pinCode
+    );
+
+    const isServiceable = serviceability && (serviceability.success === true || serviceability === true);
+
+    if (!isServiceable) {
+      return res.status(400).json({
+        status: "failure",
+        message: `This destination pincode is not serviceable by ${courierServiceName}.`,
       });
     }
 
@@ -354,6 +379,22 @@ const bookOrder = async (req, res) => {
           provider,
           finalCharges,
           courierServiceName,
+          priceBreakup,
+          userId: userId,
+          walletId: user.Wallet,
+          walletBalance: wallet.balance,
+          walletHoldAmount: wallet.holdAmount || 0,
+          walletCreditLimit: wallet.creditLimit || 0,
+        });
+        break;
+
+      case "Losung360":
+        shipmentResult = await createLosung360Shipment({
+          id: order._id,
+          provider,
+          finalCharges,
+          courierServiceName,
+          partnerServiceId: courierService.courier_id,
           priceBreakup,
           userId: userId,
           walletId: user.Wallet,

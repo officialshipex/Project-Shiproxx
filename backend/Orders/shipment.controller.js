@@ -338,6 +338,9 @@ const checkServiceabilityAll = async (service, id, pincode) => {
 
       return await checkShadowfaxServiceability(deliveryPincode, service.provider);
     }
+    if (service.provider.toLowerCase() === "losung360") {
+      return { success: true };
+    }
 
     // Default
     return false;

@@ -49,6 +49,9 @@ const {
 const {
   trackEkartShipment,
 } = require("../AllCouriers/Ekart/Couriers/couriers.controller");
+const {
+  trackLosung360Order,
+} = require("../AllCouriers/Losung360/Courier/couriers.controller");
 const Bottleneck = require("bottleneck");
 const {
   sendWhatsAppMessage,
@@ -95,6 +98,7 @@ const trackSingleOrder = async (order) => {
       Shiprocket: trackShiprocketOrder,
       Shadowfax: trackShadowfaxOrder,
       Ekart: trackEkartShipment,
+      Losung360: trackLosung360Order,
     };
 
     // if (!trackingFunctions[provider]) {
@@ -108,6 +112,8 @@ const trackSingleOrder = async (order) => {
       result = await trackingFunctions["BoxdLogistics"](awb_number, shipment_id);
     } else if (partner && partner === "Proship") {
       result = await trackingFunctions["Proship"](awb_number, shipment_id);
+    } else if (partner && partner === "Losung360") {
+      result = await trackingFunctions["Losung360"](awb_number);
     } else if (partner && partner === "Shiprocket") {
       result = await trackingFunctions["Shiprocket"](awb_number);
     } else if (partner && partner === "Shadowfax") {
@@ -129,8 +135,8 @@ const trackSingleOrder = async (order) => {
 
     // Normalize only the latest one
     const normalizedData = mapTrackingResponse(
-      [latestTrackingEvent],
-      (partner === "ZipyPost" || partner === "BoxdLogistics" || partner === "Proship" || partner === "Shiprocket" || partner === "Ekart") ? partner : provider,
+      [result.data],
+      (partner === "ZipyPost" || partner === "BoxdLogistics" || partner === "Proship" || partner === "Shiprocket" || partner === "Ekart" || partner === "Losung360") ? partner : provider,
     );
     // console.log("normalized", normalizedData);
 
@@ -1074,6 +1080,50 @@ const trackSingleOrder = async (order) => {
       // console.log("ZipyPost normalizedData:", normalizedData);
     }
 
+    if (partner === "Losung360") {
+      const statusText = normalizedData.Status?.toLowerCase() || "";
+
+      if (statusText.includes("delivered")) {
+        order.status = "Delivered";
+        order.ndrStatus = "Delivered";
+        order.reattempt = false;
+      } else if (statusText.includes("out for delivery") || statusText.includes("ofd")) {
+        order.status = "Out for Delivery";
+        order.ndrStatus = "Out for Delivery";
+        order.reattempt = false;
+      } else if (statusText.includes("picked up") || statusText.includes("pickup") || statusText.includes("in-transit") || statusText.includes("in transit") || statusText.includes("shipped")) {
+        order.status = "In-transit";
+        if (!order.invoiceDate) {
+          order.invoiceDate = normalizedData.StatusDateTime;
+        }
+      } else if (statusText.includes("undelivered") || statusText.includes("failed delivery") || statusText.includes("attempted")) {
+        order.status = "Undelivered";
+        order.ndrStatus = "Undelivered";
+        order.ndrReason = {
+          date: normalizedData.StatusDateTime,
+          reason: normalizedData.Instructions || "Delivery attempted",
+        };
+        order.reattempt = true;
+      } else if (statusText.includes("rto delivered")) {
+        order.status = "RTO Delivered";
+        order.ndrStatus = "RTO Delivered";
+        order.reattempt = false;
+      } else if (statusText.includes("rto") || statusText.includes("return")) {
+        order.status = "RTO In-transit";
+        order.ndrStatus = "RTO In-transit";
+        order.reattempt = false;
+      } else if (statusText.includes("cancelled")) {
+        order.status = "Cancelled";
+        order.ndrStatus = "Cancelled";
+        order.reattempt = false;
+        balanceTobeAdded =
+          order.totalFreightCharges === "N/A"
+            ? 0
+            : parseFloat(order.totalFreightCharges);
+        shouldUpdateWallet = true;
+      }
+    }
+
     if (partner === "BoxdLogistics") {
       // normalizedData.Instructions = the raw `status` field from the API (snake_case)
       // e.g. 'shipped', 'pickup_scheduled', 'out_for_delivery', 'delivered', 'undelivered', 'rto', 'rto_delivered', 'cancelled'
@@ -1650,7 +1700,7 @@ const trackSingleOrder = async (order) => {
         if (isEligibleForNdr && currentStatus !== "RTO In Transit") {
           order.status = "Undelivered";
           order.ndrStatus = "Undelivered";
-          order.reattempt=false;
+          order.reattempt = false;
 
           const ndrDate = normalizedData.StatusDateTime || new Date();
           const ndrReasonText = normalizedData.Instructions || normalizedData.StrRemarks || currentStatus || "";
@@ -1731,10 +1781,11 @@ const trackSingleOrder = async (order) => {
       //   return; // 🔥 skip further processing and DB writes
       // }
 
-      // Replace entire tracking array
-      order.tracking = newTrackingArray;
+      // Replace entire tracking array, preserving the starting 2 statuses
+      const startingTracking = (order.tracking && order.tracking.length > 0) ? order.tracking.slice(0, 2) : [];
+      order.tracking = [...startingTracking, ...newTrackingArray];
       await order.save();
-      console.log(`Tracking history replaced for ${order.awb_number}`);
+      console.log(`Tracking history replaced for ${order.awb_number} (preserving initial stages)`);
 
       // 🔹 Trigger Notifications are now handled automatically by the Order model hook (post-save)
       // No manual calls needed here.
@@ -1816,7 +1867,7 @@ const trackSingleOrder = async (order) => {
 };
 
 // Main controller
-const trackOrders = async () => {
+const trackOrders = async (includeWebhooks = false) => {
   try {
     const pLimit = await import("p-limit").then((mod) => mod.default);
     const limit = pLimit(10); // Max 10 concurrent executions
@@ -1825,11 +1876,20 @@ const trackOrders = async () => {
     const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000); // For urgent updates
     const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000); // For general updates fallback
 
-    // Find orders that are due for tracking (polling as a fallback to webhooks)
-    const allOrders = await Order.find({
+    const webhookNames = [
+      "Shree Maruti", "ShreeMaruti",
+      "Dtdc", "DTDC",
+      "Delhivery",
+      "Ekart",
+      "Amazon", "Amazon Shipping",
+      "Shiprocket",
+      "Shadowfax",
+      "Proship",
+      "Losung360"
+    ];
+
+    const query = {
       status: { $nin: ["new", "Cancelled", "Delivered", "RTO Delivered"] },
-      provider: { $nin: ["Shree Maruti", "Dtdc", "DTDC", "Delhivery","Ekart"] },
-      // awb_number:"52710410010006",
       $or: [
         { lastTrackedAt: { $exists: false } },
         { lastTrackedAt: null },
@@ -1846,9 +1906,17 @@ const trackOrders = async () => {
           ],
         },
       ],
-    });
+    };
 
-    console.log(`📦 Found ${allOrders.length} orders to track`);
+    if (!includeWebhooks) {
+      query.provider = { $nin: webhookNames };
+      query.partner = { $nin: webhookNames };
+    }
+
+    // Find orders that are due for tracking (polling as a fallback to webhooks)
+    const allOrders = await Order.find(query);
+
+    console.log(`📦 Found ${allOrders.length} orders to track (includeWebhooks: ${includeWebhooks})`);
 
     // Bulk update lastTrackedAt for the whole batch to avoid redundant polling
     if (allOrders.length > 0) {
@@ -1881,7 +1949,15 @@ if (process.env.NODE_ENV === "production") {
   // Run every hour during active business hours (6 AM to 10 PM IST)
   cron.schedule("0 6-22 * * *", async () => {
     console.log("🕒 Starting scheduled Order Tracking...");
-    await trackOrders();
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kolkata",
+      hour: "numeric",
+      hour12: false
+    });
+    const currentHour = parseInt(formatter.format(new Date()), 10);
+    const includeWebhooks = currentHour === 22;
+    console.log(`[Cron Run] Current hour in IST: ${currentHour}. Include webhooks: ${includeWebhooks}`);
+    await trackOrders(includeWebhooks);
   }, {
     scheduled: true,
     timezone: "Asia/Kolkata"
@@ -1890,6 +1966,17 @@ if (process.env.NODE_ENV === "production") {
 
 const mapTrackingResponse = (data, provider, remark) => {
   // console.log("Mapping data for provider:", data);
+  if (provider === "Losung360") {
+    const trackingData = data[0] || {};
+    const history = trackingData.history || [];
+    const latestScan = history.length > 0 ? history[history.length - 1] : null;
+    return {
+      Status: latestScan?.status || trackingData.current_status || "N/A",
+      StatusLocation: latestScan?.location || "Unknown",
+      StatusDateTime: latestScan?.timestamp ? new Date(latestScan.timestamp) : null,
+      Instructions: latestScan?.status || trackingData.current_status || "N/A",
+    };
+  }
   if (provider === "Ekart") {
     const event = data[0];
     const formatEkartDateTime = (ctime) => {

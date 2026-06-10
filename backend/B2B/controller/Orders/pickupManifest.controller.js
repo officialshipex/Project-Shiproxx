@@ -178,17 +178,14 @@ const getPickupManifests = async (req, res) => {
             }
         }
 
-        // To get filter options (locations/couriers), we need to check all manifests for this user
-        let filterOptionsQuery = { userId, orderType: "B2B" };
+        // To get filter options (locations/couriers), we get unique distinct values directly from PickupManifest
+        let filterOptionsQuery = { orderType: "B2B" };
+        if (userId) filterOptionsQuery.userId = userId;
 
-        const allMatchingManifests = await PickupManifest.find(filterOptionsQuery)
-            .populate({
-                path: "orderIds",
-                select: "pickupAddress courierServiceName",
-            });
-
-        const pickupLocations = [...new Set(allMatchingManifests.flatMap(m => m.orderIds.map(o => o.pickupAddress?.contactName)).filter(Boolean))];
-        const courierServices = [...new Set(allMatchingManifests.flatMap(m => m.orderIds.map(o => o.courierServiceName)).filter(Boolean))];
+        const [pickupLocations, courierServices] = await Promise.all([
+            PickupManifest.distinct("pickupAddress.contactName", filterOptionsQuery),
+            PickupManifest.distinct("courierServiceNames", filterOptionsQuery),
+        ]);
 
         const manifests = await PickupManifest.find(query)
             .sort({ createdAt: -1 })
