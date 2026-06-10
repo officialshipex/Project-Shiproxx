@@ -1875,6 +1875,7 @@ const trackOrders = async (includeWebhooks = false) => {
     const now = new Date();
     const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000); // For urgent updates
     const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000); // For general updates fallback
+    const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000); // Only track webhook orders from last 15 days
 
     const webhookNames = [
       "Shree Maruti", "ShreeMaruti",
@@ -1888,29 +1889,68 @@ const trackOrders = async (includeWebhooks = false) => {
       "Losung360"
     ];
 
-    const query = {
-      status: { $nin: ["new", "Cancelled", "Delivered", "RTO Delivered"] },
-      $or: [
-        { lastTrackedAt: { $exists: false } },
-        { lastTrackedAt: null },
-        {
-          $and: [
-            { status: "Out for Delivery" },
-            { lastTrackedAt: { $lt: twoHoursAgo } },
-          ],
-        },
-        {
-          $and: [
-            { status: { $ne: "Out for Delivery" } },
-            { lastTrackedAt: { $lt: threeHoursAgo } },
-          ],
-        },
-      ],
-    };
+    let query = {};
 
-    if (!includeWebhooks) {
-      query.provider = { $nin: webhookNames };
-      query.partner = { $nin: webhookNames };
+    if (includeWebhooks) {
+      query = {
+        $or: [
+          {
+            provider: { $nin: webhookNames },
+            partner: { $nin: webhookNames },
+            status: { $nin: ["new", "Cancelled", "Delivered", "RTO Delivered"] },
+          },
+          {
+            $or: [
+              { provider: { $in: webhookNames } },
+              { partner: { $in: webhookNames } },
+            ],
+            status: { $in: ["Out for Delivery", "Undelivered", "Action_Requested"] },
+            createdAt: { $gte: fifteenDaysAgo },
+          },
+        ],
+        $and: [
+          {
+            $or: [
+              { lastTrackedAt: { $exists: false } },
+              { lastTrackedAt: null },
+              {
+                $and: [
+                  { status: "Out for Delivery" },
+                  { lastTrackedAt: { $lt: twoHoursAgo } },
+                ],
+              },
+              {
+                $and: [
+                  { status: { $ne: "Out for Delivery" } },
+                  { lastTrackedAt: { $lt: threeHoursAgo } },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+    } else {
+      query = {
+        status: { $nin: ["new", "Cancelled", "Delivered", "RTO Delivered"] },
+        provider: { $nin: webhookNames },
+        partner: { $nin: webhookNames },
+        $or: [
+          { lastTrackedAt: { $exists: false } },
+          { lastTrackedAt: null },
+          {
+            $and: [
+              { status: "Out for Delivery" },
+              { lastTrackedAt: { $lt: twoHoursAgo } },
+            ],
+          },
+          {
+            $and: [
+              { status: { $ne: "Out for Delivery" } },
+              { lastTrackedAt: { $lt: threeHoursAgo } },
+            ],
+          },
+        ],
+      };
     }
 
     // Find orders that are due for tracking (polling as a fallback to webhooks)
