@@ -8,8 +8,97 @@ const { getZone } = require("../../Rate/zoneManagementController");
 const { getLosung360AccessToken } = require("../../AllCouriers/Losung360/Authorize/losung360.controller");
 const estimatedDeliveryDate = require("../../models/EDDMap.model");
 const { assignPickupManifest } = require("../../Orders/scheduledPickup.controller");
+const PickupAddress = require("../../models/pickupAddress.model");
 
 const LOSUNG360_BASE_URL = "https://appapi.losung360.com/external/v1";
+
+const getLosung360WarehouseId = async (userId, pickupAddressData, token) => {
+  try {
+    // 1. Find the pickupAddress document in our database for this specific order/user
+    const dbPickupAddress = await PickupAddress.findOne({
+      userId,
+      "pickupAddress.pinCode": pickupAddressData.pinCode,
+      "pickupAddress.address": pickupAddressData.address,
+    });
+
+    if (!dbPickupAddress) {
+      console.warn(`No pickupAddress document found in DB for user ${userId} and pincode ${pickupAddressData.pinCode}`);
+      return null;
+    }
+
+    if (dbPickupAddress.losung360WarehouseId) {
+      return Number(dbPickupAddress.losung360WarehouseId);
+    }
+
+    // 2. Check if any other pickup address document in the DB has already registered this location on Losung360
+    const existingWithId = await PickupAddress.findOne({
+      "pickupAddress.pinCode": pickupAddressData.pinCode,
+      "pickupAddress.address": pickupAddressData.address,
+      losung360WarehouseId: { $ne: "", $exists: true }
+    });
+
+    if (existingWithId && existingWithId.losung360WarehouseId) {
+      console.log(`Found existing Losung360 warehouse ID ${existingWithId.losung360WarehouseId} in DB from another document.`);
+      dbPickupAddress.losung360WarehouseId = existingWithId.losung360WarehouseId;
+      await dbPickupAddress.save();
+      return Number(existingWithId.losung360WarehouseId);
+    }
+
+    // 3. Generate a completely unique warehouse name using the database document's _id to prevent duplicate name (400) errors
+    const baseName = (pickupAddressData.contactName || "WH").replace(/[^a-zA-Z0-9]/g, "").substring(0, 10);
+    const uniqueWarehouseName = `${baseName}-${dbPickupAddress._id.toString()}`.substring(0, 30);
+
+    const warehousePayload = {
+      name: uniqueWarehouseName,
+      address: pickupAddressData.address,
+      city: pickupAddressData.city,
+      state: pickupAddressData.state,
+      pincode: String(pickupAddressData.pinCode),
+      contact_person: pickupAddressData.contactName || "Contact Person",
+      contact_number: pickupAddressData.phoneNumber ? pickupAddressData.phoneNumber.replace(/^0+/, "") : "9999999999",
+      is_default: false,
+    };
+
+    console.log("Losung360 Create Warehouse Payload:", JSON.stringify(warehousePayload, null, 2));
+
+    try {
+      const response = await axios.post(
+        `${LOSUNG360_BASE_URL}/warehouses/create`,
+        warehousePayload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 10000,
+        }
+      );
+
+      console.log("Losung360 Create Warehouse Response:", response.data);
+
+      if (response.data && response.data.id) {
+        dbPickupAddress.losung360WarehouseId = String(response.data.id);
+        await dbPickupAddress.save();
+        return Number(response.data.id);
+      }
+    } catch (e) {
+      console.warn("Losung360 Create Warehouse API Error:", e.response?.data || e.message);
+
+      // If it fails with duplicate location (409) or duplicate name (400), we cannot call GET /warehouses as it is not supported
+      const status = e.response?.status;
+      if (status === 409) {
+        console.error("Losung360 Duplicate Location: Warehouse with this address already exists on Losung360, but its ID is not saved in our database and cannot be retrieved via GET API.");
+      } else if (status === 400) {
+        console.error("Losung360 Duplicate Name: Warehouse with this name already exists.");
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error in getLosung360WarehouseId:", error.message);
+    return null;
+  }
+};
 
 const createLosung360Shipment = async ({
   id,
@@ -115,9 +204,17 @@ const createLosung360Shipment = async ({
       return { success: false, message: "Losung360 authentication failed" };
     }
 
-    // Step 7: Create Order in Losung360
+    // Step 7: Create/Resolve Warehouse in Losung360
+    const pickupAddressId = await getLosung360WarehouseId(currentOrder.userId, currentOrder.pickupAddress, token);
+
+    if (!pickupAddressId) {
+      await Order.findByIdAndUpdate(id, { status: "new" });
+      await session.abortTransaction();
+      session.endSession();
+      return { success: false, message: "Losung360 pickup address registration failed" };
+    }
+
     const channelId = 1082;
-    const pickupAddressId = Number(process.env.LOSUNG360_PICKUP_ADDRESS_ID) || 0;
 
     const orderPayload = {
       pickup_address_id: pickupAddressId,
@@ -192,7 +289,7 @@ const createLosung360Shipment = async ({
     const shipmentEndTime = Date.now();
     console.log(`⏱️ Losung360 /shipping/create-shipment API took: ${shipmentEndTime - shipmentStartTime}ms`);
     console.log(`⏱️ Total Losung360 shipment creation APIs combined duration: ${shipmentEndTime - orderStartTime}ms`);
-    console.log("Losung360 Create Shipment Response:", shipmentResponse.data);
+    // console.log("Losung360 Create Shipment Response:", shipmentResponse.data);
 
     if (!shipmentResponse.data || shipmentResponse.data.success !== true || !shipmentResponse.data.awb) {
       throw new Error(shipmentResponse.data?.detail || "Losung360 shipment creation failed");
@@ -274,7 +371,7 @@ const createLosung360Shipment = async ({
       awb_number: awb,
       orderId: currentOrder.orderId,
       estimatedDeliveryDate: estimateDate,
-      labelUrl: label_url || null
+      // labelUrl: label_url || null
     };
   } catch (error) {
     if (session.inTransaction()) {
@@ -283,9 +380,34 @@ const createLosung360Shipment = async ({
     await Order.findByIdAndUpdate(id, { status: "new" });
     session.endSession();
     console.error("Losung360 Creation Error:", error.response?.data || error.message);
+
+    let errMsg = "Error creating shipment";
+    if (error.response?.data) {
+      const data = error.response.data;
+      if (typeof data.detail === "string") {
+        errMsg = data.detail;
+      } else if (data.detail && typeof data.detail === "object") {
+        errMsg = data.detail.message || data.detail.detail || JSON.stringify(data.detail);
+      } else if (typeof data.message === "string") {
+        errMsg = data.message;
+        if (data.errors && typeof data.errors === "object") {
+          const fieldErrors = Object.entries(data.errors)
+            .map(([field, err]) => `${field}: ${err}`)
+            .join(", ");
+          if (fieldErrors) {
+            errMsg += ` (${fieldErrors})`;
+          }
+        }
+      } else if (typeof data === "string") {
+        errMsg = data;
+      }
+    } else {
+      errMsg = error.message || errMsg;
+    }
+
     return {
       success: false,
-      message: error.response?.data?.detail || error.message || "Error creating shipment",
+      message: errMsg,
     };
   }
 };

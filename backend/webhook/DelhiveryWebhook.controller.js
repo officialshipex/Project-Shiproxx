@@ -142,7 +142,7 @@ const DelhiveryWebhook = async (req, res) => {
       ) {
         order.ndrStatus = "Undelivered";
         order.status = "Undelivered";
-        order.reattempt=false;
+        order.reattempt = false;
 
         order.ndrReason = {
           date: normalizedData.StatusDateTime,

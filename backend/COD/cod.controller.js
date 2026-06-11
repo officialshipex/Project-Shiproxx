@@ -54,7 +54,7 @@ const codPlanUpdate = async (req, res) => {
     if (codPlan) {
       // Update existing COD Plan
       codPlan.planName = planName;
-      codPlan.planCharges = codAmount;
+      codPlan.planCharges = Number(Number(codAmount).toFixed(2));
       codPlan.isCustom = false;
       codPlan.remittanceDay = undefined;
       await codPlan.save();
@@ -69,7 +69,7 @@ const codPlanUpdate = async (req, res) => {
       codPlan = new CodPlan({
         user: userID,
         planName,
-        planCharges: codAmount,
+        planCharges: Number(Number(codAmount).toFixed(2)),
       });
       await codPlan.save();
 
@@ -179,7 +179,7 @@ const codToBeRemitteds = async () => {
       const startOfDay = new Date(new Date(`${istDateStr}T00:00:00.000Z`).getTime() - IST_OFFSET);
       const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
 
-      const codAmount = order.paymentDetails.amount || 0;
+      const codAmount = Number(Number(order.paymentDetails.amount || 0).toFixed(2));
       const customOrderId = String(order.orderId || "");
 
       // 🔥 Start TRANSACTION
@@ -686,8 +686,8 @@ const processAndRemit = async (plan, session) => {
       const transactionEntry = {
         channelOrderId: "" || null,
         category: "credit",
-        amount: creditedAmount,
-        balanceAfterTransaction: afterWallet,
+        amount: Number(creditedAmount.toFixed(2)),
+        balanceAfterTransaction: Number(afterWallet.toFixed(2)),
         awb_number: "" || null,
         description: "COD Adjustment credited to wallet",
       };
@@ -695,7 +695,7 @@ const processAndRemit = async (plan, session) => {
       await Wallet.updateOne(
         { _id: wallet._id },
         {
-          $set: { balance: afterWallet },
+          $set: { balance: Number(afterWallet.toFixed(2)) },
         },
         { session }
       );
@@ -715,7 +715,7 @@ const processAndRemit = async (plan, session) => {
       // adjustAmount is 0 → only update balance
       await Wallet.updateOne(
         { _id: wallet._id },
-        { $set: { balance: afterWallet } },
+        { $set: { balance: Number(afterWallet.toFixed(2)) } },
         { session }
       );
     }
@@ -723,7 +723,7 @@ const processAndRemit = async (plan, session) => {
     // No adjustment → only update balance
     await Wallet.updateOne(
       { _id: wallet._id },
-      { $set: { balance: afterWallet } },
+      { $set: { balance: Number(afterWallet.toFixed(2)) } },
       { session }
     );
   }
@@ -745,8 +745,8 @@ const processAndRemit = async (plan, session) => {
     date: todayIST,
     remittanceId: remitanceId,
     codAvailable: Number(totalCodResult.toFixed(2)),
-    amountCreditedToWallet: extraAmount,
-    adjustedAmount: creditedAmount,
+    amountCreditedToWallet: Number(extraAmount.toFixed(2)),
+    adjustedAmount: Number(creditedAmount.toFixed(2)),
     earlyCodCharges: Number(charges.toFixed(2)),
     status: totalCodResult === 0 ? "Paid" : "Pending",
     orderDetails: plan.orderDetails,
@@ -759,11 +759,11 @@ const processAndRemit = async (plan, session) => {
     { userId: plan.userId, CODToBeRemitted: { $gte: codToBeDeducted } }, // ensure enough COD
     {
       $inc: {
-        CODToBeRemitted: -totalCodConsumed,
-        RemittanceInitiated: payoutToClient,
-        TotalDeductionfromCOD: TotalDeduction,
+        CODToBeRemitted: -Number(totalCodConsumed.toFixed(2)),
+        RemittanceInitiated: Number(payoutToClient.toFixed(2)),
+        TotalDeductionfromCOD: Number(TotalDeduction.toFixed(2)),
       },
-      $set: { rechargeAmount },
+      $set: { rechargeAmount: Number(rechargeAmount.toFixed(2)) },
       $push: { remittanceData: remittanceEntryForUser },
     },
     { new: true, session }
@@ -780,8 +780,8 @@ const processAndRemit = async (plan, session) => {
     userName: user.fullname,
     remitanceId: remitanceId,
     totalCod: Number(totalCodResult.toFixed(2)),
-    amountCreditedToWallet: extraAmount,
-    adjustedAmount: creditedAmount,
+    amountCreditedToWallet: Number(extraAmount.toFixed(2)),
+    adjustedAmount: Number(creditedAmount.toFixed(2)),
     earlyCodCharges: Number(charges.toFixed(2)),
     status: totalCodResult === 0 ? "Paid" : "Pending",
     orderDetails: plan.orderDetails,
@@ -1062,7 +1062,8 @@ const codRemittanceRecharge = async (req, res) => {
   const session = await mongoose.startSession();
   try {
     const userId = req.user._id;
-    const { amount, walletId } = req.body;
+    const walletId = req.body.walletId;
+    const amount = Number(Number(req.body.amount || 0).toFixed(2));
 
     // Validate amount
     if (!amount || isNaN(amount) || amount <= 0) {
@@ -1132,7 +1133,7 @@ const codRemittanceRecharge = async (req, res) => {
         remainingAmount -= codValue;
       } else if (remainingAmount > 0) {
         // Partial payment
-        const newValue = codValue - remainingAmount;
+        const newValue = Number((codValue - remainingAmount).toFixed(2));
 
         await CodRemittanceOrdersModel.updateOne(
           { _id: order._id },
@@ -1150,8 +1151,8 @@ const codRemittanceRecharge = async (req, res) => {
       { _id: remittanceRecord._id },
       {
         $inc: {
-          CODToBeRemitted: -amount,
-          rechargeAmount: amount,
+          CODToBeRemitted: -Number(amount.toFixed(2)),
+          rechargeAmount: Number(amount.toFixed(2)),
           // RemittanceInitiated: -amount,
         },
       },
@@ -1161,13 +1162,13 @@ const codRemittanceRecharge = async (req, res) => {
     // ✅ Push transaction and update wallet balance
     await Promise.all([
       currentWallet.updateOne({
-        $inc: { balance: amount },
+        $inc: { balance: Number(amount.toFixed(2)) },
       }, { session }),
       WalletTransaction.create([{
         walletId: currentWallet._id,
         category: "credit",
-        amount,
-        balanceAfterTransaction: currentWallet.balance + amount,
+        amount: Number(amount.toFixed(2)),
+        balanceAfterTransaction: Number((currentWallet.balance + amount).toFixed(2)),
         date: new Date(),
         description: "Recharge from COD Remittance",
       }], { session })
@@ -1418,13 +1419,13 @@ const uploadCodRemittance = async (req, res) => {
 
         if (actualAmount > 0) {
           if (userRemittance.RemittanceInitiated >= actualAmount) {
-            userRemittance.RemittanceInitiated -= actualAmount;
-            userRemittance.LastCODRemitted = actualAmount;
+            userRemittance.RemittanceInitiated = Number((userRemittance.RemittanceInitiated - actualAmount).toFixed(2));
+            userRemittance.LastCODRemitted = Number(actualAmount.toFixed(2));
           } else {
             console.warn(
               `RemittanceInitiated (${userRemittance.RemittanceInitiated}) less than actualAmount (${actualAmount}), setting to 0 to avoid negative value.`
             );
-            userRemittance.LastCODRemitted = userRemittance.RemittanceInitiated;
+            userRemittance.LastCODRemitted = Number(userRemittance.RemittanceInitiated.toFixed(2));
             userRemittance.RemittanceInitiated = 0;
           }
         } else {
@@ -1454,7 +1455,7 @@ const uploadCodRemittance = async (req, res) => {
       }
 
       // ✅ Only update TotalCODRemitted (always safe — this tracks total ever paid)
-      userRemittance.TotalCODRemitted += Number(remittance.totalCod || 0);
+      userRemittance.TotalCODRemitted = Number((userRemittance.TotalCODRemitted + Number(remittance.totalCod || 0)).toFixed(2));
 
       // ✅ Safety check
       if (isNaN(userRemittance.TotalCODRemitted)) {
@@ -1485,15 +1486,15 @@ const uploadCodRemittance = async (req, res) => {
           date: remittance.date,
           remittanceId: remittance.remitanceId,
           utr: row["*UTR"] || "N/A",
-          codAvailable: remittance.totalCod || 0,
-          amountCreditedToWallet: remittance.amountCreditedToWallet || 0,
-          earlyCodCharges: remittance.earlyCodCharges || 0,
-          adjustedAmount: remittance.adjustedAmount || 0,
+          codAvailable: Number((remittance.totalCod || 0).toFixed(2)),
+          amountCreditedToWallet: Number((remittance.amountCreditedToWallet || 0).toFixed(2)),
+          earlyCodCharges: Number((remittance.earlyCodCharges || 0).toFixed(2)),
+          adjustedAmount: Number((remittance.adjustedAmount || 0).toFixed(2)),
           remittanceMethod: "Bank Transaction",
           status: "Paid",
           orderDetails: {
             date: remittance.orderDetails.date,
-            codcal: remittance.orderDetails.codcal,
+            codcal: Number((remittance.orderDetails.codcal || 0).toFixed(2)),
             orders: [...remittance.orderDetails.orders],
           },
         });
@@ -3162,7 +3163,7 @@ const transferCOD = async (req, res) => {
     // WALLET ADJUSTMENT (TopUp)
     // ============================================================
     if (totalAdjusted > 0) {
-      const newBalance = wallet.balance + totalAdjusted;
+      const newBalance = Number((wallet.balance + totalAdjusted).toFixed(2));
 
       await Wallet.updateOne(
         { _id: wallet._id },
@@ -3172,7 +3173,7 @@ const transferCOD = async (req, res) => {
       await WalletTransaction.create([{
         walletId: wallet._id,
         category: "credit",
-        amount: totalAdjusted,
+        amount: Number(totalAdjusted.toFixed(2)),
         balanceAfterTransaction: newBalance,
         description: "COD adjustment credited to wallet",
         date: new Date(),
@@ -3182,13 +3183,13 @@ const transferCOD = async (req, res) => {
     // ============================================================
     // Update summary fields
     // ============================================================
-    remRecord.LastCODRemitted = totalPayable;
+    remRecord.LastCODRemitted = Number(totalPayable.toFixed(2));
     remRecord.RemittanceInitiated =
-      (remRecord.RemittanceInitiated || 0) - totalPayable - totalAdjusted;
+      Number(((remRecord.RemittanceInitiated || 0) - totalPayable - totalAdjusted).toFixed(2));
     remRecord.TotalCODRemitted =
-      (Number(remRecord.TotalCODRemitted) || 0) + totalPayable;
+      Number(((Number(remRecord.TotalCODRemitted) || 0) + totalPayable).toFixed(2));
     remRecord.TotalDeductionfromCOD =
-      (Number(remRecord.TotalDeductionfromCOD) || 0) + totalAdjusted;
+      Number(((Number(remRecord.TotalDeductionfromCOD) || 0) + totalAdjusted).toFixed(2));
 
     await remRecord.save({ session });
 
@@ -3776,9 +3777,9 @@ const uploadBankResponse = async (req, res) => {
       };
 
       // Update summary fields
-      remRecord.LastCODRemitted = paidAmount;
-      remRecord.RemittanceInitiated = Math.max(0, (remRecord.RemittanceInitiated || 0) - paidAmount);
-      remRecord.TotalCODRemitted = (Number(remRecord.TotalCODRemitted) || 0) + paidAmount;
+      remRecord.LastCODRemitted = Number(paidAmount.toFixed(2));
+      remRecord.RemittanceInitiated = Number(Math.max(0, (remRecord.RemittanceInitiated || 0) - paidAmount).toFixed(2));
+      remRecord.TotalCODRemitted = Number(((Number(remRecord.TotalCODRemitted) || 0) + paidAmount).toFixed(2));
 
       await remRecord.save({ session });
 
@@ -3909,7 +3910,7 @@ const saveCustomCodPlan = async (req, res) => {
     let codPlan = await CodPlan.findOne({ user: userId });
     if (codPlan) {
       codPlan.planName = planName;
-      codPlan.planCharges = Number(codCharge);
+      codPlan.planCharges = Number(Number(codCharge).toFixed(2));
       codPlan.isCustom = true;
       codPlan.remittanceDay = remittanceDay;
       await codPlan.save();
@@ -3917,7 +3918,7 @@ const saveCustomCodPlan = async (req, res) => {
       codPlan = new CodPlan({
         user: userId,
         planName,
-        planCharges: Number(codCharge),
+        planCharges: Number(Number(codCharge).toFixed(2)),
         isCustom: true,
         remittanceDay,
       });
@@ -3978,7 +3979,7 @@ const correctRemittanceData = async (remittanceId, dryRun = false) => {
 
     // Wallet adjustment stays the same (negative balance was real)
     // but cap it at the new remainingRecharge in case it's now smaller
-    const newCreditedAmount = Math.min(oldCreditedAmount, recalcRemainingRecharge);
+    const newCreditedAmount = Number(Math.min(oldCreditedAmount, recalcRemainingRecharge).toFixed(2));
     recalcRemainingRecharge -= newCreditedAmount;
 
     const newCharges = Number(((recalcRemainingRecharge * planCharges) / 100).toFixed(2));
@@ -4046,9 +4047,9 @@ const correctRemittanceData = async (remittanceId, dryRun = false) => {
           "remittanceData.$.status": newCodAvailable === 0 ? "Paid" : "Pending",
         },
         $inc: {
-          CODToBeRemitted: deltaTotalCodConsumed,
-          RemittanceInitiated: -deltaPayoutToClient,
-          TotalDeductionfromCOD: -deltaTotalDeduction,
+          CODToBeRemitted: Number(deltaTotalCodConsumed.toFixed(2)),
+          RemittanceInitiated: -Number(deltaPayoutToClient.toFixed(2)),
+          TotalDeductionfromCOD: -Number(deltaTotalDeduction.toFixed(2)),
         },
       },
       { session }

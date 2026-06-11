@@ -34,6 +34,9 @@ const {
   cancelShadowfaxOrder,
 } = require("../../AllCouriers/Shadowfax/Courier/couriers.controller");
 const {
+  cancelLosung360Order,
+} = require("../../AllCouriers/Losung360/Courier/couriers.controller");
+const {
   removeFromPickupManifest,
 } = require("../../Orders/scheduledPickup.controller");
 
@@ -138,7 +141,7 @@ const cancelOrdersAtBooked = async (req, res) => {
         result = await cancelShadowfaxOrder(currentOrder.awb_number, currentOrder.courierName);
         break;
       case "Losung360":
-        result = { success: true };
+        result = await cancelLosung360Order(currentOrder.awb_number);
         break;
       default:
         return res.status(400).json({

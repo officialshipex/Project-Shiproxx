@@ -29,6 +29,10 @@ const pickupAddress = new mongoose.Schema({
     type: String,
     default: ""
   },
+  losung360WarehouseId: {
+    type: String,
+    default: ""
+  },
   createdAt: {
     type: Date,
     default: Date.now,

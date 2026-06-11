@@ -98,6 +98,7 @@ const trackLosung360Order = async (awb) => {
     );
 
     if (response.data) {
+      // console.log("Losung360 Tracking Response Data:", JSON.stringify(response.data, null, 2));
       return { success: true, data: response.data };
     }
 
@@ -107,6 +108,13 @@ const trackLosung360Order = async (awb) => {
     return { success: false, error: error?.response?.data?.detail || error.message };
   }
 };
+// trackLosung360Order("77019842443")
+//   .then(res => console.log("Top-level Track Call Result:", JSON.stringify(res, null, 2)))
+//   .catch(err => console.error("Top-level Track Call Error:", err));
 
-module.exports = { trackLosung360Order, createOrder };
+const cancelLosung360Order = async (awb) => {
+  return { success: true };
+};
+
+module.exports = { trackLosung360Order, createOrder, cancelLosung360Order };
 

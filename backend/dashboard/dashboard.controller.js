@@ -779,6 +779,18 @@ const getDashboardOverview = async (req, res) => {
             },
             { $count: "count" },
           ],
+          booked: [
+            {
+              $match: {
+                shipmentCreatedAt: {
+                  $gte: new Date(startDate),
+                  $lte: new Date(endDate),
+                },
+                status: "Booked",
+              },
+            },
+            { $count: "count" },
+          ],
           readyToShip: [
             {
               $match: {
@@ -968,6 +980,7 @@ const getDashboardOverview = async (req, res) => {
 
         shipmentStats: {
           total: result.totalShipments[0]?.count || 0,
+          booked: result.booked[0]?.count || 0,
           readyToShip: result.readyToShip[0]?.count || 0,
           inTransit: result.inTransit[0]?.count || 0,
           outForDelivery: result.outForDelivery[0]?.count || 0,

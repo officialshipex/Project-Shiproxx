@@ -1083,7 +1083,7 @@ const trackSingleOrder = async (order) => {
     if (partner === "Losung360") {
       const statusText = normalizedData.Status?.toLowerCase() || "";
 
-      if (statusText.includes("delivered")) {
+      if (statusText.includes("delivered") || statusText === "dld" || statusText === "dl") {
         order.status = "Delivered";
         order.ndrStatus = "Delivered";
         order.reattempt = false;
@@ -1091,12 +1091,27 @@ const trackSingleOrder = async (order) => {
         order.status = "Out for Delivery";
         order.ndrStatus = "Out for Delivery";
         order.reattempt = false;
-      } else if (statusText.includes("picked up") || statusText.includes("pickup") || statusText.includes("in-transit") || statusText.includes("in transit") || statusText.includes("shipped")) {
+      } else if (
+        statusText.includes("picked up") ||
+        statusText.includes("pickup") ||
+        statusText.includes("in-transit") ||
+        statusText.includes("in transit") ||
+        statusText.includes("shipped") ||
+        statusText === "pu" ||
+        statusText === "pud" ||
+        statusText === "it"
+      ) {
         order.status = "In-transit";
         if (!order.invoiceDate) {
           order.invoiceDate = normalizedData.StatusDateTime;
         }
-      } else if (statusText.includes("undelivered") || statusText.includes("failed delivery") || statusText.includes("attempted")) {
+      } else if (
+        statusText.includes("undelivered") ||
+        statusText.includes("failed delivery") ||
+        statusText.includes("attempted") ||
+        statusText === "ud" ||
+        statusText === "und"
+      ) {
         order.status = "Undelivered";
         order.ndrStatus = "Undelivered";
         order.ndrReason = {
@@ -1104,7 +1119,7 @@ const trackSingleOrder = async (order) => {
           reason: normalizedData.Instructions || "Delivery attempted",
         };
         order.reattempt = true;
-      } else if (statusText.includes("rto delivered")) {
+      } else if (statusText.includes("rto delivered") || statusText === "rtod") {
         order.status = "RTO Delivered";
         order.ndrStatus = "RTO Delivered";
         order.reattempt = false;
@@ -1112,7 +1127,7 @@ const trackSingleOrder = async (order) => {
         order.status = "RTO In-transit";
         order.ndrStatus = "RTO In-transit";
         order.reattempt = false;
-      } else if (statusText.includes("cancelled")) {
+      } else if (statusText.includes("cancelled") || statusText === "can") {
         order.status = "Cancelled";
         order.ndrStatus = "Cancelled";
         order.reattempt = false;
@@ -1121,6 +1136,8 @@ const trackSingleOrder = async (order) => {
             ? 0
             : parseFloat(order.totalFreightCharges);
         shouldUpdateWallet = true;
+      } else if (statusText.includes("booked") || statusText === "spb") {
+        order.status = "Booked";
       }
     }
 
@@ -1746,11 +1763,15 @@ const trackSingleOrder = async (order) => {
       }
     }
 
-    if (Array.isArray(result.data) && result.data.length > 0) {
+    const scansArray = (partner === "Losung360" || provider === "Losung360")
+      ? (result.data?.history || [])
+      : (Array.isArray(result.data) ? result.data : []);
+
+    if (scansArray.length > 0) {
       // If API returned a full list of tracking events
-      const newTrackingArray = result.data.map((item) => {
+      const newTrackingArray = scansArray.map((item) => {
         const mapped =
-          partner === "ZipyPost" || partner === "BoxdLogistics" || partner === "Proship" || partner === "Shiprocket" || partner === "Ekart"
+          partner === "ZipyPost" || partner === "BoxdLogistics" || partner === "Proship" || partner === "Shiprocket" || partner === "Ekart" || partner === "Losung360"
             ? mapTrackingResponse([item], partner)
             : mapTrackingResponse([item], provider, result?.remark);
 
@@ -1886,7 +1907,7 @@ const trackOrders = async (includeWebhooks = false) => {
       "Shiprocket",
       "Shadowfax",
       "Proship",
-      "Losung360"
+      // "Losung360"
     ];
 
     let query = {};
@@ -2007,14 +2028,24 @@ if (process.env.NODE_ENV === "production") {
 const mapTrackingResponse = (data, provider, remark) => {
   // console.log("Mapping data for provider:", data);
   if (provider === "Losung360") {
-    const trackingData = data[0] || {};
-    const history = trackingData.history || [];
-    const latestScan = history.length > 0 ? history[history.length - 1] : null;
+    const rawData = data[0] || {};
+    const latestScan = Array.isArray(rawData.history)
+      ? (rawData.history[rawData.history.length - 1] || null)
+      : rawData;
+
+    const formatLosung360DateTime = (rawDate) => {
+      if (!rawDate) return null;
+      if (typeof rawDate !== "string") return new Date(rawDate);
+      if (rawDate.includes("Z") || rawDate.includes("+")) return new Date(rawDate);
+      const formatted = rawDate.replace(" ", "T") + "Z"; // treat the IST time as-is so frontend shows correct time
+      return new Date(formatted);
+    };
+
     return {
-      Status: latestScan?.status || trackingData.current_status || "N/A",
+      Status: latestScan?.system_status_name || latestScan?.status || rawData.current_status || "N/A",
       StatusLocation: latestScan?.location || "Unknown",
-      StatusDateTime: latestScan?.timestamp ? new Date(latestScan.timestamp) : null,
-      Instructions: latestScan?.status || trackingData.current_status || "N/A",
+      StatusDateTime: formatLosung360DateTime(latestScan?.timestamp),
+      Instructions: latestScan?.description || latestScan?.status || rawData.current_status || "N/A",
     };
   }
   if (provider === "Ekart") {

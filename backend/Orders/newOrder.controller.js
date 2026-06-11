@@ -69,6 +69,7 @@ const {
   cancelOrder: cancelShiprocketOrder,
 } = require("../AllCouriers/ShipRocket/Courier/couriers.controller");
 const { cancelShadowfaxOrder } = require("../AllCouriers/Shadowfax/Courier/couriers.controller");
+const { cancelLosung360Order } = require("../AllCouriers/Losung360/Courier/couriers.controller");
 const WeightDiscrepancy = require("../WeightDispreancy/weightDispreancy.model");
 // Create a shipment
 const newOrder = async (req, res) => {
@@ -1812,6 +1813,11 @@ const cancelOrdersAtBooked = async (req, res) => {
       if (result.success === false) {
         return res.status(400).send({ error: result.message || "Failed to cancel order with Shadowfax" });
       }
+    } else if (currentOrder.provider === "Losung360" || currentOrder.partner === "Losung360") {
+      const result = await cancelLosung360Order(currentOrder.awb_number);
+      if (result.success === false) {
+        return res.status(400).send({ error: result.message || "Failed to cancel order with Losung360" });
+      }
     } else {
       return res.status(400).json({
         error: "Unsupported courier provider",
@@ -2160,6 +2166,8 @@ const bulkCancelOrder = async (req, res) => {
               cancelResponse = await cancelProshipOrder(currentOrder.awb_number);
             } else if (provider === "Shadowfax" || partner === "Shadowfax") {
               cancelResponse = await cancelShadowfaxOrder(currentOrder.awb_number, currentOrder.courierName);
+            } else if (provider === "Losung360" || partner === "Losung360") {
+              cancelResponse = await cancelLosung360Order(currentOrder.awb_number);
             } else {
               cancelResponse = { success: false, error: `Unsupported courier provider: ${provider}` };
             }
