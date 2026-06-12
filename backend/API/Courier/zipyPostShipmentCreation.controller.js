@@ -252,6 +252,7 @@ const createZipypostShipment = async ({
           timestamp: token.timestamp,
           sellerid: sellerId,
         },
+        timeout: 15000,
       }
     );
 

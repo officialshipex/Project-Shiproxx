@@ -91,6 +91,7 @@ const createClientWarehouse = async (payload, apiKey) => {
           "Content-Type": "application/json",
           Authorization: `Token ${apiKey || process.env.DEL_API_TOKEN}`,
         },
+        timeout: 10000,
       },
     );
 

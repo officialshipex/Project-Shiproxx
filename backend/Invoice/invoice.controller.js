@@ -151,6 +151,7 @@ async function generateInvoicePDF(invoice, company = {}, customer = {}) {
       const invoicePeriod = invoiceDate.toLocaleString("en-IN", {
         month: "long",
         year: "numeric",
+        timeZone: "UTC",
       });
 
       doc
@@ -159,7 +160,7 @@ async function generateInvoicePDF(invoice, company = {}, customer = {}) {
           align: "right",
         })
         .text(
-          `Invoice Date: ${invoiceDate.toLocaleDateString()}`,
+          `Invoice Date: ${invoiceDate.toLocaleDateString("en-IN", { timeZone: "UTC" })}`,
           400,
           contentStartY + 55,
           { align: "right" },
@@ -546,6 +547,7 @@ async function uploadToS3(localPath, key) {
       Key: key,
       Body: fileContent,
       ContentType: "application/pdf",
+      CacheControl: "no-store, no-cache, must-revalidate, max-age=0",
     }),
   );
 
@@ -757,7 +759,7 @@ async function generateInvoiceForUserMonth(userId, periodStart, periodEnd) {
   };
 
   // Determine Company Details based on date (April 2026 onwards)
-  const isNewBranding = new Date(periodEnd) >= new Date(2026, 3, 1);
+  const isNewBranding = new Date(periodEnd) >= new Date(2026, 8, 1);
   const companyDetails = isNewBranding
     ? {
         name: "Quickpost360 Services Private Limited",
@@ -1034,28 +1036,21 @@ const buildInvoiceFilters = (query) => {
   }
 
   // ⭐ Case 1: Month + Year → Filter by specific month
+  // Use periodEnd only (indexed) — all invoices end on the last day of the billing month
   if (month !== null && year !== null) {
     const startDate = new Date(year, month, 1);
     const endDate = new Date(year, month + 1, 1);
 
-    filters.$or = [
-      { periodStart: { $gte: startDate, $lt: endDate } },
-      { periodEnd: { $gte: startDate, $lt: endDate } },
-    ];
-
+    filters.periodEnd = { $gte: startDate, $lt: endDate };
     return filters;
   }
 
-  // ⭐ Case 2: Year only → Filter entire year
+  // ⭐ Case 2: Year only → Filter entire year using periodEnd (indexed)
   if (month === null && year !== null) {
     const startOfYear = new Date(year, 0, 1);
     const endOfYear = new Date(year + 1, 0, 1);
 
-    filters.$or = [
-      { periodStart: { $gte: startOfYear, $lt: endOfYear } },
-      { periodEnd: { $gte: startOfYear, $lt: endOfYear } },
-    ];
-
+    filters.periodEnd = { $gte: startOfYear, $lt: endOfYear };
     return filters;
   }
 
@@ -1089,11 +1084,16 @@ const adminGetInvoices = async (req, res) => {
     // 🔥 Fetch paginated data + count in parallel
     const [invoices, totalCount] = await Promise.all([
       finalLimit === null
-        ? Invoice.find(filters).sort({ createdAt: -1 })
+        ? Invoice.find(filters)
+          .select("invoiceNumber includedAwbs invoiceDate createdAt periodStart periodEnd s3Url totalAmount status userId")
+          .sort({ createdAt: -1 })
+          .lean()
         : Invoice.find(filters)
+          .select("invoiceNumber includedAwbs invoiceDate createdAt periodStart periodEnd s3Url totalAmount status userId")
           .sort({ createdAt: -1 })
           .skip(skip)
-          .limit(finalLimit),
+          .limit(finalLimit)
+          .lean(),
       Invoice.countDocuments(filters),
     ]);
 
@@ -1184,11 +1184,16 @@ const userGetInvoices = async (req, res) => {
     // 🔥 Run data + count in parallel
     const [invoices, totalCount] = await Promise.all([
       finalLimit === null
-        ? Invoice.find(filters).sort({ createdAt: -1 })
+        ? Invoice.find(filters)
+          .select("invoiceNumber includedAwbs invoiceDate createdAt periodStart periodEnd s3Url totalAmount status")
+          .sort({ createdAt: -1 })
+          .lean()
         : Invoice.find(filters)
+          .select("invoiceNumber includedAwbs invoiceDate createdAt periodStart periodEnd s3Url totalAmount status")
           .sort({ createdAt: -1 })
           .skip(skip)
-          .limit(finalLimit),
+          .limit(finalLimit)
+          .lean(),
       Invoice.countDocuments(filters),
     ]);
 
@@ -1340,6 +1345,86 @@ const exportInvoiceToExcel = async (req, res) => {
   }
 };
 
+async function regenerateInvoicePDFsForPeriod(periodStart, periodEnd) {
+  const invoices = await Invoice.find({
+    periodEnd: {
+      $gte: periodStart,
+      $lte: periodEnd,
+    },
+  });
+
+  console.log(`Found ${invoices.length} invoices to regenerate for period ${periodStart} - ${periodEnd}`);
+
+  for (const invoice of invoices) {
+    try {
+      const userId = invoice.userId;
+      const user = await User.findById(userId).select("fullname email company Wallet");
+      const gstin = await GSTIN.findOne({ user: userId });
+      const BillingInfo = await billing.findOne({ user: userId });
+      const PAN = await Pan.findOne({ user: userId });
+
+      const customerInfo = {
+        name: gstin?.nameOfBusiness || gstin?.legalNameOfBusiness || user?.fullname || "N/A",
+        address: gstin?.address || BillingInfo?.address || "N/A",
+        gstin: gstin?.gstin || "N/A",
+        state: gstin?.state || BillingInfo?.state || "N/A",
+        pincode: gstin?.pincode || BillingInfo?.postalCode || "N/A",
+        pan: PAN?.pan || "N/A",
+      };
+
+      const isNewBranding = new Date(invoice.periodEnd) >= new Date(2026, 8, 1);
+      const companyDetails = isNewBranding
+        ? {
+            name: "Quickpost360 Services Private Limited",
+            address:
+              "House No 87 Singhal Panna, Gali No2 Near Shiv Mandir, Badesera, Bhiwani, Bhiwani, Haryana, India, 127031",
+            phone: "+91- 9813981344",
+            email: "support@shipexindia.com",
+            gstin: "06AABCQ1885H1ZC",
+            cin: "U53200HR2025PTC138342",
+            bank: {
+              accountName: "Quickpost360 Services Private Limited",
+              accountNumber: "258800258800",
+              bankName: "Indusind Bank Limited",
+              ifsc: "INDB0000673",
+            },
+          }
+        : {
+            name: "Shipex India",
+            address:
+              "01, Basement, Biju Tower, Baba Nagar, Bhiwani, Haryana - 127021",
+            phone: "+91- 9813981344",
+            email: "support@shipexindia.com",
+            pan: "XXXAAABBB",
+            gstin: "06FKCPS6109D3Z7",
+            bank: {
+              accountName: "Shipex India",
+              accountNumber: "2258120020000251",
+              bankName: "Ujjivan Small Finance Bank",
+              ifsc: "UJVN0002258",
+            },
+          };
+
+      const pdfPath = await generateInvoicePDF(invoice, companyDetails, customerInfo);
+      const s3Key = `invoices/${userId}/${invoice.invoiceNumber}.pdf`;
+      const s3Url = await uploadToS3(pdfPath, s3Key);
+
+      invoice.s3Url = s3Url;
+      await invoice.save();
+
+      try {
+        fs.unlinkSync(pdfPath);
+      } catch (e) {
+        console.log("PDF cleanup error:", e);
+      }
+
+      console.log(`Successfully regenerated invoice ${invoice.invoiceNumber} for user ${userId}`);
+    } catch (err) {
+      console.error(`Error regenerating invoice ${invoice.invoiceNumber}:`, err);
+    }
+  }
+}
+
 /* -------------------------
    Exports (controllers)
    -------------------------*/
@@ -1352,4 +1437,5 @@ module.exports = {
   userGetInvoices,
   bulkDownloadInvoices,
   exportInvoiceToExcel,
+  regenerateInvoicePDFsForPeriod,
 };

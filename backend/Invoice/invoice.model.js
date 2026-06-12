@@ -50,5 +50,9 @@ const InvoiceSchema = new mongoose.Schema(
 );
 
 InvoiceSchema.index({ userId: 1, periodStart: 1, periodEnd: 1 }, { unique: true });
+InvoiceSchema.index({ userId: 1, createdAt: -1 });
+InvoiceSchema.index({ createdAt: -1 });
+InvoiceSchema.index({ invoiceNumber: 1 });
+InvoiceSchema.index({ periodEnd: -1 });             // for date-range filtering
 
 module.exports = mongoose.model("Invoice", InvoiceSchema);

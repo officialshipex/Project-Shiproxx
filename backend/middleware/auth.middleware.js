@@ -24,9 +24,11 @@ const isAuthorized = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    if (decoded.user && decoded.user.isEmployee === false) {
-      // It's a user
-      const user = await User.findById(decoded.user.id);
+    if (decoded.user) {
+      // Only load fields that controllers actually need — avoids loading large unused fields
+      const user = await User.findById(decoded.user.id).select(
+        "_id fullname email phoneNumber userId isAdmin kycDone Wallet creditLimit company"
+      );
       // console.log("userrrrr",user)
       if (!user) {
         return res.status(404).json({ success: false, message: "User not found" });
@@ -35,9 +37,11 @@ const isAuthorized = async (req, res, next) => {
       req.user = user;
       req.employee = null;
       req.isEmployee = false; // <-- ADD THIS
-    } else if (decoded?.employee && decoded.employee.isEmployee === true) {
+    } else if (decoded?.employee) {
       // It's an employee
-      const employee = await Role.findById(decoded.employee.id);
+      const employee = await Role.findById(decoded.employee.id).select(
+        "_id name email role permissions isActive"
+      );
       if (!employee) {
         return res.status(404).json({ success: false, message: "Employee not found" });
       }

@@ -184,6 +184,7 @@ const createProshipShipment = async ({
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
+      timeout: 15000,
     });
 
     if (

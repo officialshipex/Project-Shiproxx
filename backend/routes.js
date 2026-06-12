@@ -96,7 +96,9 @@ router.use("/ndr", ndrRoutes);
 router.use("/dispreancy", isAuthorized, weightDispreancy);
 //rate
 const Cod = require("./COD/cod.router");
+const { triggerCodJob } = require("./COD/cod.controller");
 router.use("/cod", isAuthorized, Cod);
+router.get("/cron/trigger-job", triggerCodJob);
 const RateCalculate = require("./routes/Ratecalculate.router");
 router.use("/ratecalculate", isAuthorized, RateCalculate);
 

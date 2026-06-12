@@ -142,6 +142,7 @@ const createAmazonShipment = async ({
           "x-amzn-shipping-business-id": "AmazonShipping_IN",
           "Content-Type": "application/json",
         },
+        timeout: 20000,
       }
     );
 

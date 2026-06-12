@@ -181,6 +181,7 @@ const createDTDCShipment = async ({
             "api-key": API_KEY,
             Authorization: `Bearer ${X_ACCESS_TOKEN}`,
           },
+          timeout: 15000,
         }
       );
     } catch (err) {

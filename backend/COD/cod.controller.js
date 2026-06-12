@@ -105,7 +105,14 @@ const runTransaction = async (callback) => {
   }
 };
 
+let isCodToBeRemittedsRunning = false;
+
 const codToBeRemitteds = async () => {
+  if (isCodToBeRemittedsRunning) {
+    console.log("⚠️ codToBeRemitteds is already running. Skipping duplicate execution.");
+    return;
+  }
+  isCodToBeRemittedsRunning = true;
   const session = await mongoose.startSession();
 
   try {
@@ -270,22 +277,21 @@ const codToBeRemitteds = async () => {
     console.error("❌ CODToBeRemitteds ERROR:", error);
   } finally {
     session.endSession();
+    isCodToBeRemittedsRunning = false;
   }
 };
 
-if (process.env.NODE_ENV === "production") {
-  cron.schedule("0 6 * * *", () => {
+cron.schedule("30 0 * * *", () => {
+  if (process.env.NODE_ENV === "production") {
     console.log(
-      "⏰ Running scheduled task at 6:00 AM IST (local): Fetching orders..."
+      "⏰ Running scheduled task at 6:00 AM IST (12:30 AM UTC): Fetching orders..."
     );
     codToBeRemitteds();
-  }, {
-    scheduled: true,
-    timezone: "Asia/Kolkata"
-  });
-} else {
-  console.log("⚙️ Cron job not started (development mode)");
-}
+  }
+}, {
+  scheduled: true,
+  timezone: "Etc/UTC"
+});
 // codToBeRemitteds();
 
 const getStartOfDayIST = (date = new Date()) => {
@@ -294,7 +300,14 @@ const getStartOfDayIST = (date = new Date()) => {
   return new Date(istTime.getTime() - (5.5 * 3600 * 1000));
 };
 
+let isRemittanceScheduleRunning = false;
+
 const remittanceScheduleData = async () => {
+  if (isRemittanceScheduleRunning) {
+    console.log("⚠️ remittanceScheduleData is already running. Skipping duplicate execution.");
+    return;
+  }
+  isRemittanceScheduleRunning = true;
   try {
     const todayIST = new Date();
     const [existingSameDateDelivered, afterCodPlans] = await Promise.all([
@@ -547,26 +560,26 @@ const remittanceScheduleData = async () => {
     }
   } catch (error) {
     console.error("❌ Error in remittance schedule:", error);
+  } finally {
+    isRemittanceScheduleRunning = false;
   }
 };
 
-if (process.env.NODE_ENV === "production") {
-  cron.schedule(
-    "0 7 * * *",
-    () => {
+cron.schedule(
+  "30 1 * * *",
+  () => {
+    if (process.env.NODE_ENV === "production") {
       console.log(
-        "⏰ Running scheduled task at 7:00 AM IST (production): Fetching orders..."
+        "⏰ Running scheduled task at 7:00 AM IST (1:30 AM UTC): Fetching orders..."
       );
       remittanceScheduleData();
-    },
-    {
-      scheduled: true,
-      timezone: "Asia/Kolkata",
     }
-  );
-} else {
-  console.log("⚙️ Cron job not started (development/local environment)");
-}
+  },
+  {
+    scheduled: true,
+    timezone: "Etc/UTC",
+  }
+);
 
 // remittanceScheduleData();
 
@@ -577,13 +590,13 @@ const processAndRemit = async (plan, session) => {
   let remitanceId;
   do {
     remitanceId = Math.floor(10000 + Math.random() * 90000);
-  } while (await adminCodRemittance.findOne({ remitanceId }));
+  } while (await adminCodRemittance.findOne({ remitanceId }).session(session));
 
   // Fetch fresh user, codPlan, wallet, codRemittance:
   const [user, codPlan, remittanceData] = await Promise.all([
-    User.findById(plan.userId),
-    CodPlan.findOne({ user: plan.userId }),
-    codRemittance.findOne({ userId: plan.userId }),
+    User.findById(plan.userId).session(session),
+    CodPlan.findOne({ user: plan.userId }).session(session),
+    codRemittance.findOne({ userId: plan.userId }).session(session),
   ]);
 
   if (!user || !codPlan || !remittanceData) {
@@ -592,7 +605,7 @@ const processAndRemit = async (plan, session) => {
   }
 
   // Now fetch the wallet using the user's wallet reference
-  const wallet = await Wallet.findById(user.Wallet).select("balance");
+  const wallet = await Wallet.findById(user.Wallet).session(session).select("balance");
 
   if (!wallet) {
     console.log(`Missing wallet for user ${plan.userId}, skipping...`);
@@ -1070,20 +1083,24 @@ const codRemittanceRecharge = async (req, res) => {
       return res.status(400).json({ message: "Invalid recharge amount" });
     }
 
-    // ✅ Find user correctly
-    const user = await User.findById(userId);
+    session.startTransaction();
+
+    // ✅ Find user correctly inside transaction session
+    const user = await User.findById(userId).session(session);
     if (!user) {
+      await session.abortTransaction();
       return res.status(404).json({ message: "User not found" });
     }
 
-    // ✅ Fetch all COD orders for this user (Pending)
+    // ✅ Fetch all COD orders for this user (Pending) inside transaction session
     const allCodRemittanceOrder = await CodRemittanceOrdersModel.find({
       Email: user.email,
       status: "Pending",
-    }).sort({ Date: 1 }); // optional: sort oldest first
+    }).session(session).sort({ Date: 1 });
 
-    const remittanceRecord = await codRemittance.findOne({ userId }).lean();
+    const remittanceRecord = await codRemittance.findOne({ userId }).session(session);
     if (!remittanceRecord) {
+      await session.abortTransaction();
       return res.status(404).json({ message: "Remittance record not found" });
     }
 
@@ -1102,18 +1119,18 @@ const codRemittanceRecharge = async (req, res) => {
 
     // Check if requested recharge exceeds effective pending amount
     if (amount > remittanceRecord.CODToBeRemitted) {
+      await session.abortTransaction();
       return res.status(400).json({
         message: "Insufficient COD Available Balance",
         available: effectivePending,
       });
     }
 
-    const currentWallet = await Wallet.findById(walletId).select("balance");
+    const currentWallet = await Wallet.findById(walletId).session(session).select("balance");
     if (!currentWallet) {
+      await session.abortTransaction();
       return res.status(404).json({ message: "Wallet not found" });
     }
-
-    session.startTransaction();
 
     // ✅ Deduct amount against COD Orders
     let remainingAmount = amount;
@@ -1146,33 +1163,41 @@ const codRemittanceRecharge = async (req, res) => {
       if (remainingAmount <= 0) break;
     }
 
-    // ✅ Update remittance record
-    await codRemittance.updateOne(
-      { _id: remittanceRecord._id },
+    // ✅ Update remittance record with balance check constraint
+    const updateResult = await codRemittance.updateOne(
+      { _id: remittanceRecord._id, CODToBeRemitted: { $gte: amount } },
       {
         $inc: {
           CODToBeRemitted: -Number(amount.toFixed(2)),
           rechargeAmount: Number(amount.toFixed(2)),
-          // RemittanceInitiated: -amount,
         },
       },
       { session }
     );
 
-    // ✅ Push transaction and update wallet balance
-    await Promise.all([
-      currentWallet.updateOne({
-        $inc: { balance: Number(amount.toFixed(2)) },
-      }, { session }),
-      WalletTransaction.create([{
-        walletId: currentWallet._id,
-        category: "credit",
-        amount: Number(amount.toFixed(2)),
-        balanceAfterTransaction: Number((currentWallet.balance + amount).toFixed(2)),
-        date: new Date(),
-        description: "Recharge from COD Remittance",
-      }], { session })
-    ]);
+    if (updateResult.modifiedCount === 0) {
+      throw new Error("Insufficient COD balance or concurrent modification");
+    }
+
+    // Update wallet balance atomically
+    await Wallet.updateOne(
+      { _id: currentWallet._id },
+      { $inc: { balance: Number(amount.toFixed(2)) } },
+      { session }
+    );
+
+    // Fetch updated wallet balance to write accurate transaction history log
+    const updatedWallet = await Wallet.findById(currentWallet._id).session(session).select("balance");
+    const finalBalance = updatedWallet?.balance ?? (currentWallet.balance + amount);
+
+    await WalletTransaction.create([{
+      walletId: currentWallet._id,
+      category: "credit",
+      amount: Number(amount.toFixed(2)),
+      balanceAfterTransaction: Number(finalBalance.toFixed(2)),
+      date: new Date(),
+      description: "Recharge from COD Remittance",
+    }], { session });
 
     await session.commitTransaction();
 
@@ -1342,10 +1367,20 @@ function parseExcel(filePath) {
 }
 
 const uploadCodRemittance = async (req, res) => {
+  const isAdmin = req.user && (req.user.role === "admin" || req.user.isAdmin === true);
+  const isEmployee = req.isEmployee === true || !!req.employee;
+
+  if (!isAdmin && !isEmployee) {
+    return res.status(403).json({ success: false, error: "Unauthorized access" });
+  }
+
+  const session = await mongoose.startSession();
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
+
+    session.startTransaction();
 
     // Save file metadata
     const fileData = new File({
@@ -1353,7 +1388,7 @@ const uploadCodRemittance = async (req, res) => {
       date: new Date(),
       status: "Processing",
     });
-    await fileData.save();
+    await fileData.save({ session });
 
     // Determine file extension
     const fileExtension = path.extname(req.file.originalname).toLowerCase();
@@ -1364,10 +1399,12 @@ const uploadCodRemittance = async (req, res) => {
     } else if (fileExtension === ".xlsx" || fileExtension === ".xls") {
       codRemittances = await parseExcel(req.file.path);
     } else {
+      await session.abortTransaction();
       return res.status(400).json({ error: "Unsupported file format" });
     }
 
     if (!codRemittances || codRemittances.length === 0) {
+      await session.abortTransaction();
       return res
         .status(400)
         .json({ error: "The uploaded file is empty or contains invalid data" });
@@ -1376,9 +1413,10 @@ const uploadCodRemittance = async (req, res) => {
     for (const row of codRemittances) {
       const remittance = await adminCodRemittance.findOne({
         remitanceId: row["*RemittanceID"],
-      });
+      }).session(session);
 
       if (!remittance) {
+        await session.abortTransaction();
         return res
           .status(400)
           .json({ error: `Remittance ID ${row["*RemittanceID"]} not found.` });
@@ -1393,7 +1431,7 @@ const uploadCodRemittance = async (req, res) => {
 
       let userRemittance = await codRemittance.findOne({
         userId: remittance.userId,
-      });
+      }).session(session);
 
       if (!userRemittance) {
         userRemittance = new codRemittance({
@@ -1402,7 +1440,7 @@ const uploadCodRemittance = async (req, res) => {
           RemittanceInitiated: 0,
           remittanceData: [],
         });
-        await userRemittance.save();
+        await userRemittance.save({ session });
       }
 
       // Ensure numeric fields
@@ -1437,14 +1475,15 @@ const uploadCodRemittance = async (req, res) => {
         // Mark all orders as Paid
         if (remittance.orderDetails && Array.isArray(remittance.orderDetails.orders)) {
           for (const item of remittance.orderDetails.orders) {
-            const order = await Order.findOne({ _id: item });
+            const order = await Order.findOne({ _id: item }).session(session);
             if (!order) {
               console.log(`Order with ID ${item} not found.`);
               continue;
             }
             await CodRemittanceOrdersModel.findOneAndUpdate(
               { orderID: order.orderId },
-              { $set: { status: "Paid" } }
+              { $set: { status: "Paid" } },
+              { session }
             );
           }
         }
@@ -1462,6 +1501,7 @@ const uploadCodRemittance = async (req, res) => {
         console.error("Invalid TotalCODRemitted detected:", {
           TotalCODRemitted: userRemittance.TotalCODRemitted,
         });
+        await session.abortTransaction();
         return res
           .status(500)
           .json({ error: "Invalid TotalCODRemitted value" });
@@ -1500,11 +1540,17 @@ const uploadCodRemittance = async (req, res) => {
         });
       }
 
-      await userRemittance.save();
+      await userRemittance.save({ session });
 
       remittance.status = "Paid";
-      await remittance.save();
+      await remittance.save({ session });
     }
+
+    // Update bulk file upload status
+    fileData.status = "Completed";
+    await fileData.save({ session });
+
+    await session.commitTransaction();
 
     // Delete uploaded file
     fs.unlink(req.file.path, (err) => {
@@ -1516,10 +1562,13 @@ const uploadCodRemittance = async (req, res) => {
       file: fileData,
     });
   } catch (error) {
+    await session.abortTransaction();
     console.error("Error in uploadCodRemittance:", error);
     res
       .status(500)
       .json({ error: "An error occurred while processing the file" });
+  } finally {
+    session.endSession();
   }
 };
 
@@ -1845,6 +1894,13 @@ const courierCodRemittance = async (req, res) => {
 };
 
 const getAdminCodRemitanceData = async (req, res) => {
+  const isAdmin = req.user && (req.user.role === "admin" || req.user.isAdmin === true);
+  const isEmployee = req.isEmployee === true || !!req.employee;
+
+  if (!isAdmin && !isEmployee) {
+    return res.status(403).json({ success: false, error: "Unauthorized access" });
+  }
+
   try {
     const {
       userNameFilter,
@@ -2624,6 +2680,13 @@ const CourierdownloadSampleExcel = async (req, res) => {
   }
 };
 const uploadCourierCodRemittance = async (req, res) => {
+  const isAdmin = req.user && (req.user.role === "admin" || req.user.isAdmin === true);
+  const isEmployee = req.isEmployee === true || !!req.employee;
+
+  if (!isAdmin && !isEmployee) {
+    return res.status(403).json({ success: false, error: "Unauthorized access" });
+  }
+
   try {
     const userID = req.user._id;
 
@@ -2797,6 +2860,13 @@ const exportOrderInRemittance = async (req, res) => {
 };
 
 const validateCODTransfer = async (req, res) => {
+  const isAdmin = req.user && (req.user.role === "admin" || req.user.isAdmin === true);
+  const isEmployee = req.isEmployee === true || !!req.employee;
+
+  if (!isAdmin && !isEmployee) {
+    return res.status(403).json({ success: false, error: "Unauthorized access" });
+  }
+
   try {
     const remittanceIds = req.body.remittanceIds;
 
@@ -2858,6 +2928,13 @@ const validateCODTransfer = async (req, res) => {
 };
 
 const getCODTransferData = async (req, res) => {
+  const isAdmin = req.user && (req.user.role === "admin" || req.user.isAdmin === true);
+  const isEmployee = req.isEmployee === true || !!req.employee;
+
+  if (!isAdmin && !isEmployee) {
+    return res.status(403).json({ success: false, error: "Unauthorized access" });
+  }
+
   try {
     const { id } = req.params;
     let { selectedRemittanceIds } = req.query;
@@ -3030,6 +3107,13 @@ const getCODTransferData = async (req, res) => {
 // };
 
 const transferCOD = async (req, res) => {
+  const isAdmin = req.user && (req.user.role === "admin" || req.user.isAdmin === true);
+  const isEmployee = req.isEmployee === true || !!req.employee;
+
+  if (!isAdmin && !isEmployee) {
+    return res.status(403).json({ success: false, error: "Unauthorized access" });
+  }
+
   const session = await mongoose.startSession();
   try {
     const { id } = req.params;
@@ -3049,19 +3133,27 @@ const transferCOD = async (req, res) => {
     topUpRemittanceIds = topUpRemittanceIds.map(String);
     frozenRemittanceIds = frozenRemittanceIds.map(String);
 
-    // Fetch user remittance record
-    const remRecord = await codRemittance.findOne({ userId: id });
+    session.startTransaction();
+
+    // Fetch user remittance record inside transaction session
+    const remRecord = await codRemittance.findOne({ userId: id }).session(session);
     if (!remRecord) {
+      await session.abortTransaction();
       return res
         .status(404)
         .json({ message: "No COD remittance record found" });
     }
 
-    // Fetch user + wallet
-    const user = await User.findById(id);
-    const wallet = await Wallet.findById(user.Wallet).select("balance");
+    // Fetch user + wallet inside transaction session
+    const user = await User.findById(id).session(session);
+    if (!user) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "User not found" });
+    }
+    const wallet = await Wallet.findById(user.Wallet).session(session).select("balance");
 
     if (!wallet) {
+      await session.abortTransaction();
       return res.status(404).json({ message: "Wallet not found" });
     }
 
@@ -3152,12 +3244,11 @@ const transferCOD = async (req, res) => {
 
     // UTR required only when actual money is paid to client
     if (totalPayable > 0 && !utr) {
+      await session.abortTransaction();
       return res.status(400).json({
         message: "UTR is required when paying remittances.",
       });
     }
-
-    session.startTransaction();
 
     // ============================================================
     // WALLET ADJUSTMENT (TopUp)
@@ -3464,6 +3555,13 @@ const checkOrderDuplicates = async () => {
 // logic independently per user, combines all payable rows into one XLSX.
 // ============================================================
 const exportBankTemplate = async (req, res) => {
+  const isAdmin = req.user && (req.user.role === "admin" || req.user.isAdmin === true);
+  const isEmployee = req.isEmployee === true || !!req.employee;
+
+  if (!isAdmin && !isEmployee) {
+    return res.status(403).json({ success: false, error: "Unauthorized access" });
+  }
+
   try {
     let { selectedRemittanceIds } = req.query;
 
@@ -3671,6 +3769,13 @@ const exportBankTemplate = async (req, res) => {
 //   2. Fallback: If no exact ID, matches by Beneficiary Account + Amount.
 // ============================================================
 const uploadBankResponse = async (req, res) => {
+  const isAdmin = req.user && (req.user.role === "admin" || req.user.isAdmin === true);
+  const isEmployee = req.isEmployee === true || !!req.employee;
+
+  if (!isAdmin && !isEmployee) {
+    return res.status(403).json({ success: false, error: "Unauthorized access" });
+  }
+
   const session = await mongoose.startSession();
   try {
     const { rows, selectedRemittanceIds } = req.body;
@@ -3852,6 +3957,13 @@ const uploadBankResponse = async (req, res) => {
 };
 
 const getBankExportBatches = async (req, res) => {
+  const isAdmin = req.user && (req.user.role === "admin" || req.user.isAdmin === true);
+  const isEmployee = req.isEmployee === true || !!req.employee;
+
+  if (!isAdmin && !isEmployee) {
+    return res.status(403).json({ success: false, error: "Unauthorized access" });
+  }
+
   try {
     const batches = await BankExportBatch.find({ status: "Active" })
       .sort({ exportedAt: -1 })
@@ -3865,6 +3977,13 @@ const getBankExportBatches = async (req, res) => {
 };
 
 const validateExportedStatus = async (req, res) => {
+  const isAdmin = req.user && (req.user.role === "admin" || req.user.isAdmin === true);
+  const isEmployee = req.isEmployee === true || !!req.employee;
+
+  if (!isAdmin && !isEmployee) {
+    return res.status(403).json({ success: false, error: "Unauthorized access" });
+  }
+
   try {
     const { selectedRemittanceIds } = req.body;
     if (!selectedRemittanceIds || !Array.isArray(selectedRemittanceIds) || selectedRemittanceIds.length === 0) {
@@ -3895,6 +4014,13 @@ const validateExportedStatus = async (req, res) => {
 };
 
 const saveCustomCodPlan = async (req, res) => {
+  const isAdmin = req.user && (req.user.role === "admin" || req.user.isAdmin === true);
+  const isEmployee = req.isEmployee === true || !!req.employee;
+
+  if (!isAdmin && !isEmployee) {
+    return res.status(403).json({ success: false, error: "Unauthorized access" });
+  }
+
   try {
     const { id } = req.query;
     const userId = id || req.user?._id;
@@ -4086,6 +4212,34 @@ const correctRemittanceData = async (remittanceId, dryRun = false) => {
 // correctRemittanceData("84096", true).then(console.log).catch(console.error);  // Dry run
 // correctRemittanceData("84096").then(console.log).catch(console.error);         // Apply
 
+const triggerCodJob = async (req, res) => {
+  try {
+    const { token, job } = req.query;
+    const expectedToken = process.env.CRON_SECRET_TOKEN || "shipex_cron_secret_2026";
+    
+    if (!token || token !== expectedToken) {
+      return res.status(401).json({ success: false, error: "Unauthorized: Invalid or missing token." });
+    }
+
+    if (job === "remittanceScheduleData") {
+      console.log("🚀 Manual trigger: Running remittanceScheduleData...");
+      await remittanceScheduleData();
+      return res.status(200).json({ success: true, message: "remittanceScheduleData executed successfully." });
+    } else if (job === "codToBeRemitteds") {
+      console.log("🚀 Manual trigger: Running codToBeRemitteds...");
+      await codToBeRemitteds();
+      return res.status(200).json({ success: true, message: "codToBeRemitteds executed successfully." });
+    } else {
+      return res.status(400).json({ success: false, error: "Invalid job specified. Use 'remittanceScheduleData' or 'codToBeRemitteds'." });
+    }
+  } catch (error) {
+    console.error(`❌ Error triggering job ${req.query.job}:`, error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Internal Server Error",
+    });
+  }
+};
 
 module.exports = {
   codPlanUpdate,
@@ -4114,4 +4268,5 @@ module.exports = {
   saveCustomCodPlan,
   correctRemittanceData,
   remittanceScheduleData,
+  triggerCodJob,
 };

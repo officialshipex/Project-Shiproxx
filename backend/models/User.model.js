@@ -144,7 +144,6 @@ usersSchema.pre("save", async function (next) {
       if (!this.Wallet) {
         const newWallet = await Wallet.create({
           balance: 0,
-          transactions: [],
         });
         this.Wallet = newWallet._id;
       }

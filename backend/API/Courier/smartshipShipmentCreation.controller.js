@@ -178,6 +178,7 @@ const createSmartshipShipment = async ({
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
+        timeout: 15000,
       }
     );
 
