@@ -33,6 +33,10 @@ const pickupAddress = new mongoose.Schema({
     type: String,
     default: ""
   },
+  delhiveryWarehouseName: {
+    type: String,
+    default: ""
+  },
   createdAt: {
     type: Date,
     default: Date.now,

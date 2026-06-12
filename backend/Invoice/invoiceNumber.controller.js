@@ -13,7 +13,7 @@ function getFinancialYear(date = new Date()) {
 }
 
 async function generateInvoiceNumber(date = new Date()) {
-  const prefix = date >= new Date(2026, 3, 1) ? "QPS" : "SFC";
+  const prefix = date >= new Date(2026, 8, 1) ? "QPS" : "SFC";
   const fy = getFinancialYear(date); // e.g. "2324"
   const key = `${prefix}${fy}`;
 

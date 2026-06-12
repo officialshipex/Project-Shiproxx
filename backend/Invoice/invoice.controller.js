@@ -15,6 +15,7 @@ const Wallet = require("../models/wallet"); // adjust path
 const WalletTransaction = require("../models/WalletTransaction.model");
 const Order = require("../models/newOrder.model"); // adjust path
 const Invoice = require("./invoice.model"); // adjust path
+const InvoiceCounter = require("./invoiceCounter.model");
 const User = require("../models/User.model"); // adjust path
 const GSTIN = require("../models/Gstin.model");
 const billing = require("../models/billingInfo.model");
@@ -1425,6 +1426,106 @@ async function regenerateInvoicePDFsForPeriod(periodStart, periodEnd) {
   }
 }
 
+/* -------------------------------------------------------
+   Rename April/May 2026 QPS2627-* invoices → SFC2627-*
+----------------------------------------------------------*/
+async function renameQPStoSFC(req, res) {
+  try {
+    // Find all invoices whose number starts with QPS2627
+    const invoices = await Invoice.find({ invoiceNumber: /^QPS2627-/ });
+
+    console.log(`[renameQPStoSFC] Found ${invoices.length} QPS2627 invoices to rename.`);
+
+    if (!invoices.length) {
+      return res.json({ success: true, message: "No QPS2627 invoices found. Nothing to rename." });
+    }
+
+    const results = { success: [], failed: [] };
+    let maxSeq = 0;
+
+    // Shipex India branding (same as pre-Sep 2026)
+    const companyDetails = {
+      name: "Shipex India",
+      address: "01, Basement, Biju Tower, Baba Nagar, Bhiwani, Haryana - 127021",
+      phone: "+91- 9813981344",
+      email: "support@shipexindia.com",
+      pan: "XXXAAABBB",
+      gstin: "06FKCPS6109D3Z7",
+      bank: {
+        accountName: "Shipex India",
+        accountNumber: "2258120020000251",
+        bankName: "Ujjivan Small Finance Bank",
+        ifsc: "UJVN0002258",
+      },
+    };
+
+    for (const invoice of invoices) {
+      try {
+        const oldNumber = invoice.invoiceNumber;
+        const seqStr = oldNumber.split("-")[1];           // e.g. "0000035"
+        const seq = parseInt(seqStr, 10);
+        if (seq > maxSeq) maxSeq = seq;
+
+        const newNumber = `SFC2627-${seqStr}`;
+        const userId = invoice.userId;
+
+        // Load customer info
+        const user = await User.findById(userId).select("fullname email Wallet");
+        const gstin = await GSTIN.findOne({ user: userId });
+        const BillingInfo = await billing.findOne({ user: userId });
+        const PAN = await Pan.findOne({ user: userId });
+
+        const customerInfo = {
+          name: gstin?.nameOfBusiness || gstin?.legalNameOfBusiness || user?.fullname || "N/A",
+          address: gstin?.address || BillingInfo?.address || "N/A",
+          gstin: gstin?.gstin || "N/A",
+          state: gstin?.state || BillingInfo?.state || "N/A",
+          pincode: gstin?.pincode || BillingInfo?.postalCode || "N/A",
+          pan: PAN?.pan || "N/A",
+        };
+
+        // Update invoice number in memory before PDF generation
+        invoice.invoiceNumber = newNumber;
+
+        // Regenerate PDF
+        const pdfPath = await generateInvoicePDF(invoice, companyDetails, customerInfo);
+        const s3Key = `invoices/${userId}/${newNumber}.pdf`;
+        const s3Url = await uploadToS3(pdfPath, s3Key);
+
+        invoice.s3Url = s3Url;
+        await invoice.save();
+
+        try { fs.unlinkSync(pdfPath); } catch (e) {}
+
+        console.log(`  ✅ ${oldNumber} → ${newNumber}`);
+        results.success.push({ old: oldNumber, new: newNumber, s3Url });
+      } catch (err) {
+        console.error(`  ❌ Error for ${invoice.invoiceNumber}:`, err.message);
+        results.failed.push({ invoiceNumber: invoice.invoiceNumber, error: err.message });
+      }
+    }
+
+    // Fix invoice counter: remove QPS2627, set SFC2627 to maxSeq
+    await InvoiceCounter.deleteOne({ key: "QPS2627" });
+    await InvoiceCounter.findOneAndUpdate(
+      { key: "SFC2627" },
+      { $set: { seq: maxSeq } },
+      { upsert: true, new: true }
+    );
+    console.log(`[renameQPStoSFC] Counter: SFC2627 = ${maxSeq}, QPS2627 deleted.`);
+
+    return res.json({
+      success: true,
+      message: `Renamed ${results.success.length} invoices. ${results.failed.length} failed.`,
+      renamed: results.success,
+      failed: results.failed,
+    });
+  } catch (err) {
+    console.error("[renameQPStoSFC] Fatal error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
+
 /* -------------------------
    Exports (controllers)
    -------------------------*/
@@ -1438,4 +1539,5 @@ module.exports = {
   bulkDownloadInvoices,
   exportInvoiceToExcel,
   regenerateInvoicePDFsForPeriod,
+  renameQPStoSFC,
 };

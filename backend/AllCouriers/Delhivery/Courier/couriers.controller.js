@@ -15,7 +15,9 @@ const plan = require("../../../models/Plan.model");
 const CourierService = require("../../../models/CourierService.Schema");
 const { getZone } = require("../../../Rate/zoneManagementController");
 const { assignPickupManifest } = require("../../../Orders/scheduledPickup.controller");
+const PickupAddress = require("../../../models/pickupAddress.model");
 const createdDelhiveryWarehouses = new Set();
+const warehousePromises = new Map();
 
 // HELPER FUNCTIONS
 const getCurrentDateTime = () => {
@@ -53,13 +55,39 @@ const createClientWarehouse = async (payload, apiKey) => {
 
   const uniqueName = getUniqueWarehouseName(payload);
 
-  // Check cache
+  // 1. Check in-memory success cache
   if (createdDelhiveryWarehouses.has(uniqueName)) {
     return {
       success: true,
       message: "Warehouse already exists (cached), proceeding",
       name: uniqueName,
     };
+  }
+
+  // 2. Check persistent MongoDB cache
+  let addressDoc = null;
+  try {
+    addressDoc = await PickupAddress.findOne({
+      "pickupAddress.pinCode": String(payload.pinCode),
+      "pickupAddress.contactName": payload.contactName,
+      "pickupAddress.address": payload.address,
+    });
+    if (addressDoc && addressDoc.delhiveryWarehouseName === uniqueName) {
+      createdDelhiveryWarehouses.add(uniqueName);
+      return {
+        success: true,
+        message: "Warehouse already exists (cached in DB), proceeding",
+        name: uniqueName,
+      };
+    }
+  } catch (err) {
+    console.error("Delhivery warehouse lookup error from DB:", err.message);
+    // Proceed to register via API if DB lookup fails
+  }
+
+  // 3. Concurrency Lock: Check if another parallel call is already registering this uniqueName
+  if (warehousePromises.has(uniqueName)) {
+    return warehousePromises.get(uniqueName);
   }
 
   const email = payload.email || payload.supportEmail || "";
@@ -82,67 +110,103 @@ const createClientWarehouse = async (payload, apiKey) => {
     country: "India",
   };
 
-  try {
-    const response = await axios.post(
-      `${url}/api/backend/clientwarehouse/create/`,
-      warehouseDetails,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${apiKey || process.env.DEL_API_TOKEN}`,
+  const registerPromise = (async () => {
+    try {
+      const response = await axios.post(
+        `${url}/api/backend/clientwarehouse/create/`,
+        warehouseDetails,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${apiKey || process.env.DEL_API_TOKEN}`,
+          },
+          timeout: 10000,
         },
-        timeout: 10000,
-      },
-    );
+      );
 
-    if (response.data.success) {
-      createdDelhiveryWarehouses.add(uniqueName);
-      return {
-        success: true,
-        message: "Warehouse created successfully",
-        name: uniqueName,
-        data: response.data,
-      };
-    } else {
-      const errorMessage = response.data.error?.[0] || "";
-      if (errorMessage.includes("already exists")) {
-        // Warehouse already exists, we can continue
+      if (response.data.success) {
         createdDelhiveryWarehouses.add(uniqueName);
+
+        // Persist to MongoDB cache asynchronously
+        if (addressDoc) {
+          addressDoc.delhiveryWarehouseName = uniqueName;
+          await addressDoc.save().catch((err) =>
+            console.error("Failed to persist Delhivery warehouse name to DB:", err.message)
+          );
+        }
+
+        return {
+          success: true,
+          message: "Warehouse created successfully",
+          name: uniqueName,
+          data: response.data,
+        };
+      } else {
+        const errorMessage = response.data.error?.[0] || "";
+        if (errorMessage.includes("already exists")) {
+          createdDelhiveryWarehouses.add(uniqueName);
+
+          if (addressDoc) {
+            addressDoc.delhiveryWarehouseName = uniqueName;
+            await addressDoc.save().catch((err) =>
+              console.error("Failed to persist Delhivery warehouse name to DB:", err.message)
+            );
+          }
+
+          return {
+            success: true,
+            message: "Warehouse already exists, proceeding",
+            name: uniqueName,
+            data: response.data.data,
+          };
+        } else {
+          console.error(
+            "Unknown error during warehouse creation:",
+            response.data.error?.[0],
+          );
+          throw new Error(
+            response.data.error?.[0] ||
+            "Unknown error during warehouse creation.",
+          );
+        }
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.error?.[0] || "";
+
+      if (errorMessage.includes("already exists")) {
+        createdDelhiveryWarehouses.add(uniqueName);
+
+        if (addressDoc) {
+          addressDoc.delhiveryWarehouseName = uniqueName;
+          await addressDoc.save().catch((err) =>
+            console.error("Failed to persist Delhivery warehouse name to DB:", err.message)
+          );
+        }
+
         return {
           success: true,
           message: "Warehouse already exists, proceeding",
           name: uniqueName,
-          data: response.data.data,
+          data: error.response?.data?.data,
         };
       } else {
         console.error(
-          "Unknown error during warehouse creation:",
-          response.data.error?.[0],
+          "Error creating warehouse:",
+          error.response?.data || error.message,
         );
-        throw new Error(
-          response.data.error?.[0] ||
-          "Unknown error during warehouse creation.",
-        );
+        throw new Error(errorMessage || "Failed to create warehouse.");
       }
     }
-  } catch (error) {
-    const errorMessage = error.response?.data?.error?.[0] || "";
+  })();
 
-    if (errorMessage.includes("already exists")) {
-      createdDelhiveryWarehouses.add(uniqueName);
-      return {
-        success: true,
-        message: "Warehouse already exists, proceeding",
-        name: uniqueName,
-        data: error.response?.data?.data,
-      };
-    } else {
-      console.error(
-        "Error creating warehouse:",
-        error.response?.data || error.message,
-      );
-      throw new Error(errorMessage || "Failed to create warehouse.");
-    }
+  warehousePromises.set(uniqueName, registerPromise);
+
+  try {
+    const result = await registerPromise;
+    return result;
+  } finally {
+    // Always clean up the promise registration when complete
+    warehousePromises.delete(uniqueName);
   }
 };
 

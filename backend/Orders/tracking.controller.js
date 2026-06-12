@@ -1081,37 +1081,43 @@ const trackSingleOrder = async (order) => {
     }
 
     if (partner === "Losung360") {
+      // Use system_status_code (SPB, PKD, etc.) as the primary key — it's more reliable than text matching
+      const statusCode = normalizedData.StatusCode?.toUpperCase() || "";
       const statusText = normalizedData.Status?.toLowerCase() || "";
 
-      if (statusText.includes("delivered") || statusText === "dld" || statusText === "dl") {
-        order.status = "Delivered";
-        order.ndrStatus = "Delivered";
+      // SPB = Shipment Booked → Ready To Ship
+      if (statusCode === "SPB" || statusText.includes("shipment booked") || statusText.includes("booked")) {
+        order.status = "Ready To Ship";
+        order.ndrStatus = "Ready To Ship";
+
+      // PKD = Pickup Done → In-transit
+      } else if (statusCode === "PKD" || statusText.includes("picked up") || statusText.includes("pickup done") || statusText.includes("pickup")) {
+        order.status = "In-transit";
+        order.ndrStatus = "In-transit";
+        if (!order.invoiceDate) {
+          order.invoiceDate = normalizedData.StatusDateTime;
+        }
         order.reattempt = false;
+
+      } else if (statusText.includes("in-transit") || statusText.includes("in transit") || statusText.includes("shipped") || statusText === "it") {
+        order.status = "In-transit";
+        order.ndrStatus = "In-transit";
+        if (!order.invoiceDate) {
+          order.invoiceDate = normalizedData.StatusDateTime;
+        }
+        order.reattempt = false;
+
       } else if (statusText.includes("out for delivery") || statusText.includes("ofd")) {
         order.status = "Out for Delivery";
         order.ndrStatus = "Out for Delivery";
         order.reattempt = false;
-      } else if (
-        statusText.includes("picked up") ||
-        statusText.includes("pickup") ||
-        statusText.includes("in-transit") ||
-        statusText.includes("in transit") ||
-        statusText.includes("shipped") ||
-        statusText === "pu" ||
-        statusText === "pud" ||
-        statusText === "it"
-      ) {
-        order.status = "In-transit";
-        if (!order.invoiceDate) {
-          order.invoiceDate = normalizedData.StatusDateTime;
-        }
-      } else if (
-        statusText.includes("undelivered") ||
-        statusText.includes("failed delivery") ||
-        statusText.includes("attempted") ||
-        statusText === "ud" ||
-        statusText === "und"
-      ) {
+
+      } else if (statusText.includes("delivered") || statusText === "dld" || statusText === "dl") {
+        order.status = "Delivered";
+        order.ndrStatus = "Delivered";
+        order.reattempt = false;
+
+      } else if (statusText.includes("undelivered") || statusText.includes("failed delivery") || statusText.includes("attempted") || statusText === "ud" || statusText === "und") {
         order.status = "Undelivered";
         order.ndrStatus = "Undelivered";
         order.ndrReason = {
@@ -1119,14 +1125,17 @@ const trackSingleOrder = async (order) => {
           reason: normalizedData.Instructions || "Delivery attempted",
         };
         order.reattempt = true;
+
       } else if (statusText.includes("rto delivered") || statusText === "rtod") {
         order.status = "RTO Delivered";
         order.ndrStatus = "RTO Delivered";
         order.reattempt = false;
+
       } else if (statusText.includes("rto") || statusText.includes("return")) {
         order.status = "RTO In-transit";
         order.ndrStatus = "RTO In-transit";
         order.reattempt = false;
+
       } else if (statusText.includes("cancelled") || statusText === "can") {
         order.status = "Cancelled";
         order.ndrStatus = "Cancelled";
@@ -1136,8 +1145,6 @@ const trackSingleOrder = async (order) => {
             ? 0
             : parseFloat(order.totalFreightCharges);
         shouldUpdateWallet = true;
-      } else if (statusText.includes("booked") || statusText === "spb") {
-        order.status = "Booked";
       }
     }
 
@@ -2029,20 +2036,59 @@ const mapTrackingResponse = (data, provider, remark) => {
   // console.log("Mapping data for provider:", data);
   if (provider === "Losung360") {
     const rawData = data[0] || {};
-    const latestScan = Array.isArray(rawData.history)
-      ? (rawData.history[rawData.history.length - 1] || null)
-      : rawData;
-
+    
     const formatLosung360DateTime = (rawDate) => {
       if (!rawDate) return null;
       if (typeof rawDate !== "string") return new Date(rawDate);
       if (rawDate.includes("Z") || rawDate.includes("+")) return new Date(rawDate);
+      
+      const parts = rawDate.split(/[\s\-:]+/);
+      if (parts.length >= 5) {
+        const day = parts[0].padStart(2, "0");
+        const monthName = parts[1].toLowerCase().slice(0, 3);
+        const year = parts[2];
+        const hour = parts[3].padStart(2, "0");
+        const minute = parts[4].padStart(2, "0");
+        const second = (parts[5] || "00").padStart(2, "0");
+        
+        const months = {
+          jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+          jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12"
+        };
+        const month = months[monthName];
+        if (month) {
+          const isoString = `${year}-${month}-${day}T${hour}:${minute}:${second}.000Z`;
+          const parsedDate = new Date(isoString);
+          if (!isNaN(parsedDate.getTime())) {
+            return parsedDate;
+          }
+        }
+      }
+      
       const formatted = rawDate.replace(" ", "T") + "Z"; // treat the IST time as-is so frontend shows correct time
-      return new Date(formatted);
+      const parsed = new Date(formatted);
+      if (!isNaN(parsed.getTime())) {
+        return parsed;
+      }
+      return new Date(rawDate);
     };
+
+    let history = [];
+    if (Array.isArray(rawData.history)) {
+      history = [...rawData.history];
+      history.sort((a, b) => {
+        const dateA = formatLosung360DateTime(a.timestamp) || new Date(0);
+        const dateB = formatLosung360DateTime(b.timestamp) || new Date(0);
+        return dateA - dateB;
+      });
+      rawData.history = history; // mutate original array so caller uses sorted history
+    }
+
+    const latestScan = history.length > 0 ? history[history.length - 1] : rawData;
 
     return {
       Status: latestScan?.system_status_name || latestScan?.status || rawData.current_status || "N/A",
+      StatusCode: latestScan?.system_status_code || null,   // e.g. "SPB", "PKD"
       StatusLocation: latestScan?.location || "Unknown",
       StatusDateTime: formatLosung360DateTime(latestScan?.timestamp),
       Instructions: latestScan?.description || latestScan?.status || rawData.current_status || "N/A",
@@ -2123,7 +2169,7 @@ const mapTrackingResponse = (data, provider, remark) => {
       return rawDate + "Z"; // treat the IST time as-is so frontend shows correct time
     };
 
-    const scanArray = data || [];
+    const scanArray = Array.isArray(data[0]) ? data[0] : (Array.isArray(data) ? data : []);
     // console.log("scan",scanArray)
     const latestScan = scanArray?.[scanArray.length - 1];
     return {
