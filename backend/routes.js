@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const RTOCharges = require("./RTO/rtoController");
+const apiLimiter = require("./middleware/rateLimiter.middleware");
 const authRouter = require("./routes/auth.router");
 const { isAuthorized } = require("./middleware/auth.middleware");
 const getKyc = require("./GetKycDetals/getKyc.router");
@@ -188,6 +189,6 @@ router.use("/announcement", announcementRouter);
 const agreementRoutes = require("./agreement/agreement.routes");
 router.use("/agreement", agreementRoutes);
 
-router.use("/api", api);
+router.use("/api", apiLimiter, api);
 
 module.exports = router;

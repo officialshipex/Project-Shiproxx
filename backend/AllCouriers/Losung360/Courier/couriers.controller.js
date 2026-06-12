@@ -113,7 +113,41 @@ const trackLosung360Order = async (awb) => {
 //   .catch(err => console.error("Top-level Track Call Error:", err));
 
 const cancelLosung360Order = async (awb) => {
-  return { success: true };
+  try {
+    const token = await getLosung360AccessToken();
+    if (!token) {
+      return { success: false, message: "Losung360 auth token retrieval failed" };
+    }
+
+    const response = await axios.post(
+      `${LOSUNG360_BASE_URL}/shipping/cancel-shipment`,
+      {
+        awb: awb,
+        cancellation_reason: "Customer requested"
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        timeout: 10000
+      }
+    );
+
+    if (response.data && response.data.success) {
+      console.log("Losung360 Cancellation Response:", response.data);
+      return { success: true, message: response.data.message || "Cancelled successfully", data: response.data };
+    }
+
+    return { success: false, message: response.data?.message || "Cancellation failed at Losung360" };
+  } catch (error) {
+    console.error("Losung360 Cancellation Error:", error?.response?.data || error.message);
+    return {
+      success: false,
+      message: error?.response?.data?.message || error?.response?.data?.detail || error.message,
+      error: error?.response?.data || error.message
+    };
+  }
 };
 
 module.exports = { trackLosung360Order, createOrder, cancelLosung360Order };
