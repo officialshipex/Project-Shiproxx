@@ -849,7 +849,11 @@ const trackSingleOrder = async (order) => {
       // console.log("stat", normalizedData.StatusType, normalizedData.Status);
       if (statusDoc) {
         function normalizeString(str) {
-          return str?.toLowerCase().replace(/\s+/g, "").trim();
+          return str
+            ?.toLowerCase()
+            .replace(/['"]/g, "") // remove apostrophes and quotes
+            .replace(/[^a-z0-9]/gi, "") // remove all non-alphanumeric characters
+            .trim();
         }
 
         const dbMapping = statusDoc?.data.find(
@@ -862,54 +866,31 @@ const trackSingleOrder = async (order) => {
             normalizeString(normalizedData?.Instructions),
         );
 
-        // console.log(dbMapping?.sy_status);
-
         if (dbMapping) {
-          // console.log("maped delhivery status", dbMapping.sy_status);
-          order.status = dbMapping.sy_status; // fallback if not mapped
+          order.status = dbMapping.sy_status;
           order.ndrStatus = dbMapping.sy_status;
+
           if (dbMapping.sy_status === "In-transit" && !order.invoiceDate) {
             order.invoiceDate = normalizedData.StatusDateTime;
           }
-          // Only set ndrStatus for actual NDR-related states
-          if (
-            [
-              "Our for Delivery",
-              "RTO",
-              "Undelivered",
-              "In-transit",
-              "RTO In-transit",
-              "RTO Delivered",
-            ].includes(dbMapping.sy_status)
-          ) {
-            order.ndrStatus = dbMapping.sy_status;
-          }
-          if (order.status === "RTO Delivered") {
-            order.ndrStatus = "RTO Delivered";
-          }
-          if (order.status === "RTO" || order.status === "RTO In-transit") {
+
+          if (order.status === "RTO Delivered") order.ndrStatus = "RTO Delivered";
+
+          if (["RTO", "RTO In-transit"].includes(order.status)) {
             order.ndrStatus = order.status;
           }
         }
       }
 
-      if (
-        (order.ndrStatus === "Undelivered" ||
-          order.ndrStatus === "Out for Delivery" ||
-          order.ndrStatus === "Action_Requested") &&
-        normalizedData.Status === "Delivered"
-      ) {
+      if (normalizedData.Status === "Delivered") {
         if (order.ndrHistory.length > 0) {
-          // NDR was raised → mark both as Delivered
           order.status = "Delivered";
           order.ndrStatus = "Delivered";
         } else {
-          // No NDR raised → only status is Delivered
           order.status = "Delivered";
-          // order.ndrStatus="Delivered";
         }
       }
-      // await order.save();
+      
       const eligibleNSLCodes = [
         "EOD-74",
         "EOD-15",
@@ -925,17 +906,16 @@ const trackSingleOrder = async (order) => {
       const lastAction = lastNdr?.actions?.[lastNdr.actions.length - 1];
 
       const lastEntryDate = lastAction?.date
-        ? new Date(lastAction.date).toDateString()
+        ? new Date(lastAction.date).getTime()
         : null;
 
       const currentStatusDate = new Date(
         normalizedData.StatusDateTime,
-      ).toDateString();
+      ).getTime();
 
       if (
         (order.ndrHistory.length === 0 ||
-          lastEntryDate !== currentStatusDate) &&
-        order.ndrHistory.length <= 2
+          (lastEntryDate !== null && lastEntryDate < currentStatusDate))
       ) {
         if (
           normalizedData.StatusCode &&
@@ -943,7 +923,6 @@ const trackSingleOrder = async (order) => {
         ) {
           order.ndrStatus = "Undelivered";
           order.status = "Undelivered";
-          updateNdrHistoryByAwb(order.awb_number);
           order.ndrReason = {
             date: normalizedData.StatusDateTime,
             reason: normalizedData.Instructions,
@@ -954,7 +933,7 @@ const trackSingleOrder = async (order) => {
             actions: [
               {
                 action: `NDR ${attemptCount} Raised`,
-                actionBy: order.courierServiceName,
+                actionBy: order.provider,
                 remark: normalizedData.Instructions,
                 source: order.provider,
                 date: normalizedData.StatusDateTime,

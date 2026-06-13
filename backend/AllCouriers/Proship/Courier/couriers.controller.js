@@ -106,8 +106,6 @@ const createProshipOrder = async (req, res) => {
     if (totalBalance < finalCharges) {
       await session.abortTransaction();
       session.endSession();
-      // Restore status to "new" outside transaction if possible, or just fail
-      await Order.findByIdAndUpdate(id, { status: "new" });
       return res.status(400).json({ success: false, message: "Insufficient Wallet Balance" });
     }
 
@@ -116,7 +114,6 @@ const createProshipOrder = async (req, res) => {
     if (!zone) {
       await session.abortTransaction();
       session.endSession();
-      await Order.findByIdAndUpdate(id, { status: "new" });
       return res.status(400).json({ success: false, message: "Pincode not serviceable" });
     }
 
@@ -278,12 +275,7 @@ const createProshipOrder = async (req, res) => {
     }
     session.endSession();
 
-    if (req.body.id) {
-      await Order.updateOne(
-        { _id: req.body.id, status: "processing" },
-        { $set: { status: "new" } }
-      );
-    }
+    // Session transaction abort will automatically roll back the status to "new"
 
     console.error("Proship Creation Error:", error.response?.data || error.message);
     return res.status(500).json({

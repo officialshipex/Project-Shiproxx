@@ -73,7 +73,6 @@ const createDelhiveryShipment = async ({
     const apiKey = await getDelhiveryApiKey(courierName || provider);
 
     if (!walletId) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Wallet not found" };
@@ -93,7 +92,6 @@ const createDelhiveryShipment = async ({
     ]);
 
     if (!waybills || !waybills.length || !zone) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return {
@@ -105,7 +103,6 @@ const createDelhiveryShipment = async ({
     }
 
     if (!warehouseCreationResult || !warehouseCreationResult.success) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return {
@@ -188,7 +185,6 @@ const createDelhiveryShipment = async ({
       finalCharges === "N/A" ? 0 : parseFloat(finalCharges);
     const balance = effectiveBalance + walletCreditLimit;
     if (balance < balanceToBeDeducted) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Insufficient Wallet Balance" };
@@ -206,7 +202,6 @@ const createDelhiveryShipment = async ({
     const result = response.data?.packages?.[0];
     if (!response.data.success || !result) {
        console.log("Delhivery error",result)
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return {
@@ -292,8 +287,9 @@ const createDelhiveryShipment = async ({
       estimatedDeliveryDate: estimateDate,
     };
   } catch (error) {
-    await Order.findByIdAndUpdate(id, { status: "new" });
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
     return {
       success: false,

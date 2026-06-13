@@ -48,7 +48,6 @@ const createShadowfaxShipment = async ({
 
     // Step 2️⃣ Wallet check
     if (!walletId) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Wallet not found" };
@@ -57,7 +56,6 @@ const createShadowfaxShipment = async ({
     // Fetch API Key
     const apiKey = await getShadowfaxToken(courierName || provider);
     if (!apiKey) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Shadowfax API Token not found" };
@@ -70,7 +68,6 @@ const createShadowfaxShipment = async ({
     );
 
     if (!zone) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Pincode not serviceable (Zone not found)" };
@@ -103,7 +100,6 @@ const createShadowfaxShipment = async ({
     const balance = effectiveBalance + (walletCreditLimit || 0);
 
     if (balance < balanceToBeDeducted) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Insufficient Wallet Balance" };
@@ -176,7 +172,6 @@ const createShadowfaxShipment = async ({
     const sfxData = response.data;
 
     if (sfxData.message !== "Success" || !sfxData.data?.awb_number) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return {
@@ -257,7 +252,6 @@ const createShadowfaxShipment = async ({
       orderId: currentOrder.orderId,
     };
   } catch (error) {
-    await Order.findByIdAndUpdate(id, { status: "new" });
     if (session.inTransaction()) await session.abortTransaction();
     session.endSession();
     return {

@@ -76,7 +76,6 @@ const createShiprocketShipment = async ({
 
     // Step 2️⃣ Wallet check
     if (!walletId) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Wallet not found" };
@@ -88,7 +87,6 @@ const createShiprocketShipment = async ({
     const totalBalance = effectiveBalance + (walletCreditLimit || 0);
 
     if (totalBalance < balanceToBeDeducted) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Insufficient Wallet Balance" };
@@ -98,7 +96,6 @@ const createShiprocketShipment = async ({
     // Step 4️⃣ Get Zone
     const zone = await getZone(currentOrder.pickupAddress.pinCode, currentOrder.receiverAddress.pinCode);
     if (!zone) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Pincode not serviceable" };
@@ -122,7 +119,6 @@ const createShiprocketShipment = async ({
     // Step 6️⃣ Authenticate with Shiprocket
     const token = await getAuthToken();
     if (!token) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "ShipRocket authentication failed" };
@@ -176,7 +172,6 @@ const createShiprocketShipment = async ({
       console.error("Shiprocket Pickup Location Sync Error:", e.response?.data || e.message);
       // If adding fails for validation (like address length), we must stop and inform the user
       if (e.response?.status !== 422) {
-        await Order.findByIdAndUpdate(id, { status: "new" });
         await session.abortTransaction();
         session.endSession();
         let errMsg = "Shiprocket Pickup Location Error";
@@ -243,7 +238,6 @@ const createShiprocketShipment = async ({
     console.log("response data", orderResponse.data, orderResponse.data.data)
 
     if (!orderResponse.data?.shipment_id) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: orderResponse.data?.message || "Shiprocket order creation failed" };
@@ -282,7 +276,6 @@ const createShiprocketShipment = async ({
     }
 
     if (awb_number === "PENDING") {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return {
@@ -367,7 +360,6 @@ const createShiprocketShipment = async ({
     };
   } catch (error) {
     if (session.inTransaction()) await session.abortTransaction();
-    await Order.findByIdAndUpdate(id, { status: "new" });
     session.endSession();
     console.error("Shiprocket Creation Error:", error.response?.data || error.message);
     return {

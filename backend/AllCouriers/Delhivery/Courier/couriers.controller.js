@@ -253,7 +253,6 @@ const createOrder = async (req, res) => {
     ]);
 
     if (!users || !users.Wallet || !shipmentType) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({
@@ -282,7 +281,6 @@ const createOrder = async (req, res) => {
     ]);
 
     if (!waybills || !waybills.length || !zone) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({
@@ -294,7 +292,6 @@ const createOrder = async (req, res) => {
     }
 
     if (!warehouseCreationResult || !warehouseCreationResult.success) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({
@@ -370,7 +367,6 @@ const createOrder = async (req, res) => {
       finalCharges === "N/A" ? 0 : parseFloat(finalCharges);
     const balance = effectiveBalance + currentWallet.creditLimit;
     if (balance < balanceToBeDeducted) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return res
@@ -389,7 +385,6 @@ const createOrder = async (req, res) => {
     // console.log("delhiver", response)
     const result = response.data?.packages?.[0];
     if (!response.data.success || !result) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       console.log("error delhivery", response.data.packages[0].remarks)
@@ -471,8 +466,9 @@ const createOrder = async (req, res) => {
       awb_number: result.waybill,
     });
   } catch (error) {
-    await Order.findByIdAndUpdate(req.body.id, { status: "new" });
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
     console.error("Error in createOrder:", error.message);
     return res.status(500).json({

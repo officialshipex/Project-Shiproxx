@@ -71,14 +71,12 @@ const createOrder = async (req, res) => {
     ]);
 
     if (!zone) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({ message: "Pincode not serviceable" });
     }
 
     if (!user) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return res
@@ -88,7 +86,6 @@ const createOrder = async (req, res) => {
 
     const currentWallet = await Wallet.findById(user.Wallet).select("balance holdAmount creditLimit").session(session);
     if (!currentWallet) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return res
@@ -101,7 +98,6 @@ const createOrder = async (req, res) => {
       currentWallet.balance - (currentWallet.holdAmount || 0);
     const balance = effectiveBalance + currentWallet.creditLimit;
     if (balance < finalCharges) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return res
@@ -203,7 +199,6 @@ const createOrder = async (req, res) => {
         }
       );
     } catch (shipmentErr) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       console.error(
@@ -220,7 +215,6 @@ const createOrder = async (req, res) => {
     const result = response?.data?.data?.[0];
     console.log("reslt", result)
     if (!result?.success) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({
@@ -305,8 +299,9 @@ const createOrder = async (req, res) => {
       }
     });
   } catch (error) {
-    await Order.findByIdAndUpdate(req.body.id, { status: "new" });
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
     console.error(
       "❌ Error creating shipment:",

@@ -73,7 +73,6 @@ const createDTDCShipment = async ({
     );
 
     if (!zone) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Pincode not serviceable" };
@@ -106,7 +105,6 @@ const createDTDCShipment = async ({
     const effectiveBalance = walletBalance - walletHoldAmount;
     const balance = effectiveBalance + walletCreditLimit;
     if (balance < finalCharges) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Insufficient Wallet Balance" };
@@ -185,7 +183,6 @@ const createDTDCShipment = async ({
         }
       );
     } catch (err) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       console.error("❌ DTDC API failed:", err.response?.data || err.message);
@@ -198,7 +195,6 @@ const createDTDCShipment = async ({
 
     const result = response?.data?.data?.[0];
     if (!result?.success) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return {
@@ -282,8 +278,9 @@ const createDTDCShipment = async ({
       awb_number: result.reference_number,
     };
   } catch (error) {
-    await Order.findByIdAndUpdate(id, { status: "new" });
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
     console.error("❌ Error creating DTDC shipment:", error.message);
     return {

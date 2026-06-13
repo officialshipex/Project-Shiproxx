@@ -137,7 +137,6 @@ const createLosung360Shipment = async ({
 
     // Step 2: Wallet check
     if (!walletId) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Wallet not found" };
@@ -149,7 +148,6 @@ const createLosung360Shipment = async ({
     const totalBalance = effectiveBalance + (walletCreditLimit || 0);
     
     if (totalBalance < balanceToBeDeducted) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Insufficient Wallet Balance" };
@@ -162,7 +160,6 @@ const createLosung360Shipment = async ({
     );
 
     if (!zone) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Pincode not serviceable" };
@@ -198,7 +195,6 @@ const createLosung360Shipment = async ({
     console.log(`⏱️ Losung360 getAccessToken took: ${tokenEndTime - tokenStartTime}ms`);
 
     if (!token) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Losung360 authentication failed" };
@@ -208,7 +204,6 @@ const createLosung360Shipment = async ({
     const pickupAddressId = await getLosung360WarehouseId(currentOrder.userId, currentOrder.pickupAddress, token);
 
     if (!pickupAddressId) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Losung360 pickup address registration failed" };
@@ -377,7 +372,6 @@ const createLosung360Shipment = async ({
     if (session.inTransaction()) {
       await session.abortTransaction();
     }
-    await Order.findByIdAndUpdate(id, { status: "new" });
     session.endSession();
     console.error("Losung360 Creation Error:", error.response?.data || error.message);
 

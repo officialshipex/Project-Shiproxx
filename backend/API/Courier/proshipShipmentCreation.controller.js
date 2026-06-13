@@ -47,7 +47,6 @@ const createProshipShipment = async ({
 
     // Step 2️⃣ Wallet check
     if (!walletId) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Wallet not found" };
@@ -59,7 +58,6 @@ const createProshipShipment = async ({
     const totalBalance = effectiveBalance + (walletCreditLimit || 0);
     
     if (totalBalance < balanceToBeDeducted) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Insufficient Wallet Balance" };
@@ -72,7 +70,6 @@ const createProshipShipment = async ({
     );
 
     if (!zone) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: "Pincode not serviceable" };
@@ -105,7 +102,6 @@ const createProshipShipment = async ({
     const token = await getProshipAccessToken();
     // console.log("token",token)
     if (!token) {
-        await Order.findByIdAndUpdate(id, { status: "new" });
         await session.abortTransaction();
         session.endSession();
         return { success: false, message: "Proship authentication failed" };
@@ -194,7 +190,6 @@ const createProshipShipment = async ({
       !response.data.result ||
       !response.data.result.awb_number
     ) {
-        await Order.findByIdAndUpdate(id, { status: "new" });
         await session.abortTransaction();
         session.endSession();
         return {
@@ -284,7 +279,6 @@ const createProshipShipment = async ({
     if (session.inTransaction()) {
         await session.abortTransaction();
     }
-    await Order.findByIdAndUpdate(id, { status: "new" });
     session.endSession();
     console.error("Proship Creation Error:", error.response?.data || error.message);
     return {

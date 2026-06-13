@@ -161,7 +161,6 @@ const createOrder = async (req, res) => {
     // Check wallet balance
     if (balance < finalCharges) {
       await session.abortTransaction();
-      await Order.findByIdAndUpdate(id, { status: "new" });
       session.endSession();
       return res
         .status(400)
@@ -279,7 +278,6 @@ const createOrder = async (req, res) => {
         },
       });
     } catch (shipmentErr) {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       console.error(
@@ -379,7 +377,6 @@ const createOrder = async (req, res) => {
           orderId: currentOrder.orderId,
         });
     } else {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       return res
@@ -387,8 +384,9 @@ const createOrder = async (req, res) => {
         .json({ error: "Error creating shipment", details: response.data });
     }
   } catch (error) {
-    await Order.findByIdAndUpdate(req.body.id, { status: "new" });
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
     console.error("Error:", error.response?.data || error.message);
     return res

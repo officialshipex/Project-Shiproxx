@@ -130,7 +130,6 @@ const createShreeMarutiShipment = async ({
     const balance = effectiveBalance + walletCreditLimit;
     if (balance < finalCharges) {
       await session.abortTransaction();
-      await Order.findByIdAndUpdate(id, { status: "new" });
       session.endSession();
       console.timeEnd(t("total"));
       return { success: false, message: "Insufficient Wallet Balance" };
@@ -226,7 +225,6 @@ const createShreeMarutiShipment = async ({
       console.timeEnd(t("shreemarutiAPI"));
     } catch (shipmentErr) {
       console.timeEnd(t("shreemarutiAPI"));
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       const errMsg =
@@ -336,7 +334,6 @@ const createShreeMarutiShipment = async ({
         awb_number: result.awbNumber,
       };
     } else {
-      await Order.findByIdAndUpdate(id, { status: "new" });
       await session.abortTransaction();
       session.endSession();
       console.timeEnd(t("total"));
@@ -347,8 +344,9 @@ const createShreeMarutiShipment = async ({
       };
     }
   } catch (error) {
-    await Order.findByIdAndUpdate(id, { status: "new" });
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
     console.timeEnd(t("total"));
     console.error("Error:", error.response?.data || error.message);

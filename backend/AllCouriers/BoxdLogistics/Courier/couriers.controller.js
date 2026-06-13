@@ -340,14 +340,12 @@ const createBoxdLogisticsOrder = async (req, res) => {
         }
 
         if (!zone) {
-            await Order.findByIdAndUpdate(id, { status: "new" });
             await session.abortTransaction();
             session.endSession();
             return res.status(400).json({ success: false, message: "Pincode not serviceable" });
         }
 
         if (!user) {
-            await Order.findByIdAndUpdate(id, { status: "new" });
             await session.abortTransaction();
             session.endSession();
             return res.status(404).json({ success: false, message: "User not found" });
@@ -355,7 +353,6 @@ const createBoxdLogisticsOrder = async (req, res) => {
 
         const currentWallet = await Wallet.findById(user.Wallet).select("balance holdAmount creditLimit").session(session);
         if (!currentWallet) {
-            await Order.findByIdAndUpdate(id, { status: "new" });
             await session.abortTransaction();
             session.endSession();
             return res.status(404).json({ success: false, message: "Wallet not found" });
@@ -365,7 +362,6 @@ const createBoxdLogisticsOrder = async (req, res) => {
         const effectiveBalance = currentWallet.balance - (currentWallet.holdAmount || 0);
         const balance = effectiveBalance + (currentWallet.creditLimit || 0);
         if (balance < finalCharges) {
-            await Order.findByIdAndUpdate(id, { status: "new" });
             await session.abortTransaction();
             session.endSession();
             return res.status(400).json({ success: false, message: "Insufficient Wallet Balance" });
@@ -377,7 +373,6 @@ const createBoxdLogisticsOrder = async (req, res) => {
             createRes = await createBoxdOrder(currentOrder, courierServiceName);
             console.log("BoxdLogistics create order response:", createRes);
         } catch (err) {
-            await Order.findByIdAndUpdate(id, { status: "new" });
             await session.abortTransaction();
             session.endSession();
             console.error("❌ BoxdLogistics create order failed:", err.response?.data || err.message);
@@ -391,7 +386,6 @@ const createBoxdLogisticsOrder = async (req, res) => {
         // BoxdLogistics returns { id: <order_id>, ... } or similar — extract the portal order ID
         const boxdOrderId = createRes?.id || createRes?.order_id;
         if (!boxdOrderId) {
-            await Order.findByIdAndUpdate(id, { status: "new" });
             await session.abortTransaction();
             session.endSession();
             return res.status(400).json({
@@ -407,7 +401,6 @@ const createBoxdLogisticsOrder = async (req, res) => {
             shipRes = await shipBoxdOrder(boxdOrderId, courierId);
             console.log("BoxdLogistics ship response:", shipRes);
         } catch (err) {
-            await Order.findByIdAndUpdate(id, { status: "new" });
             await session.abortTransaction();
             session.endSession();
             console.error("❌ BoxdLogistics ship order failed:", err.response?.data || err.message);
@@ -421,7 +414,6 @@ const createBoxdLogisticsOrder = async (req, res) => {
         // Extract AWB from ship response
         const awb = shipRes?.awb_number || shipRes?.tracking_number || shipRes?.shipment?.awb || "";
         if (!awb) {
-            await Order.findByIdAndUpdate(id, { status: "new" });
             await session.abortTransaction();
             session.endSession();
             return res.status(400).json({
@@ -507,8 +499,9 @@ const createBoxdLogisticsOrder = async (req, res) => {
             }
         });
     } catch (error) {
-        await Order.findByIdAndUpdate(req.body.id, { status: "new" }).catch(() => { });
-        await session.abortTransaction();
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
         session.endSession();
         console.error("❌ BoxdLogistics shipment error:", error.response?.data || error.message);
         return res.status(500).json({

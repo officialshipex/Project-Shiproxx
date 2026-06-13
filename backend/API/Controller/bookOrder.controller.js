@@ -77,7 +77,7 @@ const bookOrder = async (req, res) => {
       Order.findOne({ orderId, userId }),
       User.findById(userId),
     ]);
-
+    // console.log(order,user)
     if (!order) {
       return res.status(404).json({
         status: "failure",
@@ -421,7 +421,8 @@ const bookOrder = async (req, res) => {
       console.error("Shipment creation failed:", shipmentResult);
       return res.status(400).json({
         status: "failure",
-        message: shipmentResult?.message || "Shipment creation failed.",
+        message: shipmentResult?.error || shipmentResult?.message || "Shipment creation failed.",
+        details: shipmentResult?.details || null,
       });
     }
 
