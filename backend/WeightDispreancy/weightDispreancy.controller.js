@@ -374,6 +374,9 @@ const uploadDispreancy = async (req, res) => {
     });
   } catch (error) {
     console.error("Error parsing upload:", error);
+    if (req.file && req.file.path) {
+      fs.promises.unlink(req.file.path).catch(() => {});
+    }
     if (!res.headersSent) {
       res.status(500).json({ success: false, error: "Internal Server Error" });
     }

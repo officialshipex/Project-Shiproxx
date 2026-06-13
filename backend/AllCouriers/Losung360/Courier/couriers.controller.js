@@ -73,7 +73,7 @@ const createOrder = async (req, res) => {
     console.error("Losung360 UI Shipment Creation Error:", error.message);
     return res.status(500).json({
       success: false,
-      message: "Failed to create order.",
+      message: error.message || "Failed to create order.",
       error: error.message,
     });
   }

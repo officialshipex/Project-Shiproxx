@@ -1017,6 +1017,15 @@ const uploadRatecard = async (req, res) => {
     });
   } catch (err) {
     console.error("Upload ratecard error:", err);
+    if (req.file && req.file.path) {
+      try {
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+      } catch (unlinkErr) {
+        console.error("Failed to delete temp file in catch:", unlinkErr);
+      }
+    }
     res.status(500).json({ error: "Failed to upload/process rate card file" });
   }
 };

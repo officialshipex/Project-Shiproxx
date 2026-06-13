@@ -31,108 +31,108 @@ const saveBaseRate = async (req, res) => {
 
 
 const uploadBaseRate = async (req, res) => {
+  if (!req.file) {
+    return res.status(400).send('No file uploaded.');
+  }
+
+  const filePath = path.join(__dirname, '../uploads', req.file.filename);
+
   try {
-    if (!req.file) {
-      return res.status(400).send('No file uploaded.');
+    const workbook = xlsx.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const data = xlsx.utils.sheet_to_json(sheet);
+
+    let parsedData;
+    try {
+      parsedData = JSON.parse(req.body.data);
+    } catch (error) {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      return res.status(400).send('Invalid JSON data.');
     }
 
-    const filePath = path.join(__dirname, '../uploads', req.file.filename);
+    const { courierProviderName } = parsedData;
+    
+    let service = '';
+    let mode = 'Surface';
 
-    try {
-      const workbook = xlsx.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const data = xlsx.utils.sheet_to_json(sheet);
+    let prevRateCard=null;
+    for (const item of data) {
+      if (item.Courier) {
+        service = item.Courier;
+        mode = item.mode || mode;
+        const existingBaseCard = await BaseRateCard.findOne({ courierProviderName, courierServiceName: service, mode });
 
+        const transformedData = [{
+          weight: parseFloat(item.Weight),
+          zoneA: { forward: item['Zone A Forward']},
+          zoneB: { forward: item['Zone B Forward']},
+          zoneC: { forward: item['Zone C Forward']},
+          zoneD: { forward: item['Zone D Forward']},
+          zoneE: { forward: item['Zone E Forward']},
+        }];
 
-      let parsedData;
-      try {
-        parsedData = JSON.parse(req.body.data);
-      } catch (error) {
-        return res.status(400).send('Invalid JSON data.');
-      }
+        if (existingBaseCard) {
+          prevRateCard=existingBaseCard;
 
-      const { courierProviderName } = parsedData;
-      
-
-      let service = '';
-      let mode = 'Surface';
-
-      let prevRateCard=null;
-      for (const item of data) {
-        if (item.Courier) {
-          service = item.Courier;
-          mode = item.mode || mode;
-          const existingBaseCard = await BaseRateCard.findOne({ courierProviderName, courierServiceName: service, mode });
-
-          const transformedData = [{
-            weight: parseFloat(item.Weight),
-            zoneA: { forward: item['Zone A Forward']},
-            zoneB: { forward: item['Zone B Forward']},
-            zoneC: { forward: item['Zone C Forward']},
-            zoneD: { forward: item['Zone D Forward']},
-            zoneE: { forward: item['Zone E Forward']},
-          }];
-
-          if (existingBaseCard) {
-            prevRateCard=existingBaseCard;
-
-            existingBaseCard.weightPriceBasic = transformedData;
-            existingBaseCard.codPercent = item['COD %'];
-            existingBaseCard.codCharge = item['COD Charge'];
-            existingBaseCard.mode = mode;
-
-            
-          } else {
-            const newBaseRate = new BaseRateCard({
-              courierProviderName,
-              courierServiceName: service,
-              mode,
-              weightPriceBasic: transformedData,
-              codPercent: item['COD %'],
-              codCharge: item['COD Charge'],
-            });
-
-            await newBaseRate.save();
-          }
-          
+          existingBaseCard.weightPriceBasic = transformedData;
+          existingBaseCard.codPercent = item['COD %'];
+          existingBaseCard.codCharge = item['COD Charge'];
+          existingBaseCard.mode = mode;
 
         } else {
-          const existingBaseCard = await BaseRateCard.findOne({ courierProviderName, courierServiceName: service, mode });
-          const transformedData = [{
-            weight: parseFloat(item.Weight.replace(/[^\d.-]/g, '')),
-            zoneA: { forward: item['Zone A Forward']},
-            zoneB: { forward: item['Zone B Forward']},
-            zoneC: { forward: item['Zone C Forward']},
-            zoneD: { forward: item['Zone D Forward']},
-            zoneE: { forward: item['Zone E Forward']},
-          }];
+          const newBaseRate = new BaseRateCard({
+            courierProviderName,
+            courierServiceName: service,
+            mode,
+            weightPriceBasic: transformedData,
+            codPercent: item['COD %'],
+            codCharge: item['COD Charge'],
+          });
 
-          console.log(transformedData);
-         
+          await newBaseRate.save();
+        }
+        
 
-          if (existingBaseCard) {
-            existingBaseCard.weightPriceAdditional= transformedData;
-            const updatedRateCard = await existingBaseCard.save();
+      } else {
+        const existingBaseCard = await BaseRateCard.findOne({ courierProviderName, courierServiceName: service, mode });
+        const transformedData = [{
+          weight: parseFloat(item.Weight.replace(/[^\d.-]/g, '')),
+          zoneA: { forward: item['Zone A Forward']},
+          zoneB: { forward: item['Zone B Forward']},
+          zoneC: { forward: item['Zone C Forward']},
+          zoneD: { forward: item['Zone D Forward']},
+          zoneE: { forward: item['Zone E Forward']},
+        }];
 
-           if(prevRateCard!=null){
-            await editBaseRate(prevRateCard, updatedRateCard);
-           }
-          }
+        console.log(transformedData);
+       
+
+        if (existingBaseCard) {
+          existingBaseCard.weightPriceAdditional= transformedData;
+          const updatedRateCard = await existingBaseCard.save();
+
+         if(prevRateCard!=null){
+          await editBaseRate(prevRateCard, updatedRateCard);
+         }
         }
       }
-
-      fs.unlinkSync(filePath);
-
-      res.status(201).json('File uploaded and data saved successfully.');
-
-    } catch (error) {
-      console.error('Error processing file:', error);
-      res.status(500).json('Error processing file.');
     }
+
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    res.status(201).json('File uploaded and data saved successfully.');
+
   } catch (error) {
-    console.error('General error:', error);
-    res.status(500).json('An unexpected error occurred.');
+    console.error('Error processing file:', error);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    res.status(500).json('Error processing file.');
   }
 };
 

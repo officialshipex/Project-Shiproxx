@@ -221,11 +221,13 @@ const bulkOrderB2B = async (req, res) => {
 
     const ext = path.extname(req.file.originalname).toLowerCase();
     if (![".xlsx", ".xls"].includes(ext)) {
+      try { if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
       return res.status(400).json({ error: "Unsupported file format" });
     }
 
     const rows = parseExcel(req.file.path);
     if (!rows.length) {
+      try { if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
       return res.status(400).json({ error: "Excel file is empty" });
     }
 
@@ -468,6 +470,9 @@ const bulkOrderB2B = async (req, res) => {
     });
   } catch (error) {
     console.error("B2B Bulk Upload Error:", error);
+    if (req.file && req.file.path) {
+      try { if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
+    }
     return res.status(500).json({
       error: error.message || "Failed to process B2B bulk upload",
     });

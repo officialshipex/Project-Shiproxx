@@ -16,7 +16,7 @@ const ekartEpochToISTDate = (epoch) => {
 
 const EkartWebhook = async (req, res) => {
   try {
-    console.log("Ekart Webhook Received:", req.body);
+    // console.log("Ekart Webhook Received:", req.body);
 
     const body = req.body;
 

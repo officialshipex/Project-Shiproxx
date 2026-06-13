@@ -1,6 +1,7 @@
 const Ticket = require('../models/TicketSchema');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 // Multer configuration for file uploads (multiple files)
 const storage = multer.diskStorage({
@@ -30,6 +31,11 @@ const createTicket = async (req, res) => {
     const userId = req.user?._id || req.employee?._id;
 
     if (!userId || !category || !subcategory || !fullname || !phoneNumber || !email || !company || !message) {
+      if (req.files && req.files.length > 0) {
+        req.files.forEach(file => {
+          try { if (fs.existsSync(file.path)) fs.unlinkSync(file.path); } catch (e) {}
+        });
+      }
       return res.status(400).json({ message: "All fields except AWB and attachments are required" });
     }
 
@@ -44,6 +50,11 @@ const createTicket = async (req, res) => {
 
     const validStatuses = ["active", "resolved", "deleted"];
     if (status && !validStatuses.includes(status)) {
+      if (req.files && req.files.length > 0) {
+        req.files.forEach(file => {
+          try { if (fs.existsSync(file.path)) fs.unlinkSync(file.path); } catch (e) {}
+        });
+      }
       return res.status(400).json({ message: "Invalid status value" });
     }
 
@@ -75,6 +86,11 @@ const createTicket = async (req, res) => {
     res.status(201).json({ message: "Ticket created successfully", ticket: newTicket });
   } catch (error) {
     console.error("Error creating ticket:", error);
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        try { if (fs.existsSync(file.path)) fs.unlinkSync(file.path); } catch (e) {}
+      });
+    }
     res.status(500).json({ message: "Server error" });
   }
 };

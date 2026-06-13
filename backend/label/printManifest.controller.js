@@ -294,6 +294,15 @@ app.get("/generate-pdf", async (req, res) => {
     });
   } catch (error) {
     console.error("Error generating PDF:", error);
+    // Clean up any temp files that may have been generated before the error
+    const filePath = path.join(__dirname, "manifest.pdf");
+    try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (e) {}
+    if (orderIdList) {
+      for (let i = 0; i < orderIdList.length; i++) {
+        const barcodePath = path.join(__dirname, `barcode_${i}.png`);
+        try { if (fs.existsSync(barcodePath)) fs.unlinkSync(barcodePath); } catch (e) {}
+      }
+    }
     res.status(500).send("Internal Server Error");
   }
 });

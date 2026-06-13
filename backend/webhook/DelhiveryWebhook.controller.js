@@ -25,7 +25,7 @@ const eligibleNSLCodes = [
 const DelhiveryWebhook = async (req, res) => {
   try {
     const token = req.headers.authorization;
-    console.log("Delhivery Webhook Token:", token);
+    // console.log("Delhivery Webhook Token:", token);
 
     if (token !== `Bearer ${DELHIVERY_WEBHOOK_TOKEN}`) {
       return res.status(401).send("Unauthorized");
@@ -34,7 +34,7 @@ const DelhiveryWebhook = async (req, res) => {
     const body = req.body?.Shipment;
     if (!body) return res.status(400).send("Invalid Payload");
 
-    console.log("Webhook Scan Received from Delhivery:", body);
+    // console.log("Webhook Scan Received from Delhivery:", body);
 
     // Extract values
     const awb = body.AWB;

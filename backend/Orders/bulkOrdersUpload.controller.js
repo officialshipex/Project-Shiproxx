@@ -301,12 +301,14 @@ const bulkOrder = async (req, res) => {
     const fileExtension = path.extname(req.file.originalname).toLowerCase();
 
     if (![".xlsx", ".xls"].includes(fileExtension)) {
+      try { if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
       return res.status(400).json({ error: "Unsupported file format" });
     }
 
     const orders = await parseExcel(req.file.path);
 
     if (!orders || !orders.length) {
+      try { if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
       return res.status(400).json({
         error: "The uploaded file is empty or contains invalid data",
       });
@@ -489,6 +491,9 @@ const bulkOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("Bulk Upload Error:", error);
+    if (req.file && req.file.path) {
+      try { if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
+    }
     return res.status(500).json({
       error: error.message || "Failed to process bulk upload",
     });

@@ -211,271 +211,290 @@ const createClientWarehouse = async (payload, apiKey) => {
 };
 
 const createOrder = async (req, res) => {
-  const session = await mongoose.startSession();
+  const {
+    id,
+    provider,
+    courierName,
+    finalCharges,
+    courierServiceName,
+    estimatedDeliveryDate,
+    priceBreakup
+  } = req.body;
 
-  try {
-    const {
-      id,
-      provider,
-      courierName,
-      finalCharges,
-      courierServiceName,
-      estimatedDeliveryDate,
-      priceBreakup
-    } = req.body;
+  const maxRetries = 3;
+  let attempt = 0;
 
-    session.startTransaction();
+  while (attempt < maxRetries) {
+    attempt++;
+    const session = await mongoose.startSession();
 
-    // Step 1️⃣ Fetch order and lock
-    const currentOrder = await Order.findOneAndUpdate(
-      { _id: id, status: "new" },
-      { $set: { status: "processing" } },
-      { new: true, session },
-    );
+    try {
+      session.startTransaction();
 
-    if (!currentOrder) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({
-        success: false,
-        message: `Shipment cannot be created because order is already processed or not in 'new' status.`,
-      });
-    }
+      // Step 1️⃣ Fetch order and lock
+      const currentOrder = await Order.findOneAndUpdate(
+        { _id: id, status: "new" },
+        { $set: { status: "processing" } },
+        { new: true, session },
+      );
 
-    // Step 2️⃣ Fetch user, wallet, and courier service concurrently
-    const [users, plans, shipmentType] = await Promise.all([
-      user.findById(currentOrder.userId).populate("Wallet").session(session),
-      plan.findOne({ userId: currentOrder.userId }).session(session),
-      CourierService.findOne({
-        name: courierServiceName,
-        provider: "Delhivery",
-      }).session(session),
-    ]);
+      if (!currentOrder) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({
+          success: false,
+          message: `Shipment cannot be created because order is already processed or not in 'new' status.`,
+        });
+      }
 
-    if (!users || !users.Wallet || !shipmentType) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({
-        success: false,
-        message: !users || !users.Wallet ? "User or Wallet not found" : "Invalid Courier Service Name",
-      });
-    }
+      // Step 2️⃣ Fetch user, wallet, and courier service concurrently
+      const [users, plans, shipmentType] = await Promise.all([
+        user.findById(currentOrder.userId).populate("Wallet").session(session),
+        plan.findOne({ userId: currentOrder.userId }).session(session),
+        CourierService.findOne({
+          name: courierServiceName,
+          provider: "Delhivery",
+        }).session(session),
+      ]);
 
-    const currentWallet = users.Wallet;
-    const internalCourierName = shipmentType.courierName || provider;
+      if (!users || !users.Wallet || !shipmentType) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({
+          success: false,
+          message: !users || !users.Wallet ? "User or Wallet not found" : "Invalid Courier Service Name",
+        });
+      }
 
-    // Fetch API key for the specific account
-    const apiKey = await getDelhiveryApiKey(internalCourierName);
+      const currentWallet = users.Wallet;
+      const internalCourierName = shipmentType.courierName || provider;
 
-    // Step 3️⃣ Get waybills (from pool cache), zone & create warehouse in parallel
-    const [waybills, zone, warehouseCreationResult] = await Promise.all([
-      getWaybill(apiKey),
-      getZone(
-        currentOrder.pickupAddress.pinCode,
-        currentOrder.receiverAddress.pinCode,
-      ),
-      createClientWarehouse(
-        currentOrder.pickupAddress,
-        apiKey,
-      ),
-    ]);
+      // Fetch API key for the specific account
+      const apiKey = await getDelhiveryApiKey(internalCourierName);
 
-    if (!waybills || !waybills.length || !zone) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({
-        success: false,
-        message: (!waybills || !waybills.length)
-          ? "No Waybill Available"
-          : "Pincode not serviceable",
-      });
-    }
+      // Step 3️⃣ Get waybills (from pool cache), zone & create warehouse in parallel
+      const [waybills, zone, warehouseCreationResult] = await Promise.all([
+        getWaybill(apiKey),
+        getZone(
+          currentOrder.pickupAddress.pinCode,
+          currentOrder.receiverAddress.pinCode,
+        ),
+        createClientWarehouse(
+          currentOrder.pickupAddress,
+          apiKey,
+        ),
+      ]);
 
-    if (!warehouseCreationResult || !warehouseCreationResult.success) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({
-        success: false,
-        message: "Failed to create or fetch pickup warehouse",
-        details: warehouseCreationResult,
-      });
-    }
+      if (!waybills || !waybills.length || !zone) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({
+          success: false,
+          message: (!waybills || !waybills.length)
+            ? "No Waybill Available"
+            : "Pincode not serviceable",
+        });
+      }
 
-    // Step 5️⃣ Prepare payload (keep as-is)
-    const pickupWarehouseName =
-      warehouseCreationResult.name ||
-      warehouseCreationResult.data?.name ||
-      getUniqueWarehouseName(currentOrder.pickupAddress);
+      if (!warehouseCreationResult || !warehouseCreationResult.success) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({
+          success: false,
+          message: "Failed to create or fetch pickup warehouse",
+          details: warehouseCreationResult,
+        });
+      }
 
-    const payment_type =
-      currentOrder.paymentDetails.method === "COD" ? "COD" : "Pre-paid";
+      // Step 5️⃣ Prepare payload (keep as-is)
+      const pickupWarehouseName =
+        warehouseCreationResult.name ||
+        warehouseCreationResult.data?.name ||
+        getUniqueWarehouseName(currentOrder.pickupAddress);
 
-    const payloadData = {
-      pickup_location: { name: pickupWarehouseName },
-      shipments: [
-        {
-          Waybill: waybills[0],
-          country: "India",
-          city: currentOrder.receiverAddress.city,
-          pin: currentOrder.receiverAddress.pinCode,
-          state: currentOrder.receiverAddress.state,
-          order: currentOrder.orderId,
-          add: currentOrder.receiverAddress.address || "Default Warehouse",
-          payment_mode: payment_type,
-          shipping_mode:
-            shipmentType.courierType === "Domestic (Surface)"
-              ? "Surface"
-              : "Express",
-          quantity: currentOrder.productDetails
-            .reduce((sum, product) => sum + product.quantity, 0)
-            .toString(),
-          phone: currentOrder.receiverAddress.phoneNumber,
-          products_desc: currentOrder.productDetails
-            .map((p) => p.name)
-            .join(", "),
-          hsn_code: currentOrder.productDetails
-            .map((product) => product.hsn)
-            .join(", "),
-          ewbn:
-            currentOrder?.paymentDetails?.amount >= 50000
-              ? currentOrder?.otherDetails?.ewaybill
-              : "",
-          total_amount: currentOrder.paymentDetails.amount,
-          name: currentOrder.receiverAddress.contactName || "Default Warehouse",
-          weight: currentOrder.packageDetails.applicableWeight * 1000,
-          shipment_height: currentOrder.packageDetails.volumetricWeight.height,
-          shipment_width: currentOrder.packageDetails.volumetricWeight.width,
-          shipment_length: currentOrder.packageDetails.volumetricWeight.length,
-          cod_amount:
-            payment_type === "COD"
-              ? `${currentOrder.paymentDetails.amount}`
-              : "0",
-        },
-      ],
-    };
+      const payment_type =
+        currentOrder.paymentDetails.method === "COD" ? "COD" : "Pre-paid";
 
-    // console.log("payloadData", payloadData.shipments);
-
-    const payload = `format=json&data=${encodeURIComponent(
-      JSON.stringify(payloadData),
-    )}`;
-
-    // Step 6️⃣ Wallet check
-    const walletHoldAmount = currentWallet.holdAmount || 0;
-    const effectiveBalance = currentWallet.balance - walletHoldAmount;
-    const balanceToBeDeducted =
-      finalCharges === "N/A" ? 0 : parseFloat(finalCharges);
-    const balance = effectiveBalance + currentWallet.creditLimit;
-    if (balance < balanceToBeDeducted) {
-      await session.abortTransaction();
-      session.endSession();
-      return res
-        .status(400)
-        .json({ success: false, message: "Insufficient Wallet Balance" });
-    }
-
-    // Step 7️⃣ Create Shipment (external API, keep as-is)
-    const response = await axios.post(`${url}/api/cmu/create.json`, payload, {
-      headers: {
-        Authorization: `Token ${apiKey}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      timeout: 8000,
-    });
-    // console.log("delhiver", response)
-    const result = response.data?.packages?.[0];
-    if (!response.data.success || !result) {
-      await session.abortTransaction();
-      session.endSession();
-      console.log("error delhivery", response.data.packages[0].remarks)
-      return res.status(400).json({
-        success: false,
-        message: "Failed to create shipment",
-        details: response.data,
-      });
-    }
-
-    // Step 8️⃣ Update order + wallet atomically
-    await Promise.all([
-      Order.findByIdAndUpdate(
-        id,
-        {
-          $set: {
-            status: "Booked",
-            cancelledAtStage: null,
-            awb_number: result.waybill,
-            shipment_id: result.refnum,
-            provider: provider,
-            courierName: internalCourierName,
-            totalFreightCharges: balanceToBeDeducted,
-            courierServiceName,
-            shipmentCreatedAt: new Date(),
-            zone: zone.zone,
-            estimatedDeliveryDate,
-            priceBreakup
+      const payloadData = {
+        pickup_location: { name: pickupWarehouseName },
+        shipments: [
+          {
+            Waybill: waybills[0],
+            country: "India",
+            city: currentOrder.receiverAddress.city,
+            pin: currentOrder.receiverAddress.pinCode,
+            state: currentOrder.receiverAddress.state,
+            order: currentOrder.orderId,
+            add: currentOrder.receiverAddress.address || "Default Warehouse",
+            payment_mode: payment_type,
+            shipping_mode:
+              shipmentType.courierType === "Domestic (Surface)"
+                ? "Surface"
+                : "Express",
+            quantity: currentOrder.productDetails
+              .reduce((sum, product) => sum + product.quantity, 0)
+              .toString(),
+            phone: currentOrder.receiverAddress.phoneNumber,
+            products_desc: currentOrder.productDetails
+              .map((p) => p.name)
+              .join(", "),
+            hsn_code: currentOrder.productDetails
+              .map((product) => product.hsn)
+              .join(", "),
+            ewbn:
+              currentOrder?.paymentDetails?.amount >= 50000
+                ? currentOrder?.otherDetails?.ewaybill
+                : "",
+            total_amount: currentOrder.paymentDetails.amount,
+            name: currentOrder.receiverAddress.contactName || "Default Warehouse",
+            weight: currentOrder.packageDetails.applicableWeight * 1000,
+            shipment_height: currentOrder.packageDetails.volumetricWeight.height,
+            shipment_width: currentOrder.packageDetails.volumetricWeight.width,
+            shipment_length: currentOrder.packageDetails.volumetricWeight.length,
+            cod_amount:
+              payment_type === "COD"
+                ? `${currentOrder.paymentDetails.amount}`
+                : "0",
           },
-          $push: {
-            tracking: {
+        ],
+      };
+
+      // console.log("payloadData", payloadData.shipments);
+
+      const payload = `format=json&data=${encodeURIComponent(
+        JSON.stringify(payloadData),
+      )}`;
+
+      // Step 6️⃣ Wallet check
+      const walletHoldAmount = currentWallet.holdAmount || 0;
+      const effectiveBalance = currentWallet.balance - walletHoldAmount;
+      const balanceToBeDeducted =
+        finalCharges === "N/A" ? 0 : parseFloat(finalCharges);
+      const balance = effectiveBalance + currentWallet.creditLimit;
+      if (balance < balanceToBeDeducted) {
+        await session.abortTransaction();
+        session.endSession();
+        return res
+          .status(400)
+          .json({ success: false, message: "Insufficient Wallet Balance" });
+      }
+
+      // Step 7️⃣ Create Shipment (external API, keep as-is)
+      const response = await axios.post(`${url}/api/cmu/create.json`, payload, {
+        headers: {
+          Authorization: `Token ${apiKey}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        timeout: 8000,
+      });
+      // console.log("delhiver", response)
+      const result = response.data?.packages?.[0];
+      if (!response.data.success || !result) {
+        await session.abortTransaction();
+        session.endSession();
+        console.log("error delhivery", response.data.packages?.[0]?.remarks);
+        return res.status(400).json({
+          success: false,
+          message: response.data.packages?.[0]?.remarks || "Failed to create shipment",
+          details: response.data,
+        });
+      }
+
+      // Step 8️⃣ Update order + wallet atomically
+      await Promise.all([
+        Order.findByIdAndUpdate(
+          id,
+          {
+            $set: {
               status: "Booked",
-              StatusLocation: currentOrder.pickupAddress?.city || "N/A",
-              StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
-              Instructions: "Order booked successfully",
+              cancelledAtStage: null,
+              awb_number: result.waybill,
+              shipment_id: result.refnum,
+              provider: provider,
+              courierName: internalCourierName,
+              totalFreightCharges: balanceToBeDeducted,
+              courierServiceName,
+              shipmentCreatedAt: new Date(),
+              zone: zone.zone,
+              estimatedDeliveryDate,
+              priceBreakup
+            },
+            $push: {
+              tracking: {
+                status: "Booked",
+                StatusLocation: currentOrder.pickupAddress?.city || "N/A",
+                StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
+                Instructions: "Order booked successfully",
+              },
             },
           },
-        },
-        { session },
-      ),
-      currentWallet.updateOne(
-        {
-          $inc: { balance: -balanceToBeDeducted },
-        },
-        { session },
-      ),
-    ]);
+          { session },
+        ),
+        currentWallet.updateOne(
+          {
+            $inc: { balance: -balanceToBeDeducted },
+          },
+          { session },
+        ),
+      ]);
 
-    // 🔁 Dual-write: mirror to WalletTransaction for future migration
-    await WalletTransaction.create([{
-      walletId: currentWallet._id,
-      channelOrderId: currentOrder.orderId || null,
-      category: "debit",
-      amount: balanceToBeDeducted,
-      balanceAfterTransaction: currentWallet.balance - balanceToBeDeducted,
-      date: new Date(),
-      awb_number: result.waybill || "",
-      description: "Freight Charges Applied",
-      priceBreakup
-    }], { session });
+      // 🔁 Dual-write: mirror to WalletTransaction for future migration
+      await WalletTransaction.create([{
+        walletId: currentWallet._id,
+        channelOrderId: currentOrder.orderId || null,
+        category: "debit",
+        amount: balanceToBeDeducted,
+        balanceAfterTransaction: currentWallet.balance - balanceToBeDeducted,
+        date: new Date(),
+        awb_number: result.waybill || "",
+        description: "Freight Charges Applied",
+        priceBreakup
+      }], { session });
 
-    await session.commitTransaction();
-    session.endSession();
+      await session.commitTransaction();
+      session.endSession();
 
-    // ── Auto-assign pickup manifest ──
-    try {
-      const freshOrder = await Order.findById(id);
-      if (freshOrder) await assignPickupManifest(freshOrder);
-    } catch (pErr) {
-      console.error("[Pickup] assignPickupManifest failed:", pErr.message);
+      // ── Auto-assign pickup manifest ──
+      try {
+        const freshOrder = await Order.findById(id);
+        if (freshOrder) await assignPickupManifest(freshOrder);
+      } catch (pErr) {
+        console.error("[Pickup] assignPickupManifest failed:", pErr.message);
+      }
+
+      // ✅ Final Response
+      return res.status(201).json({
+        success: true,
+        message: "Shipment Created Successfully",
+        orderId: currentOrder.orderId,
+        provider,
+        awb_number: result.waybill,
+      });
+    } catch (error) {
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
+      session.endSession();
+
+      // Check if transient error (Write Conflict)
+      const isTransient =
+        error.errorLabels?.includes("TransientTransactionError") ||
+        error.code === 112 ||
+        error.message?.includes("WriteConflict");
+
+      if (isTransient && attempt < maxRetries) {
+        console.warn(`[Delhivery createOrder] Write conflict on attempt ${attempt}. Retrying in ${50 * attempt}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, 50 * attempt));
+        continue;
+      }
+
+      console.error("Error in createOrder:", error.message);
+      return res.status(500).json({
+        success: false,
+        message: error.message || "Failed to create order.",
+        error: error.message,
+      });
     }
-
-    // ✅ Final Response
-    return res.status(201).json({
-      success: true,
-      message: "Shipment Created Successfully",
-      orderId: currentOrder.orderId,
-      provider,
-      awb_number: result.waybill,
-    });
-  } catch (error) {
-    if (session.inTransaction()) {
-      await session.abortTransaction();
-    }
-    session.endSession();
-    console.error("Error in createOrder:", error.message);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to create order.",
-      error: error.message,
-    });
   }
 };
 

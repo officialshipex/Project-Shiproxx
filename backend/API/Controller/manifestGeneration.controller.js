@@ -292,8 +292,10 @@ const generateManifest = async (req, res) => {
       await order.save();
 
       // Cleanup
-      fs.unlinkSync(writablePath);
-      if (fs.existsSync(barcodePath)) fs.unlinkSync(barcodePath);
+      try { if (fs.existsSync(writablePath)) fs.unlinkSync(writablePath); } catch (e) {}
+      if (fs.existsSync(barcodePath)) {
+        try { fs.unlinkSync(barcodePath); } catch (e) {}
+      }
 
       manifestResults.push({
         awb: order.awb_number,

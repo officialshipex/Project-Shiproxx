@@ -218,6 +218,7 @@ const uploadPincode = async (req, res) => {
         )
         .on("error", (error) => {
           console.error(error);
+          try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
           return res.status(500).json({ message: "CSV parsing error" });
         })
         .on("data", (row) => {
@@ -259,6 +260,9 @@ const uploadPincode = async (req, res) => {
     }
   } catch (err) {
     console.error(err);
+    if (req.file && req.file.path) {
+      try { if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
+    }
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -340,6 +344,7 @@ const saveCourierData = async (courier, pincodes, filePath, res) => {
     });
   } catch (error) {
     console.error("Error saving courier data:", error);
+    try { if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (e) {}
     res.status(500).json({ message: "Internal server error" });
   }
 };
