@@ -14,6 +14,8 @@ const WalletTransaction = require("../models/WalletTransaction.model");
 const RateCard = require("../models/rateCards");
 const { getZone } = require("../Rate/zoneManagementController");
 
+let uploadQueue = Promise.resolve();
+
 const downloadExcel = async (req, res) => {
   try {
     const workbook = new ExcelJS.Workbook();
@@ -66,15 +68,18 @@ const downloadExcel = async (req, res) => {
 // ─── Background worker ────────────────────────────────────────────────────────
 // Called AFTER the HTTP response is already sent so the client is never blocked.
 async function _processDiscrepancyBatch(awbNumbers, chargeWeightMap, filePath) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     // 1. already existing discrepancies (batch query)
     const existing = await WeightDiscrepancy.find({
       awbNumber: { $in: awbNumbers },
-    }).select("awbNumber").lean();
+    }).session(session).select("awbNumber").lean();
     const existingSet = new Set(existing.map((e) => e.awbNumber));
 
     // 2. Fetch orders in one query with only the fields we need
     const orders = await Order.find({ awb_number: { $in: awbNumbers } })
+      .session(session)
       .select(
         "awb_number orderId userId status courierServiceName provider " +
         "productDetails pickupAddress receiverAddress packageDetails paymentDetails"
@@ -114,7 +119,7 @@ async function _processDiscrepancyBatch(awbNumbers, chargeWeightMap, filePath) {
 
     const userIds = Array.from(userIdsSet);
     if (userIds.length === 0) {
-      fs.promises.unlink(filePath).catch(() => {});
+      await session.commitTransaction();
       return;
     }
 
@@ -137,8 +142,8 @@ async function _processDiscrepancyBatch(awbNumbers, chargeWeightMap, filePath) {
 
     // 5. Parallel fetch: plans + users
     const [allPlans, allUsers] = await Promise.all([
-      Plan.find({ userId: { $in: userIds } }).lean(),
-      User.find({ _id: { $in: userIds } }).select("Wallet").lean(),
+      Plan.find({ userId: { $in: userIds } }).session(session).lean(),
+      User.find({ _id: { $in: userIds } }).session(session).select("Wallet").lean(),
     ]);
 
     const planMap = new Map(allPlans.map((p) => [p.userId.toString(), p]));
@@ -155,7 +160,7 @@ async function _processDiscrepancyBatch(awbNumbers, chargeWeightMap, filePath) {
     }
     const rateCardsList = await RateCard.find({
       _id: { $in: Array.from(rateCardIdsSet) },
-    }).select("_id isFlatRate").lean();
+    }).session(session).select("_id isFlatRate").lean();
     const rateCardFlatRateMap = new Map(
       rateCardsList.map((rc) => [rc._id.toString(), rc.isFlatRate === true])
     );
@@ -312,14 +317,18 @@ async function _processDiscrepancyBatch(awbNumbers, chargeWeightMap, filePath) {
         });
       }
 
-      await Promise.all([
-        WeightDiscrepancy.insertMany(discrepancies, { ordered: false }),
-        walletBulkOps.length > 0 ? Wallet.bulkWrite(walletBulkOps) : Promise.resolve(),
-      ]);
+      await WeightDiscrepancy.insertMany(discrepancies, { session, ordered: false });
+      if (walletBulkOps.length > 0) {
+        await Wallet.bulkWrite(walletBulkOps, { session });
+      }
     }
+
+    await session.commitTransaction();
   } catch (err) {
+    await session.abortTransaction();
     console.error("[uploadDispreancy background] Error:", err);
   } finally {
+    session.endSession();
     fs.promises.unlink(filePath).catch(() => {});
   }
 }
@@ -337,9 +346,12 @@ const uploadDispreancy = async (req, res) => {
     const sheetName = workbook.SheetNames[0];
     const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-    const awbNumbers = sheetData
-      .map((row) => row["*AWB Number"]?.toString().trim())
-      .filter(Boolean);
+    // unique the AWB numbers from Excel to prevent duplicates within the file itself
+    const awbNumbers = [...new Set(
+      sheetData
+        .map((row) => row["*AWB Number"]?.toString().trim())
+        .filter(Boolean)
+    )];
 
     if (awbNumbers.length === 0) {
       fs.promises.unlink(filePath).catch(() => {});
@@ -366,12 +378,13 @@ const uploadDispreancy = async (req, res) => {
       message: "File received. Discrepancies are being processed in the background.",
     });
 
-    // 🔄 Run all heavy DB work AFTER response is sent
-    setImmediate(() => {
-      _processDiscrepancyBatch(awbNumbers, chargeWeightMap, filePath).catch((err) => {
-        console.error("[uploadDispreancy] Background batch failed:", err);
-      });
+    // 🔄 Run all heavy DB work sequentially via uploadQueue to prevent race conditions & double updates
+    uploadQueue = uploadQueue.then(() => {
+      return _processDiscrepancyBatch(awbNumbers, chargeWeightMap, filePath);
+    }).catch((err) => {
+      console.error("[uploadDispreancy] Sequential background batch execution failed:", err);
     });
+
   } catch (error) {
     console.error("Error parsing upload:", error);
     if (req.file && req.file.path) {

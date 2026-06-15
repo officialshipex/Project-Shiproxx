@@ -165,48 +165,54 @@ const cancelOrdersAtBooked = async (req, res) => {
       console.error("[Pickup] Failed to remove order from manifest during API cancellation:", err.message);
     }
 
-    // Perform database updates inside a quick transaction
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    // Perform database updates inside a transaction with retry for write conflicts
+    const MAX_RETRIES = 3;
+    let attempt = 0;
 
-    try {
-      // Re-fetch within session to lock
-      const currentOrderInSession = await Order.findById(currentOrder._id).session(session);
-      currentOrderInSession.status = "Cancelled";
-      currentOrderInSession.tracking.push({
-        status: "Cancelled",
-        StatusLocation: "",
-        Instructions: "Cancelled order by user",
-        StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
-      });
-      await currentOrderInSession.save({ session });
+    while (attempt < MAX_RETRIES) {
+      const session = await mongoose.startSession();
+      session.startTransaction();
 
-      const balanceToBeAdded =
-        currentOrderInSession.totalFreightCharges === "N/A"
-          ? 0
-          : parseFloat(currentOrderInSession.totalFreightCharges);
-
-      if (balanceToBeAdded > 0) {
-        const walletInSession = await Wallet.findById(currentWallet._id).select("balance").session(session);
-        const alreadyRefunded = await WalletTransaction.exists({
-          walletId: currentWallet._id,
-          awb_number: currentOrderInSession.awb_number,
-          category: "credit",
-          description: "Freight Charges Received"
+      try {
+        // Re-fetch within session to lock the document
+        const currentOrderInSession = await Order.findById(currentOrder._id).session(session);
+        currentOrderInSession.status = "Cancelled";
+        currentOrderInSession.tracking.push({
+          status: "Cancelled",
+          StatusLocation: "",
+          Instructions: "Cancelled order by user",
+          StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
         });
+        await currentOrderInSession.save({ session });
 
-        if (!alreadyRefunded) {
-          const newBalance = walletInSession.balance + balanceToBeAdded;
+        const balanceToBeAdded =
+          currentOrderInSession.totalFreightCharges === "N/A"
+            ? 0
+            : parseFloat(currentOrderInSession.totalFreightCharges);
 
-          await Promise.all([
-            Wallet.findOneAndUpdate(
+        if (balanceToBeAdded > 0) {
+          const walletInSession = await Wallet.findById(currentWallet._id)
+            .select("balance")
+            .session(session);
+
+          const alreadyRefunded = await WalletTransaction.exists({
+            walletId: currentWallet._id,
+            awb_number: currentOrderInSession.awb_number,
+            category: "credit",
+            description: "Freight Charges Received",
+          });
+
+          if (!alreadyRefunded) {
+            const newBalance = walletInSession.balance + balanceToBeAdded;
+
+            // Sequential writes — never parallel inside a transaction (avoids WriteConflict)
+            await Wallet.findOneAndUpdate(
               { _id: currentWallet._id },
-              {
-                $inc: { balance: balanceToBeAdded },
-              },
+              { $inc: { balance: balanceToBeAdded } },
               { session }
-            ),
-            WalletTransaction.create(
+            );
+
+            await WalletTransaction.create(
               [
                 {
                   walletId: currentWallet._id,
@@ -217,25 +223,39 @@ const cancelOrdersAtBooked = async (req, res) => {
                   date: new Date(),
                   awb_number: currentOrderInSession.awb_number,
                   description: "Freight Charges Received",
-                }
+                },
               ],
               { session }
-            )
-          ]);
+            );
+          }
         }
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(200).json({
+          success: true,
+          message: "Order cancelled successfully",
+        });
+
+      } catch (err) {
+        await session.abortTransaction();
+        session.endSession();
+
+        // MongoDB TransientTransactionError: retry the whole transaction
+        const isTransient =
+          err.errorLabels?.includes("TransientTransactionError") ||
+          err.code === 112;
+
+        if (isTransient && attempt < MAX_RETRIES - 1) {
+          attempt++;
+          console.warn(`[CancelOrder] WriteConflict on attempt ${attempt}, retrying...`);
+          await new Promise((r) => setTimeout(r, 100 * attempt)); // back-off: 100ms, 200ms
+          continue;
+        }
+
+        throw err;
       }
-
-      await session.commitTransaction();
-      session.endSession();
-
-      return res.status(200).json({
-        success: true,
-        message: "Order cancelled successfully",
-      });
-    } catch (err) {
-      await session.abortTransaction();
-      session.endSession();
-      throw err;
     }
   } catch (error) {
     console.error("❌ Error cancelling order:", error);
