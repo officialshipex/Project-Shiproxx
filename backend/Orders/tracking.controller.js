@@ -1062,15 +1062,13 @@ const trackSingleOrder = async (order) => {
     if (partner === "Losung360") {
       // Use system_status_code (SPB, PKD, etc.) as the primary key — it's more reliable than text matching
       const statusCode = normalizedData.StatusCode?.toUpperCase() || "";
-      const statusText = normalizedData.Status?.toLowerCase() || "";
 
-      // SPB = Shipment Booked → Ready To Ship
-      if (statusCode === "SPB" || statusText.includes("shipment booked") || statusText.includes("booked")) {
+      // Matching based on exact system_status_code
+      if (statusCode === "SPB") {
         order.status = "Ready To Ship";
         order.ndrStatus = "Ready To Ship";
 
-      // PKD = Pickup Done → In-transit
-      } else if (statusCode === "PKD" || statusText.includes("picked up") || statusText.includes("pickup done") || statusText.includes("pickup")) {
+      } else if (statusCode === "PKD" || statusCode === "INT") {
         order.status = "In-transit";
         order.ndrStatus = "In-transit";
         if (!order.invoiceDate) {
@@ -1078,44 +1076,62 @@ const trackSingleOrder = async (order) => {
         }
         order.reattempt = false;
 
-      } else if (statusText.includes("in-transit") || statusText.includes("in transit") || statusText.includes("shipped") || statusText === "it") {
-        order.status = "In-transit";
-        order.ndrStatus = "In-transit";
-        if (!order.invoiceDate) {
-          order.invoiceDate = normalizedData.StatusDateTime;
-        }
-        order.reattempt = false;
-
-      } else if (statusText.includes("out for delivery") || statusText.includes("ofd")) {
+      } else if (statusCode === "OFD") {
         order.status = "Out for Delivery";
         order.ndrStatus = "Out for Delivery";
         order.reattempt = false;
 
-      } else if (statusText.includes("delivered") || statusText === "dld" || statusText === "dl") {
-        order.status = "Delivered";
-        order.ndrStatus = "Delivered";
-        order.reattempt = false;
-
-      } else if (statusText.includes("undelivered") || statusText.includes("failed delivery") || statusText.includes("attempted") || statusText === "ud" || statusText === "und") {
+      } else if (statusCode === "UND") {
         order.status = "Undelivered";
         order.ndrStatus = "Undelivered";
         order.ndrReason = {
           date: normalizedData.StatusDateTime,
           reason: normalizedData.Instructions || "Delivery attempted",
         };
-        order.reattempt = true;
+        // order.reattempt = true;
 
-      } else if (statusText.includes("rto delivered") || statusText === "rtod") {
+        const lastNdr = order.ndrHistory[order.ndrHistory.length - 1];
+        const lastAction = lastNdr?.actions?.[lastNdr.actions.length - 1];
+        const lastEntryDate = lastAction?.date
+          ? new Date(lastAction.date).getTime()
+          : null;
+        const currentStatusDate = new Date(normalizedData.StatusDateTime).getTime();
+
+        if (
+          order.ndrHistory.length === 0 ||
+          lastEntryDate < currentStatusDate
+        ) {
+          const attemptCount = order.ndrHistory?.length + 1 || 0;
+          const newHistoryEntry = {
+            actions: [
+              {
+                action: `NDR ${attemptCount} Raised`,
+                actionBy: order.courierServiceName || order.provider,
+                remark: normalizedData.Instructions || "Delivery attempted",
+                source: order.provider,
+                date: normalizedData.StatusDateTime,
+              },
+            ],
+          };
+          order.ndrHistory.push(newHistoryEntry);
+        }
+
+      } else if (statusCode === "DLV" || statusCode === "DEL" || statusCode === "DLD") {
+        order.status = "Delivered";
+        order.ndrStatus = "Delivered";
+        order.reattempt = false;
+
+      } else if (statusCode === "RTOD" || statusCode === "RTO_DELIVERED") {
         order.status = "RTO Delivered";
         order.ndrStatus = "RTO Delivered";
         order.reattempt = false;
 
-      } else if (statusText.includes("rto") || statusText.includes("return")) {
+      } else if (statusCode === "RTO") {
         order.status = "RTO In-transit";
         order.ndrStatus = "RTO In-transit";
         order.reattempt = false;
 
-      } else if (statusText.includes("cancelled") || statusText === "can") {
+      } else if (statusCode === "CAN" || statusCode === "CANCELLED") {
         order.status = "Cancelled";
         order.ndrStatus = "Cancelled";
         order.reattempt = false;
