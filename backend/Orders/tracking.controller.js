@@ -1068,7 +1068,10 @@ const trackSingleOrder = async (order) => {
         order.status = "Ready To Ship";
         order.ndrStatus = "Ready To Ship";
 
-      } else if (statusCode === "PKD" || statusCode === "INT") {
+      } else if (statusCode === "SPD" || statusCode === "OFP" || statusCode === "CTR") {
+        order.status = "Booked";
+
+      } else if (statusCode === "PKD" || statusCode === "INT" || statusCode === "DAC") {
         order.status = "In-transit";
         order.ndrStatus = "In-transit";
         if (!order.invoiceDate) {
@@ -1081,12 +1084,12 @@ const trackSingleOrder = async (order) => {
         order.ndrStatus = "Out for Delivery";
         order.reattempt = false;
 
-      } else if (statusCode === "UND") {
+      } else if (statusCode === "UND" || statusCode === "DEX") {
         order.status = "Undelivered";
         order.ndrStatus = "Undelivered";
         order.ndrReason = {
           date: normalizedData.StatusDateTime,
-          reason: normalizedData.Instructions || "Delivery attempted",
+          reason: normalizedData.Instructions || "Delivery attempted/exception",
         };
         // order.reattempt = true;
 
@@ -1106,8 +1109,8 @@ const trackSingleOrder = async (order) => {
             actions: [
               {
                 action: `NDR ${attemptCount} Raised`,
-                actionBy: order.courierServiceName || order.provider,
-                remark: normalizedData.Instructions || "Delivery attempted",
+                actionBy: order.provider,
+                remark: normalizedData.Instructions || "Delivery attempted/exception",
                 source: order.provider,
                 date: normalizedData.StatusDateTime,
               },
@@ -1116,22 +1119,22 @@ const trackSingleOrder = async (order) => {
           order.ndrHistory.push(newHistoryEntry);
         }
 
-      } else if (statusCode === "DLV" || statusCode === "DEL" || statusCode === "DLD") {
+      } else if (statusCode === "DEL") {
         order.status = "Delivered";
         order.ndrStatus = "Delivered";
         order.reattempt = false;
 
-      } else if (statusCode === "RTOD" || statusCode === "RTO_DELIVERED") {
+      } else if (statusCode === "RTD") {
         order.status = "RTO Delivered";
         order.ndrStatus = "RTO Delivered";
         order.reattempt = false;
 
-      } else if (statusCode === "RTO") {
+      } else if (statusCode === "RTO" || statusCode === "RRA" || statusCode === "RUN") {
         order.status = "RTO In-transit";
         order.ndrStatus = "RTO In-transit";
         order.reattempt = false;
 
-      } else if (statusCode === "CAN" || statusCode === "CANCELLED") {
+      } else if (statusCode === "SC" || statusCode === "PCN" || statusCode === "ONH") {
         order.status = "Cancelled";
         order.ndrStatus = "Cancelled";
         order.reattempt = false;
@@ -1140,6 +1143,14 @@ const trackSingleOrder = async (order) => {
             ? 0
             : parseFloat(order.totalFreightCharges);
         shouldUpdateWallet = true;
+
+      } else if (statusCode === "LOS" || statusCode === "DMG" || statusCode === "CUN") {
+        order.status = "Lost";
+        order.reattempt = false;
+
+      } else if (statusCode === "PKF" || statusCode === "ADI") {
+        order.status = "Pickup Failed";
+        order.reattempt = false;
       }
     }
 
