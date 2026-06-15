@@ -281,17 +281,21 @@ const codToBeRemitteds = async () => {
   }
 };
 
-cron.schedule("30 0 * * *", () => {
-  if (process.env.NODE_ENV === "production") {
-    console.log(
-      "⏰ Running scheduled task at 6:00 AM IST (12:30 AM UTC): Fetching orders..."
-    );
-    codToBeRemitteds();
+cron.schedule(
+  "30 6 * * *", // Runs everyday at 6:30 AM IST
+  () => {
+    if (process.env.NODE_ENV === "production") {
+      console.log(
+        "⏰ Running scheduled task at 6:30 AM IST: Fetching orders..."
+      );
+      codToBeRemitteds();
+    }
+  },
+  {
+    scheduled: true,
+    timezone: "Asia/Kolkata",
   }
-}, {
-  scheduled: true,
-  timezone: "Etc/UTC"
-});
+);
 // codToBeRemitteds();
 
 const getStartOfDayIST = (date = new Date()) => {
@@ -566,18 +570,18 @@ const remittanceScheduleData = async () => {
 };
 
 cron.schedule(
-  "30 1 * * *",
+  "30 8 * * *", // Runs everyday at 8:30 AM IST
   () => {
     if (process.env.NODE_ENV === "production") {
       console.log(
-        "⏰ Running scheduled task at 7:00 AM IST (1:30 AM UTC): Fetching orders..."
+        "⏰ Running scheduled task at 8:30 AM IST: Generating remittances..."
       );
       remittanceScheduleData();
     }
   },
   {
     scheduled: true,
-    timezone: "Etc/UTC",
+    timezone: "Asia/Kolkata",
   }
 );
 
@@ -4224,8 +4228,38 @@ const triggerCodJob = async (req, res) => {
     const { token, job } = req.query;
     const expectedToken = process.env.CRON_SECRET_TOKEN || "shipex_cron_secret_2026";
 
-    if (!token || token !== expectedToken) {
-      return res.status(401).json({ success: false, error: "Unauthorized: Invalid or missing token." });
+    // 1️⃣ Auth check: Check if background CRON token matches
+    let isAuthorizedRequest = token && token === expectedToken;
+
+    // 2️⃣ Auth check: Check if user is authenticated via Bearer token in headers
+    if (!isAuthorizedRequest) {
+      const { authorization } = req.headers;
+      if (authorization) {
+        const parts = authorization.split(" ");
+        if (parts[0] === "Bearer" && parts[1]) {
+          try {
+            const jwt = require("jsonwebtoken");
+            const decoded = jwt.verify(parts[1], process.env.JWT_SECRET);
+            if (decoded.user) {
+              const User = require("../models/User.model");
+              const user = await User.findById(decoded.user.id).select("userId isAdmin role");
+              if (user) {
+                const isUser17333 = String(user.userId) === "17333";
+                const isAdmin = user.role === "admin" || user.isAdmin === true;
+                if (isUser17333 || isAdmin) {
+                  isAuthorizedRequest = true;
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore token verification errors
+          }
+        }
+      }
+    }
+
+    if (!isAuthorizedRequest) {
+      return res.status(401).json({ success: false, error: "Unauthorized: Invalid or missing token/credentials." });
     }
 
     if (job === "remittanceScheduleData") {
@@ -4236,8 +4270,13 @@ const triggerCodJob = async (req, res) => {
       console.log("🚀 Manual trigger: Running codToBeRemitteds...");
       await codToBeRemitteds();
       return res.status(200).json({ success: true, message: "codToBeRemitteds executed successfully." });
+    } else if (job === "sequentialProcess") {
+      console.log("🚀 Manual trigger: Running codToBeRemitteds and remittanceScheduleData sequentially...");
+      await codToBeRemitteds();
+      await remittanceScheduleData();
+      return res.status(200).json({ success: true, message: "COD sequential processing completed successfully." });
     } else {
-      return res.status(400).json({ success: false, error: "Invalid job specified. Use 'remittanceScheduleData' or 'codToBeRemitteds'." });
+      return res.status(400).json({ success: false, error: "Invalid job specified. Use 'remittanceScheduleData', 'codToBeRemitteds' or 'sequentialProcess'." });
     }
   } catch (error) {
     console.error(`❌ Error triggering job ${req.query.job}:`, error);
