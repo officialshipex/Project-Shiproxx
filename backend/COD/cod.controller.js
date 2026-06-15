@@ -1400,13 +1400,13 @@ const uploadCodRemittance = async (req, res) => {
       codRemittances = await parseExcel(req.file.path);
     } else {
       await session.abortTransaction();
-      try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
+      try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) { }
       return res.status(400).json({ error: "Unsupported file format" });
     }
 
     if (!codRemittances || codRemittances.length === 0) {
       await session.abortTransaction();
-      try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
+      try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) { }
       return res
         .status(400)
         .json({ error: "The uploaded file is empty or contains invalid data" });
@@ -1504,7 +1504,7 @@ const uploadCodRemittance = async (req, res) => {
           TotalCODRemitted: userRemittance.TotalCODRemitted,
         });
         await session.abortTransaction();
-        try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
+        try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) { }
         return res
           .status(500)
           .json({ error: "Invalid TotalCODRemitted value" });
@@ -1567,7 +1567,7 @@ const uploadCodRemittance = async (req, res) => {
   } catch (error) {
     await session.abortTransaction();
     console.error("Error in uploadCodRemittance:", error);
-    try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
+    try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) { }
     res
       .status(500)
       .json({ error: "An error occurred while processing the file" });
@@ -2715,12 +2715,12 @@ const uploadCourierCodRemittance = async (req, res) => {
     } else if ([".xlsx", ".xls"].includes(fileExtension)) {
       codRemittances = await parseExcel(req.file.path);
     } else {
-      try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
+      try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) { }
       return res.status(400).json({ error: "Unsupported file format" });
     }
 
     if (!codRemittances?.length) {
-      try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
+      try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) { }
       return res.status(400).json({
         error: "The uploaded file is empty or contains invalid data",
       });
@@ -2770,7 +2770,7 @@ const uploadCourierCodRemittance = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in uploadCourierCodRemittance:", error);
-    try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) {}
+    try { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (e) { }
     res
       .status(500)
       .json({ error: "An error occurred while processing the file" });
@@ -4223,7 +4223,7 @@ const triggerCodJob = async (req, res) => {
   try {
     const { token, job } = req.query;
     const expectedToken = process.env.CRON_SECRET_TOKEN || "shipex_cron_secret_2026";
-    
+
     if (!token || token !== expectedToken) {
       return res.status(401).json({ success: false, error: "Unauthorized: Invalid or missing token." });
     }

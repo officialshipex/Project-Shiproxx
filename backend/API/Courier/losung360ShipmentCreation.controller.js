@@ -12,18 +12,37 @@ const PickupAddress = require("../../models/pickupAddress.model");
 
 const LOSUNG360_BASE_URL = "https://appapi.losung360.com/external/v1";
 
-const getLosung360WarehouseId = async (userId, pickupAddressData, token) => {
+const getLosung360WarehouseId = async (userId, pickupAddressData, token, session) => {
   try {
     // 1. Find the pickupAddress document in our database for this specific order/user
-    const dbPickupAddress = await PickupAddress.findOne({
+    let dbPickupAddress = await PickupAddress.findOne({
       userId,
       "pickupAddress.pinCode": pickupAddressData.pinCode,
       "pickupAddress.address": pickupAddressData.address,
-    });
+    }).session(session);
 
     if (!dbPickupAddress) {
-      console.warn(`No pickupAddress document found in DB for user ${userId} and pincode ${pickupAddressData.pinCode}`);
-      return null;
+      console.warn(`No pickupAddress document found in DB for user ${userId} and pincode ${pickupAddressData.pinCode}. Creating one...`);
+      
+      const userDoc = await User.findById(userId).session(session);
+      const email = pickupAddressData.email || userDoc?.email || `${userId}@shipex.in`;
+      
+      dbPickupAddress = new PickupAddress({
+        userId,
+        isPrimary: false,
+        pickupAddress: {
+          contactName: pickupAddressData.contactName || "Contact Person",
+          email: email,
+          phoneNumber: pickupAddressData.phoneNumber || "9999999999",
+          address: pickupAddressData.address,
+          pinCode: pickupAddressData.pinCode,
+          city: pickupAddressData.city,
+          state: pickupAddressData.state,
+        },
+        losung360WarehouseId: ""
+      });
+      await dbPickupAddress.save({ session });
+      console.log(`Successfully created new pickupAddress document: ${dbPickupAddress._id}`);
     }
 
     if (dbPickupAddress.losung360WarehouseId) {
@@ -35,12 +54,12 @@ const getLosung360WarehouseId = async (userId, pickupAddressData, token) => {
       "pickupAddress.pinCode": pickupAddressData.pinCode,
       "pickupAddress.address": pickupAddressData.address,
       losung360WarehouseId: { $ne: "", $exists: true }
-    });
+    }).session(session);
 
     if (existingWithId && existingWithId.losung360WarehouseId) {
       console.log(`Found existing Losung360 warehouse ID ${existingWithId.losung360WarehouseId} in DB from another document.`);
       dbPickupAddress.losung360WarehouseId = existingWithId.losung360WarehouseId;
-      await dbPickupAddress.save();
+      await dbPickupAddress.save({ session });
       return Number(existingWithId.losung360WarehouseId);
     }
 
@@ -78,7 +97,7 @@ const getLosung360WarehouseId = async (userId, pickupAddressData, token) => {
 
       if (response.data && response.data.id) {
         dbPickupAddress.losung360WarehouseId = String(response.data.id);
-        await dbPickupAddress.save();
+        await dbPickupAddress.save({ session });
         return Number(response.data.id);
       }
     } catch (e) {
@@ -206,7 +225,7 @@ const createLosung360Shipment = async ({
       }
 
       // Step 7: Create/Resolve Warehouse in Losung360
-      const pickupAddressId = await getLosung360WarehouseId(currentOrder.userId, currentOrder.pickupAddress, token);
+      const pickupAddressId = await getLosung360WarehouseId(currentOrder.userId, currentOrder.pickupAddress, token, session);
 
       if (!pickupAddressId) {
         await session.abortTransaction();
