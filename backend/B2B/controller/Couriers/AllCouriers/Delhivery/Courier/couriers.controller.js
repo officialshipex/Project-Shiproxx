@@ -88,7 +88,7 @@ const createDelhiveryB2BShipment = async (req, res) => {
     form.append(
       "callback",
       JSON.stringify({
-        uri: `https://api.shipexindia.com/v1/webhook/delhivery/manifest`,
+        uri: `https://api.shiproxx.com/v1/webhook/delhivery/manifest`,
         method: "POST",
         authorization: `Bearer ${process.env.DELHIVERY_WEBHOOK_SECRET}`,
         headers: { "Content-Type": "application/json" },

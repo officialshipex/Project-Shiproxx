@@ -25,7 +25,7 @@ const getLosung360WarehouseId = async (userId, pickupAddressData, token) => {
       console.warn(`No pickupAddress document found in DB for user ${userId} and pincode ${pickupAddressData.pinCode}. Creating one...`);
       
       const userDoc = await User.findById(userId);
-      const email = pickupAddressData.email || userDoc?.email || `${userId}@shipex.in`;
+      const email = pickupAddressData.email || userDoc?.email || `${userId}@shiproxx.com`;
       
       dbPickupAddress = new PickupAddress({
         userId,

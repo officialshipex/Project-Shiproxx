@@ -11,7 +11,7 @@ const mongoose = require("mongoose");
 // ─────────────────────────────────────────────────────────
 const ECHQ_API_URL = "https://app.echqlabs.com/api/singlecampaign"; // adjust if different
 const ECHQ_API_KEY = process.env.ECHQ_API_KEY || "";
-const BACKEND_URL = process.env.BACKEND_PUBLIC_URL || "https://api.shipexindia.com";
+const BACKEND_URL = process.env.BACKEND_PUBLIC_URL || "https://api.shiproxx.com";
 
 const SERVICE_ID_ORDER_VERIFY = 22;
 const SERVICE_ID_NDR_FOLLOWUP = 21;
@@ -134,7 +134,7 @@ const initiateAiCall = async (req, res) => {
         const campaignName = `${serviceType.toUpperCase()}_${new Date().toISOString().split('T')[0]}_${order.orderId}`;
 
         let callingData = {
-          brand_name: "Shipex India",
+          brand_name: "Shiproxx",
           product_name: order.productDetails?.[0]?.name || "Package",
           order_number: order.orderId?.toString(),
           order_type: order.paymentDetails?.method || "COD",
@@ -299,9 +299,9 @@ const aiCallCallback = async (req, res) => {
               actions: [
                 {
                   action: confirmed ? "Address Verified" : "Address Issue Reported",
-                  actionBy: "Shipex India",
+                  actionBy: "Shiproxx",
                   remark: customerResponse || "No response captured",
-                  source: "Shipex India",
+                  source: "Shiproxx",
                   date: new Date(),
                 },
               ],
@@ -317,9 +317,9 @@ const aiCallCallback = async (req, res) => {
               actions: [
                 {
                   action: ndrAction,
-                  actionBy: "Shipex India",
+                  actionBy: "Shiproxx",
                   remark: customerResponse || "",
-                  source: "Shipex India",
+                  source: "Shiproxx",
                   date: new Date(),
                 },
               ],

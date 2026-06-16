@@ -78,9 +78,9 @@ const ndrProcessController = async (req, res) => {
       orderDetails.reattempt = false;
       const queuedEntry = {
         action: req.body.action,
-        actionBy: "ShipexIndia",
+        actionBy: "Shiproxx",
         remark: req.body.remarks || req.body.comments || "NDR Action Requested",
-        source: "ShipexIndia",
+        source: "Shiproxx",
         date: new Date(),
       };
       pushNdrActionToHistory(orderDetails, queuedEntry);
@@ -194,9 +194,9 @@ const ndrBulkProcessController = async (req, res) => {
             if (freshOrder) {
               const queuedEntry = {
                 action: payload.action,
-                actionBy: "ShipexIndia",
+                actionBy: "Shiproxx",
                 remark: payload.remarks || payload.comments || "NDR Action Requested",
-                source: "ShipexIndia",
+                source: "Shiproxx",
                 date: new Date(),
               };
               pushNdrActionToHistory(freshOrder, queuedEntry);

@@ -140,7 +140,7 @@ exports.generateMisReport = async (req, res) => {
           cell.fill = {
             type: "pattern",
             pattern: "solid",
-            fgColor: { argb: "FF0CBB7D" } // Brand Green
+            fgColor: { argb: "FF10BE3B" } // Brand Green
           };
           cell.alignment = { vertical: "middle", horizontal: "center" };
         });
@@ -242,7 +242,7 @@ exports.generateMisReport = async (req, res) => {
 
         if (email) {
           await transporter.sendMail({
-            from: '"Shipex Team" <info@shipexindia.com>',
+            from: '"Shiproxx Team" <info@shiproxx.com>',
             to: email,
             subject: "Generated MIS Report",
             html: `
@@ -251,11 +251,11 @@ exports.generateMisReport = async (req, res) => {
                 <p>Dear User,</p>
                 <p>Your MIS Report has been successfully generated. You can download it directly from the link below or access it from your dashboard.</p>
                 <p>
-                  <a href="${downloadUrl}" style="background-color: #0CBB7D; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  <a href="${downloadUrl}" style="background-color: #10BE3B; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
                     Download Report
                   </a>
                 </p>
-                <p>Thanks,<br/>Shipex Team</p>
+                <p>Thanks,<br/>Shiproxx Team</p>
               </div>
             `,
             attachments: [

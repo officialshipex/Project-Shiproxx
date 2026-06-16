@@ -50,12 +50,12 @@ exports.generateLabel = async (req, res) => {
     /* ===============================
        LOGOS
     ================================ */
-    const shipexLogo = await fetchImageBuffer(
-      "https://shipex-india.s3.ap-south-1.amazonaws.com/uploads/1767099868221_Shipex.jpg"
+    const shiproxxLogo = await fetchImageBuffer(
+      "https://shiproxx-india.s3.ap-south-1.amazonaws.com/uploads/1767099868221_Shiproxx.jpg"
     );
 
     const courierLogo = await fetchImageBuffer(
-      "https://shipex-india.s3.ap-south-1.amazonaws.com/uploads/1767333425857_Delhivery.png"
+      "https://shiproxx-india.s3.ap-south-1.amazonaws.com/uploads/1767333425857_Delhivery.png"
     );
 
     /* ===============================
@@ -100,7 +100,7 @@ exports.generateLabel = async (req, res) => {
         .stroke();
 
       doc.image(courierLogo, x + 10, cy + 9, { width: 60 });
-      doc.image(shipexLogo, x + LABEL_W / 2 + 10, cy + 6, { width: 60 });
+      doc.image(shiproxxLogo, x + LABEL_W / 2 + 10, cy + 6, { width: 60 });
 
       cy += LOGO_H;
 

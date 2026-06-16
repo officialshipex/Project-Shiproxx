@@ -15,7 +15,7 @@ const Wallet = require("../models/wallet");
 
 const ECHQ_API_URL = "https://app.echqlabs.com/api/singlecampaign";
 const ECHQ_API_KEY = process.env.ECHQ_API_KEY || "";
-const BACKEND_PUBLIC_URL = process.env.BACKEND_PUBLIC_URL || "https://api.shipexindia.com";
+const BACKEND_PUBLIC_URL = process.env.BACKEND_PUBLIC_URL || "https://api.shiproxx.com";
 const SERVICE_ID_NDR_FOLLOWUP = 21;
 
 /**
@@ -77,7 +77,7 @@ const autoTriggerNdrAiCall = async (order, newNdrStatus) => {
       calling_number: phone.replace(/\D/g, "").slice(-10),
       callback_url: `${BACKEND_PUBLIC_URL}/ai-calling/callback`,
       calling_data: {
-        brand_name: "Shipex India",
+        brand_name: "Shiproxx",
         product_name: order.productDetails?.[0]?.name || "Package",
         order_number: order.orderId?.toString(),
         order_type: order.paymentDetails?.method || "COD",

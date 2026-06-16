@@ -12,7 +12,7 @@ const {
 } = require("./WooCommerce/woocommerce.controller");
 
 const createWebhook = async (storeURL, storeAccessToken) => {
-  const webhookURL = "https://api.shipexindia.com/v1/channel/webhook/orders";
+  const webhookURL = "https://api.shiproxx.com/v1/channel/webhook/orders";
   const webhookTopic = "orders/create";
 
   try {
@@ -638,7 +638,7 @@ const fulfillOrder = async (req, res) => {
             tracking_info: {
               number: awb_number,
               company: provider,
-              url: `https://www.shipexindia.com/track/${awb_number}`, // Adjust based on courier tracking link
+              url: `https://www.shiproxx.com/track/${awb_number}`, // Adjust based on courier tracking link
             },
           },
         },
@@ -657,7 +657,7 @@ const fulfillOrder = async (req, res) => {
         trackingInfo: {
           trackingNumber: awb_number,
           courier: provider,
-          trackingURL: `https://www.shipexindia.com/track/${awb_number}`, // Adjust for your provider
+          trackingURL: `https://www.shiproxx.com/track/${awb_number}`, // Adjust for your provider
         },
       });
     } catch (error) {

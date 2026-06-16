@@ -4226,7 +4226,7 @@ const correctRemittanceData = async (remittanceId, dryRun = false) => {
 const triggerCodJob = async (req, res) => {
   try {
     const { token, job } = req.query;
-    const expectedToken = process.env.CRON_SECRET_TOKEN || "shipex_cron_secret_2026";
+    const expectedToken = process.env.CRON_SECRET_TOKEN || "shiproxx_cron_secret_2026";
 
     // 1️⃣ Auth check: Check if background CRON token matches
     let isAuthorizedRequest = token && token === expectedToken;

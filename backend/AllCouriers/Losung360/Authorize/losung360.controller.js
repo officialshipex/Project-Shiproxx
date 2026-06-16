@@ -1,8 +1,8 @@
 const axios = require("axios");
 const AllCourier = require("../../../models/AllCourierSchema");
 
-const LOSUNG360_EMAIL = process.env.LOSUNG360_EMAIL || "sandeep@shipexindia.com";
-const LOSUNG360_PASSWORD = process.env.LOSUNG360_PASSWORD || "Shipex@123";
+const LOSUNG360_EMAIL = process.env.LOSUNG360_EMAIL || "sandeep@shiproxx.com";
+const LOSUNG360_PASSWORD = process.env.LOSUNG360_PASSWORD || "Shiproxx@123";
 const LOSUNG360_BASE_URL = "https://appapi.losung360.com/external/v1";
 
 let cachedToken = null;

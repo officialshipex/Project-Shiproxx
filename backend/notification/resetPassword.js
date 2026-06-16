@@ -58,11 +58,11 @@ resetPassword.post("/resetPassword", async (req, res) => {
 
     // Prepare email content
     const logoUrl =
-      "https://shipex-india.s3.ap-south-1.amazonaws.com/uploads/1758806046534_shipexNoBG.png";
-    const productName = "Shipex";
-    const resetUrl = `https://app.shipexindia.com/reset-password?token=${token}`;
-    const supportEmail = "info@shipexindia.com";
-    const brandName = "Shipex India";
+      "https://shiproxx-india.s3.ap-south-1.amazonaws.com/uploads/1758806046534_shiproxxNoBG.png";
+    const productName = "Shiproxx";
+    const resetUrl = `https://app.shiproxx.com/reset-password?token=${token}`;
+    const supportEmail = "info@shiproxx.com";
+    const brandName = "Shiproxx";
 
     // Format expiry for email in readable string with timezone
     const expiryText = expiresAt.toLocaleString("en-IN", {
@@ -76,7 +76,7 @@ resetPassword.post("/resetPassword", async (req, res) => {
     });
 
     const mailOptions = {
-      from: '"Shipex Team" <info@shipexindia.com>',
+      from: '"Shiproxx Team" <info@shiproxx.com>',
       to: email,
       subject: `Reset Your ${productName} Password`,
       html: `
@@ -94,7 +94,7 @@ resetPassword.post("/resetPassword", async (req, res) => {
                     Click on the below link to reset your password securely
                   </p>
                   <a href="${resetUrl}" target="_blank"
-                    style="display:inline-block; background-color:#0CBB7D; color:#fff; font-size:16px; font-weight:500; border-radius:6px; padding:13px 38px; margin:18px 0 25px 0; text-decoration:none;line-height:19px;">
+                    style="display:inline-block; background-color:#10BE3B; color:#fff; font-size:16px; font-weight:500; border-radius:6px; padding:13px 38px; margin:18px 0 25px 0; text-decoration:none;line-height:19px;">
                     Reset password
                   </a>
                   <div style="background:#f4f4f4; color:#222; font-size:15px; border-radius:10px; padding:18px 5px 12px 5px; margin:25px 0 24px 0;">
@@ -102,7 +102,7 @@ resetPassword.post("/resetPassword", async (req, res) => {
                   </div>
                   <p style="font-size:15px;color:#222;line-height:21px;margin-bottom:12px;">
                     If you have further questions, write to us at
-                    <a href="mailto:${supportEmail}" style="color:#0CBB7D;">${supportEmail}</a> and our team will get back to you.
+                    <a href="mailto:${supportEmail}" style="color:#10BE3B;">${supportEmail}</a> and our team will get back to you.
                   </p>
                   <div style="margin-top:20px;font-size:14px;color:#444;">
                     Have a great day!<br>

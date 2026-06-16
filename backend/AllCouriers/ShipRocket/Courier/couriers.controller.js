@@ -76,7 +76,7 @@ const addPickupLocation = async (pickupData) => {
     const requestData = {
       pickup_location: pickupData.warehouseName || pickupData.contactName,
       name: pickupData.contactName || "",
-      email: pickupData.email || "info@shipex.in",
+      email: pickupData.email || "info@shiproxx.com",
       phone: cleanPhone(pickupData.phoneNumber) || "9999999999",
       address: pickupData.address,
       address_2: pickupData.address2 || "",

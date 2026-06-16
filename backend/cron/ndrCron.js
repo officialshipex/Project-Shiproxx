@@ -100,9 +100,9 @@ if (process.env.NODE_ENV === "production") {
               if (!Array.isArray(freshOrder.ndrHistory)) freshOrder.ndrHistory = [];
               const autoEntry = {
                 action: "RE-ATTEMPT",
-                actionBy: "ShipexIndia",
+                actionBy: "Shiproxx",
                 remark: "Kindly Reattempt on priority basis.",
-                source: "ShipexIndia",
+                source: "Shiproxx",
                 date: new Date(),
               };
               freshOrder.ndrHistory.push({ actions: [autoEntry] });

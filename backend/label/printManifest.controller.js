@@ -43,7 +43,7 @@ app.get("/generate-pdf", async (req, res) => {
 
     for (const [courierName, orders] of Object.entries(groupedOrders)) {
       // Title
-      doc.fontSize(18).text("Shipex India Manifest", { align: "center" });
+      doc.fontSize(18).text("Shiproxx Manifest", { align: "center" });
       doc.moveDown(0.5);
       const currentDateTime = new Date().toLocaleString("en-IN", {
         day: "numeric",

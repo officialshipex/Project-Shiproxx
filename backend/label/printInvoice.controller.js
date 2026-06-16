@@ -33,7 +33,7 @@ app.get("/download-invoice/:id", async (req, res) => {
 
   // Logo
   try {
-    const jpgLogoPath = path.join(__dirname, "../public/assets/Shipex.jpg");
+    const jpgLogoPath = path.join(__dirname, "../public/assets/Shiproxx.jpg");
     if (fs.existsSync(jpgLogoPath)) {
       doc.image(jpgLogoPath, 220, 40, { width: 170 });
     }
@@ -116,7 +116,7 @@ app.get("/download-invoice/:id", async (req, res) => {
     `Invoice Date: ${formattedCurrentDate}`,
     `Order No: ${s(order.orderId)}`,
     `Order Date: ${formattedOrderDate}`,
-    "Channel: SHIPEX",
+    "Channel: SHIPROXX",
     `Payment Method: ${payMethod}`,
   ]);
 

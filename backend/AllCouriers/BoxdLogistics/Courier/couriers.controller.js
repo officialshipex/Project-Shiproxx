@@ -32,7 +32,7 @@ const createBoxdWarehouse = async (userId, pickup) => {
                 userId,
                 pickupAddress: {
                     contactName: pickup.contactName,
-                    email: pickup.email || "info@shipex.in",
+                    email: pickup.email || "info@shiproxx.com",
                     phoneNumber: pickup.phoneNumber,
                     address: pickup.address,
                     pinCode: pickup.pinCode,
@@ -328,7 +328,7 @@ const createBoxdLogisticsOrder = async (req, res) => {
                 userId: currentOrder.userId,
                 pickupAddress: {
                     contactName: currentOrder.pickupAddress.contactName,
-                    email: currentOrder.pickupAddress.email || user?.email || "info@shipex.in",
+                    email: currentOrder.pickupAddress.email || user?.email || "info@shiproxx.com",
                     phoneNumber: currentOrder.pickupAddress.phoneNumber,
                     address: currentOrder.pickupAddress.address,
                     pinCode: currentOrder.pickupAddress.pinCode,

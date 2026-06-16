@@ -129,7 +129,7 @@ const createProshipShipment = async ({
           from_phone_number: currentOrder.pickupAddress.phoneNumber,
           from_address: currentOrder.pickupAddress.address,
           from_country: "IN",
-          from_email: currentOrder.pickupAddress.email || "info@shipex.in",
+          from_email: currentOrder.pickupAddress.email || "info@shiproxx.com",
           from_pincode: String(currentOrder.pickupAddress.pinCode),
           from_city: currentOrder.pickupAddress.city,
           from_addressline: currentOrder.pickupAddress.address,

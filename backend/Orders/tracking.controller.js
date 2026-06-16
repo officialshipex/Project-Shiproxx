@@ -1833,7 +1833,7 @@ const trackSingleOrder = async (order) => {
             if (store?.storeURL) {
               await markWooOrderAsShipped(
                 store.storeURL,
-                order.orderId,      // internal Shipex orderId
+                order.orderId,      // internal Shiproxx orderId
                 order.awb_number,
                 order.provider,     // courier provider name
                 order.status

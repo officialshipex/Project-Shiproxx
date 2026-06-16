@@ -70,7 +70,7 @@ const generateManifest = async (req, res) => {
       )}`;
 
       // Title
-      doc.fontSize(18).text("Shipex India Manifest", { align: "center" });
+      doc.fontSize(18).text("Shiproxx Manifest", { align: "center" });
       doc.moveDown(0.5);
       const currentDateTime = new Date().toLocaleString("en-IN", {
         day: "numeric",

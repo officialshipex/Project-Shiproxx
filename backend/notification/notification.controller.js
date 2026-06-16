@@ -353,7 +353,7 @@ const sendWhatsAppMessage = async ({
     const userTemplate = setting[`whatsapp${statusKey}Template`];
     const templateToUse = userTemplate || matchedStatus.template;
 
-    const tracking_link = `https://www.shipexindia.com/track/${awb_number}`;
+    const tracking_link = `https://www.shiproxx.com/track/${awb_number}`;
     const messageBody = templateToUse
       .replace(/{tracking_link}/g, tracking_link)
       .replace(/{order_id}/g, awb_number)
@@ -486,16 +486,16 @@ const sendEmailMessage = async ({
     const userTemplate = setting[`email${statusKey}Template`];
     const userSubject = setting[`email${statusKey}Subject`];
     const templateToUse = userTemplate || matchedStatus.template;
-    const subjectToUse = userSubject || `Shipex | ${matchedStatus.label}`;
+    const subjectToUse = userSubject || `Shiproxx | ${matchedStatus.label}`;
 
-    const tracking_link = `https://www.shipexindia.com/track/${awb_number}`;
+    const tracking_link = `https://www.shiproxx.com/track/${awb_number}`;
     const messageBody = templateToUse
       .replace(/{tracking_link}/g, tracking_link)
       .replace(/{order_id}/g, awb_number)
       .replace(/{customer_name}/g, "Customer");
 
     const info = await transporter.sendMail({
-      from: '"Shipex Team" <info@shipexindia.com>',
+      from: '"Shiproxx Team" <info@shiproxx.com>',
       to: email,
       subject: subjectToUse,
       html: `<div style="font-family: Arial, sans-serif; padding: 20px;"><h2>${matchedStatus.label}</h2><p>${messageBody}</p><a href="${tracking_link}">Track Shipment</a></div>`,
@@ -595,7 +595,7 @@ const sendSMSMessage = async ({
     const userTemplate = setting[`sms${statusKey}Template`];
     const templateToUse = userTemplate || matchedStatus.template;
 
-    const tracking_link = `https://www.shipexindia.com/track/${awb_number}`;
+    const tracking_link = `https://www.shiproxx.com/track/${awb_number}`;
     const messageBody = templateToUse
       .replace(/{tracking_link}/g, tracking_link)
       .replace(/{order_id}/g, awb_number)

@@ -93,9 +93,9 @@ const _sendWebhook = async (wh, payload, payloadString, WebhookLog) => {
     const response = await axios.post(wh.url, payload, {
       headers: {
         "Content-Type": "application/json",
-        "x-shipex-signature": signature,
-        "x-shipex-event": "track_update",
-        "x-shipex-webhook-id": wh.webhookId,
+        "x-shiproxx-signature": signature,
+        "x-shiproxx-event": "track_update",
+        "x-shiproxx-webhook-id": wh.webhookId,
       },
       timeout: 10000, // 10s timeout
     });

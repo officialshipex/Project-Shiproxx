@@ -83,7 +83,7 @@ async function generateInvoicePDF(invoice, company = {}, customer = {}) {
 
       /* ================= LOGO (TOP LEFT) ================= */
 
-      const logoPath = path.join(__dirname, "../public/assets/Shipex.jpg");
+      const logoPath = path.join(__dirname, "../public/assets/Shiproxx.jpg");
       const logoWidth = 90;
       const logoHeight = 40;
       const logoX = 40;
@@ -771,7 +771,7 @@ async function generateInvoiceForUserMonth(userId, periodStart, periodEnd) {
           address:
             "House No 87 Singhal Panna, Gali No2 Near Shiv Mandir, Badesera, Bhiwani, Bhiwani, Haryana, India, 127031",
           phone: "+91- 9813981344",
-          email: "support@shipexindia.com",
+          email: "support@shiproxx.com",
           gstin: "06AABCQ1885H1ZC",
           cin: "U53200HR2025PTC138342",
           bank: {
@@ -782,15 +782,15 @@ async function generateInvoiceForUserMonth(userId, periodStart, periodEnd) {
           },
         }
       : {
-          name: "Shipex India",
+          name: "Shiproxx",
           address:
             "01, Basement, Biju Tower, Baba Nagar, Bhiwani, Haryana - 127021",
           phone: "+91- 9813981344",
-          email: "support@shipexindia.com",
+          email: "support@shiproxx.com",
           pan: "XXXAAABBB",
           gstin: "06FKCPS6109D3Z7",
           bank: {
-            accountName: "Shipex India",
+            accountName: "Shiproxx",
             accountNumber: "2258120020000251",
             bankName: "Ujjivan Small Finance Bank",
             ifsc: "UJVN0002258",
@@ -1387,7 +1387,7 @@ async function regenerateInvoicePDFsForPeriod(periodStart, periodEnd) {
             address:
               "House No 87 Singhal Panna, Gali No2 Near Shiv Mandir, Badesera, Bhiwani, Bhiwani, Haryana, India, 127031",
             phone: "+91- 9813981344",
-            email: "support@shipexindia.com",
+            email: "support@shiproxx.com",
             gstin: "06AABCQ1885H1ZC",
             cin: "U53200HR2025PTC138342",
             bank: {
@@ -1398,15 +1398,15 @@ async function regenerateInvoicePDFsForPeriod(periodStart, periodEnd) {
             },
           }
         : {
-            name: "Shipex India",
+            name: "Shiproxx",
             address:
               "01, Basement, Biju Tower, Baba Nagar, Bhiwani, Haryana - 127021",
             phone: "+91- 9813981344",
-            email: "support@shipexindia.com",
+            email: "support@shiproxx.com",
             pan: "XXXAAABBB",
             gstin: "06FKCPS6109D3Z7",
             bank: {
-              accountName: "Shipex India",
+              accountName: "Shiproxx",
               accountNumber: "2258120020000251",
               bankName: "Ujjivan Small Finance Bank",
               ifsc: "UJVN0002258",
@@ -1450,16 +1450,16 @@ async function renameQPStoSFC(req, res) {
     const results = { success: [], failed: [] };
     let maxSeq = 0;
 
-    // Shipex India branding (same as pre-Sep 2026)
+    // Shiproxx branding (same as pre-Sep 2026)
     const companyDetails = {
-      name: "Shipex India",
+      name: "Shiproxx",
       address: "01, Basement, Biju Tower, Baba Nagar, Bhiwani, Haryana - 127021",
       phone: "+91- 9813981344",
-      email: "support@shipexindia.com",
+      email: "support@shiproxx.com",
       pan: "XXXAAABBB",
       gstin: "06FKCPS6109D3Z7",
       bank: {
-        accountName: "Shipex India",
+        accountName: "Shiproxx",
         accountNumber: "2258120020000251",
         bankName: "Ujjivan Small Finance Bank",
         ifsc: "UJVN0002258",

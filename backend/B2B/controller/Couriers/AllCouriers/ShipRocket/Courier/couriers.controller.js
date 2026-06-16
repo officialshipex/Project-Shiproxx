@@ -94,7 +94,7 @@ exports.createShiprocketCargoShipment = async (req, res) => {
 
       sender_contact_person_name: order.pickupAddress.contactName,
       sender_contact_person_email:
-        order.pickupAddress.email || "noreply@shipex.in",
+        order.pickupAddress.email || "noreply@shiproxx.com",
       sender_contact_person_contact_no: order.pickupAddress.phoneNumber,
 
       /* ===== DELIVERY ===== */
@@ -107,7 +107,7 @@ exports.createShiprocketCargoShipment = async (req, res) => {
 
       recipient_contact_person_name: order.receiverAddress.contactName,
       recipient_contact_person_email:
-        order.receiverAddress.email || "noreply@shipex.in",
+        order.receiverAddress.email || "noreply@shiproxx.com",
       recipient_contact_person_contact_no: order.receiverAddress.phoneNumber,
 
       /* ===== OTHER ===== */
@@ -131,7 +131,7 @@ exports.createShiprocketCargoShipment = async (req, res) => {
       source: "API",
 
       supporting_docs: [
-        "https://shipex-india.s3.ap-south-1.amazonaws.com/invoices/6877cd814b130b3f25a64711/SHI-20251127-7800.pdf",
+        "https://shiproxx-india.s3.ap-south-1.amazonaws.com/invoices/6877cd814b130b3f25a64711/SHI-20251127-7800.pdf",
       ],
     };
 
@@ -180,7 +180,7 @@ exports.createShiprocketCargoShipment = async (req, res) => {
 
       // REQUIRED
       supporting_docs: [
-        "https://shipex-india.s3.ap-south-1.amazonaws.com/invoices/6877cd814b130b3f25a64711/SHI-20251127-7800.pdf",
+        "https://shiproxx-india.s3.ap-south-1.amazonaws.com/invoices/6877cd814b130b3f25a64711/SHI-20251127-7800.pdf",
       ],
     };
 

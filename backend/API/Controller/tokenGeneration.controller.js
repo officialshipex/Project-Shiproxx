@@ -37,7 +37,7 @@ const generateToken = async (req, res) => {
       return res.status(403).json({
         success: false,
         message:
-          "Please contact your Sales Manager or support at tech@shipexindia.com",
+          "Please contact your Sales Manager or support at tech@shiproxx.com",
       });
     }
 

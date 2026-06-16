@@ -132,9 +132,9 @@ const ndrCreate = async (req, res) => {
 
       const queuedEntry = {
         action: req.body.action || "RE-ATTEMPT",
-        actionBy: "ShipexIndia",
+        actionBy: "Shiproxx",
         remark: taskPayload.remarks,
-        source: "ShipexIndia",
+        source: "Shiproxx",
         date: new Date(),
       };
       orderDetails.ndrHistory.push({ actions: [queuedEntry] });

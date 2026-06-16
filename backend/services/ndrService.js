@@ -72,9 +72,9 @@ const callShiprocketNdrApi = async (orderDetails) => {
 
         const entry = {
           action: "NDR_ACTION",
-          actionBy: "ShipexIndia",
+          actionBy: "Shiproxx",
           remark: "NDR Action Requested (Shiprocket)",
-          source: "ShipexIndia",
+          source: "Shiproxx",
           date: new Date(),
         };
 
@@ -106,9 +106,9 @@ const callNimbustNdrApi = async (orderDetails) => {
 
         const entry = {
           action: "NDR_ACTION",
-          actionBy: "ShipexIndia",
+          actionBy: "Shiproxx",
           remark: "NDR Action Requested (NimbusPost)",
-          source: "ShipexIndia",
+          source: "Shiproxx",
           date: new Date(),
         };
 
@@ -236,9 +236,9 @@ const callEcomExpressNdrApi = async (
     if (response.data[0].status) {
       const entry = {
         action,
-        actionBy: "ShipexIndia",
+        actionBy: "Shiproxx",
         remark: comments || "NDR Action Requested",
-        source: "ShipexIndia",
+        source: "Shiproxx",
         date: new Date(),
       };
 
@@ -338,9 +338,9 @@ const submitNdrToAmazon = async (
       // Prepare new action
       const ndrActionEntry = {
         action,
-        actionBy: "ShipexIndia",
+        actionBy: "Shiproxx",
         remark: comments || "",
-        source: "ShipexIndia",
+        source: "Shiproxx",
         date: new Date(),
       };
 
@@ -386,9 +386,9 @@ async function handleDelhiveryNdrAction(awb_number, action, comments) {
     // --- build entry function ---
     const buildActionEntry = (remark) => ({
       action,
-      actionBy: "ShipexIndia",
+      actionBy: "Shiproxx",
       remark: comments || "NDR Action Requested",
-      source: "ShipexIndia",
+      source: "Shiproxx",
       date: new Date(),
     });
 
@@ -625,9 +625,9 @@ const submitNdrToDtdc = async (
       // --- Build entry ---
       const entry = {
         action: rtoActionValue === "1" ? "RE-ATTEMPT" : "RTO",
-        actionBy: "ShipexIndia",
+        actionBy: "Shiproxx",
         remark: remarks || "NDR Action Requested",
-        source: "ShipexIndia",
+        source: "Shiproxx",
         date: new Date(),
       };
 
@@ -795,9 +795,9 @@ const submitNdrToShreeMaruti = async ({
     if (result.success === true) {
       const entry = {
         action: actionType,
-        actionBy: "ShipexIndia",
+        actionBy: "Shiproxx",
         remark: remarks || "NDR Action Requested",
-        source: "ShipexIndia",
+        source: "Shiproxx",
         date: new Date(),
       };
 
@@ -900,9 +900,9 @@ const callSmartshipNdrApi = async (
       // --- Build entry ---
       const entry = {
         action: action_id === 1 ? "RE-ATTEMPT" : "RTO",
-        actionBy: "ShipexIndia",
+        actionBy: "Shiproxx",
         remark: comments,
-        source: "ShipexIndia",
+        source: "Shiproxx",
         date: new Date(),
       };
 
@@ -1038,9 +1038,9 @@ const submitNdrToZipypost = async (awb, payload) => {
           : action.toUpperCase() === "RTO"
             ? "RTO"
             : action,
-      actionBy: "ShipexIndia",
+      actionBy: "Shiproxx",
       remark: seller_remark || "NDR Action Requested",
-      source: "ShipexIndia",
+      source: "Shiproxx",
       date: new Date(),
     };
 
@@ -1171,9 +1171,9 @@ const submitNdrToEkart = async ({
       // SUCCESS → Record in History & Update Order
       const entry = {
         action: ekartAction.toUpperCase(),
-        actionBy: "ShipexIndia",
+        actionBy: "Shiproxx",
         remark: comments || "NDR Action Requested",
-        source: "ShipexIndia",
+        source: "Shiproxx",
         date: new Date(),
       };
 
@@ -1259,9 +1259,9 @@ const submitNdrToBoxdLogistics = async ({
       if (!orderInDb) return { success: false, error: "Order not found in DB" };
       const entry = {
         action: action.toUpperCase() === "CHANGE_ADDRESS" ? "RE-ATTEMPT" : action,
-        actionBy: "ShipexIndia",
+        actionBy: "Shiproxx",
         remark: remarks || "NDR Action Requested",
-        source: "ShipexIndia",
+        source: "Shiproxx",
         date: new Date(),
       };
       pushNdrActionToHistory(orderInDb, entry);
@@ -1315,9 +1315,9 @@ const submitNdrToBoxdLogistics = async ({
 
     const entry = {
       action: actionUpper === "CHANGE_ADDRESS" ? "RE-ATTEMPT" : action,
-      actionBy: "ShipexIndia",
+      actionBy: "Shiproxx",
       remark: remarks,
-      source: "ShipexIndia",
+      source: "Shiproxx",
       date: new Date(),
     };
 
@@ -1452,9 +1452,9 @@ const submitNdrToProship = async ({
     if (response.data && (response.data.meta?.status === "200 OK" || response.data.success || response.data.status === 200)) {
       const entry = {
         action: isRto ? "RTO" : "RE-ATTEMPT",
-        actionBy: "ShipexIndia",
+        actionBy: "Shiproxx",
         remark: remarks || "NDR Action Requested",
-        source: "ShipexIndia",
+        source: "Shiproxx",
         date: new Date(),
       };
 

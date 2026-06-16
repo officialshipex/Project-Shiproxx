@@ -549,9 +549,9 @@ const getPlanNames = async (req, res) => {
 //     // Add a demo data row for user reference
 //     worksheet.addRow({
 //       planName: "Silver (same as existing plans in system)",
-//       courierProviderName: "Shipex (same as existing providers in system)",
+//       courierProviderName: "Shiproxx (same as existing providers in system)",
 //       courierServiceName:
-//         "Shipex surface (same as existing services in system)",
+//         "Shiproxx surface (same as existing services in system)",
 //       basicWeight: "500 (in grams)",
 //       basicZoneA: "50",
 //       basicZoneB: "60",

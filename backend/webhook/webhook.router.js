@@ -31,14 +31,14 @@ webhookRouter.post("/delhivery/manifest", delhiveryManifestCallback)
 webhookRouter.use("/manage", outgoingWebhookRouter);
 
 // ── Test receiver endpoint — used to verify outgoing webhook connectivity ──
-// Users configure https://api.shipexindia.com/v1/webhook/shipex as their test URL.
-webhookRouter.post("/shipex", (req, res) => {
-  const eventTopic = req.headers["x-shipex-event"] || "unknown";
-  const webhookId = req.headers["x-shipex-webhook-id"] || "unknown";
-  const isTest = req.headers["x-shipex-test"] === "true";
-  const signature = req.headers["x-shipex-signature"] || "not-provided";
+// Users configure https://api.shiproxx.com/v1/webhook/shiproxx as their test URL.
+webhookRouter.post("/shiproxx", (req, res) => {
+  const eventTopic = req.headers["x-shiproxx-event"] || "unknown";
+  const webhookId = req.headers["x-shiproxx-webhook-id"] || "unknown";
+  const isTest = req.headers["x-shiproxx-test"] === "true";
+  const signature = req.headers["x-shiproxx-signature"] || "not-provided";
 
-  console.log(`[Shipex Receiver] 📩 Incoming webhook`);
+  console.log(`[Shiproxx Receiver] 📩 Incoming webhook`);
   console.log(`  Event     : ${eventTopic}`);
   console.log(`  WebhookID : ${webhookId}`);
   console.log(`  Test      : ${isTest}`);
@@ -50,7 +50,7 @@ webhookRouter.post("/shipex", (req, res) => {
     event: eventTopic,
     webhookId,
     test: isTest,
-    message: "Webhook received successfully by Shipex",
+    message: "Webhook received successfully by Shiproxx",
   });
 });
 
