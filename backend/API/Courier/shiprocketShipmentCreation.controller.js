@@ -138,7 +138,16 @@ const createShiprocketShipment = async ({
           timeout: 10000
         });
 
-        const existingLocations = pickupResponse.data?.data?.shipping_address || pickupResponse.data?.data || [];
+        let existingLocations = [];
+        if (pickupResponse.data?.data?.shipping_address && Array.isArray(pickupResponse.data.data.shipping_address)) {
+          existingLocations = pickupResponse.data.data.shipping_address;
+        } else if (pickupResponse.data?.data && Array.isArray(pickupResponse.data.data)) {
+          existingLocations = pickupResponse.data.data;
+        } else if (pickupResponse.data && Array.isArray(pickupResponse.data)) {
+          existingLocations = pickupResponse.data;
+        } else if (pickupResponse.data?.shipping_address && Array.isArray(pickupResponse.data.shipping_address)) {
+          existingLocations = pickupResponse.data.shipping_address;
+        }
         console.log("Existing Shiprocket Locations Count:", existingLocations.length);
 
         // Try to find a match by pincode and address snippet to be more accurate

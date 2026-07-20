@@ -61,7 +61,18 @@ const getAllPickupLocations = async () => {
       headers: { Authorization: `Bearer ${token}` },
       timeout: 10000,
     });
-    return response.data?.data?.shipping_address || [];
+    
+    let locations = [];
+    if (response.data?.data?.shipping_address && Array.isArray(response.data.data.shipping_address)) {
+      locations = response.data.data.shipping_address;
+    } else if (response.data?.data && Array.isArray(response.data.data)) {
+      locations = response.data.data;
+    } else if (response.data && Array.isArray(response.data)) {
+      locations = response.data;
+    } else if (response.data?.shipping_address && Array.isArray(response.data.shipping_address)) {
+      locations = response.data.shipping_address;
+    }
+    return locations;
   } catch (error) {
     console.error("ShipRocket getAllPickupLocations Error:", error.response?.data || error.message);
     return null;
@@ -219,12 +230,35 @@ const createCustomOrder = async (req, res) => {
   try {
     const { id, finalCharges, courierServiceName, provider, priceBreakup } = req.body;
 
+    // Fetch order to get userId
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    // Fetch user to get Wallet ID
+    const user = await User.findById(order.userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Fetch wallet details
+    const wallet = await Wallet.findById(user.Wallet).select("balance holdAmount creditLimit");
+    if (!wallet) {
+      return res.status(404).json({ success: false, message: "Wallet not found" });
+    }
+
     const result = await createShiprocketShipment({
       id,
       provider: provider || "Shiprocket",
       finalCharges,
       courierServiceName,
-      priceBreakup
+      priceBreakup,
+      userId: order.userId,
+      walletId: user.Wallet,
+      walletBalance: wallet.balance,
+      walletHoldAmount: wallet.holdAmount || 0,
+      walletCreditLimit: wallet.creditLimit || 0,
     });
 
     if (result.success) {

@@ -44,8 +44,10 @@ const saveShipRocket = async (req, res) => {
       { email, password },
       { headers: { "Content-Type": "application/json" }, timeout: 10000 }
     );
+    // console.log("shiprocket authentication",response.data)
     if (!response.data?.token) return res.status(401).json({ message: "Invalid ShipRocket credentials." });
   } catch (error) {
+    // console.log("shiprocket authentication",error.response?.data)
     return res.status(400).json({
       message: "ShipRocket authentication failed.",
       error: error.response?.data?.message || error.message,
