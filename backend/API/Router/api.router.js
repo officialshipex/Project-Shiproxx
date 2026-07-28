@@ -7,6 +7,7 @@ const { generateToken, generateTokenWithoutPassword } = require("../Controller/t
 const pincodeServiceability = require("../Controller/pincodeServiceability.controller");
 const availableCourierService=require("../Controller/availableCourierService.controller")
 const bookOrder= require("../Controller/bookOrder.controller");
+const getOrderDetails = require("../Controller/getOrderDetails.controller");
 const cancelOrdersAtBooked = require("../Controller/cancelledOrder.controller");
 const trackOrder = require("../Controller/trackOrder.controller");
 const generateLabel=require("../Controller/labelGeneration.controller")
@@ -22,6 +23,7 @@ router.post("/external/generateTokenWithoutPassword", generateTokenWithoutPasswo
 router.post("/external/pincodeServiceability", isAuthorized, pincodeServiceability);
 router.post("/external/serviceableCourierServices/rate", isAuthorized, availableCourierService);
 router.post("/external/orderBooking",isAuthorized, bookOrder);
+router.get("/external/getOrder/:orderId", isAuthorized, getOrderDetails);
 router.post("/external/cancelledOrder/:awb_number", isAuthorized, cancelOrdersAtBooked);
 router.post("/external/trackOrder", trackOrder);
 router.get("/external/generateLabel/:awb",isAuthorized,generateLabel);

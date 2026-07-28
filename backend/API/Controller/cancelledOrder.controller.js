@@ -37,6 +37,9 @@ const {
   cancelLosung360Order,
 } = require("../../AllCouriers/Losung360/Courier/couriers.controller");
 const {
+  cancelOrder: cancelShiprocketOrder,
+} = require("../../AllCouriers/ShipRocket/Courier/couriers.controller");
+const {
   removeFromPickupManifest,
 } = require("../../Orders/scheduledPickup.controller");
 
@@ -104,6 +107,8 @@ const cancelOrdersAtBooked = async (req, res) => {
       provider = "Losung360";
     } else if (currentOrder.partner === "Shadowfax" || currentOrder.provider === "Shadowfax") {
       provider = "Shadowfax";
+    } else if (currentOrder.partner === "Shiprocket" || currentOrder.provider === "Shiprocket") {
+      provider = "Shiprocket";
     } else {
       provider = currentOrder.provider;
     }
@@ -142,6 +147,9 @@ const cancelOrdersAtBooked = async (req, res) => {
         break;
       case "Losung360":
         result = await cancelLosung360Order(currentOrder.awb_number);
+        break;
+      case "Shiprocket":
+        result = await cancelShiprocketOrder(currentOrder.awb_number);
         break;
       default:
         return res.status(400).json({

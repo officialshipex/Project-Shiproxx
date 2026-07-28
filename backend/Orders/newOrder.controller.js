@@ -1722,12 +1722,7 @@ const cancelOrdersAtBooked = async (req, res) => {
       return res.status(400).send({ error: "Order is not ready to Cancelled" });
     }
 
-    if (currentOrder.provider === "Xpressbees") {
-      const result = await cancelShipmentXpressBees(currentOrder.awb_number);
-      if (result.error) {
-        return res.status(400).send({ error: "Failed to cancel order" });
-      }
-    } else if (currentOrder.provider === "Shiprocket" || currentOrder.partner === "Shiprocket") {
+    if (currentOrder.provider === "Shiprocket" || currentOrder.partner === "Shiprocket") {
       const result = await cancelShiprocketOrder(currentOrder.awb_number);
       if (result.error) {
         return res.status(400).json({
@@ -1735,6 +1730,11 @@ const cancelOrdersAtBooked = async (req, res) => {
           details: result,
           orderId: currentOrder._id,
         });
+      }
+    } else if (currentOrder.provider === "Xpressbees") {
+      const result = await cancelShipmentXpressBees(currentOrder.awb_number);
+      if (result.error) {
+        return res.status(400).send({ error: "Failed to cancel order" });
       }
     } else if (currentOrder.provider === "Nimuspost") {
       const result = await cancelShipmentXpressBees(currentOrder.awb_number);
@@ -2161,10 +2161,10 @@ const bulkCancelOrder = async (req, res) => {
           // Call provider cancel API
           let cancelResponse;
           try {
-            if (provider === "Xpressbees") {
-              cancelResponse = await cancelShipmentXpressBees(currentOrder.awb_number);
-            } else if (provider === "Shiprocket" || partner === "Shiprocket") {
+            if (provider === "Shiprocket" || partner === "Shiprocket") {
               cancelResponse = await cancelShiprocketOrder(currentOrder.awb_number);
+            } else if (provider === "Xpressbees") {
+              cancelResponse = await cancelShipmentXpressBees(currentOrder.awb_number);
             } else if (provider === "Nimuspost") {
               cancelResponse = await cancelShipmentXpressBees(currentOrder.awb_number);
             } else if (provider === "Delhivery") {

@@ -261,6 +261,7 @@ const createShiprocketShipment = async ({
 
       // Step 🔟 Assign AWB
       let awb_number = "PENDING";
+      let courier_name = null;
       try {
         const courierService = await require("../../models/CourierService.Schema").findOne({
           name: courierServiceName,
@@ -275,6 +276,7 @@ const createShiprocketShipment = async ({
           );
           console.log("awb response", awbResponse.data)
           awb_number = awbResponse.data?.response?.data?.awb_code || "PENDING";
+          courier_name = awbResponse.data?.response?.data?.courier_name || null;
         } else {
           // Fallback: auto-assign if no ID is found (optional, or could error)
           const awbResponse = await axios.post(
@@ -284,6 +286,7 @@ const createShiprocketShipment = async ({
           );
           console.log("awb response (auto-assign)", awbResponse.data)
           awb_number = awbResponse.data?.response?.data?.awb_code || "PENDING";
+          courier_name = awbResponse.data?.response?.data?.courier_name || null;
         }
       } catch (awbErr) {
         console.error("Shiprocket AWB Assignment Error:", awbErr.response?.data || awbErr.message);
@@ -307,7 +310,7 @@ const createShiprocketShipment = async ({
               status: "Booked",
               awb_number: awb_number,
               shipment_id: String(shipment_id),
-              provider: "Shiprocket",
+              provider: courier_name || "Shiprocket",
               partner: "Shiprocket",
               totalFreightCharges: balanceToBeDeducted,
               courierServiceName,
@@ -371,6 +374,7 @@ const createShiprocketShipment = async ({
         message: "Shipment Created Successfully",
         shipment_id: String(shipment_id),
         orderId: currentOrder.orderId,
+        awb_number: awb_number,
       };
     } catch (error) {
       if (session.inTransaction()) await session.abortTransaction();

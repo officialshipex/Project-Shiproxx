@@ -150,10 +150,11 @@ const createShipmentFunctionShipRocket = async (
     if (!awbResult?.awb_code) return { status: 400, error: "Failed to assign AWB" };
 
     const awb_number = awbResult.awb_code;
+    const courier_name = awbResult.courier_name || null;
     currentOrder.status = "Booked";
     currentOrder.awb_number = awb_number;
     currentOrder.shipment_id = String(shipment_id);
-    currentOrder.provider = "Shiprocket";
+    currentOrder.provider = courier_name || "Shiprocket";
     currentOrder.partner = "Shiprocket";
     currentOrder.totalFreightCharges = charges;
     currentOrder.courierServiceName = serviceDetails.name || serviceDetails.courierProviderServiceName;
