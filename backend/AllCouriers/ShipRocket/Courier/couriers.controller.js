@@ -185,7 +185,7 @@ const getTrackingByAWB = async (awb_code) => {
       timestamp: a.date || null,
       instructions: a.activity || a.status || "",
       shipment_status: shipment.shipment_status || null,
-    }));
+    })).reverse();
 
     return { success: true, data: normalised, shipment_status: shipment.shipment_status || null };
   } catch (error) {
