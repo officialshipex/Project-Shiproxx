@@ -47,6 +47,10 @@ const {
 const {
   checkPincodeServiceability: checkShadowfaxServiceability,
 } = require("../AllCouriers/Shadowfax/Courier/couriers.controller");
+const {
+  checkShipexIndiaServiceability,
+} = require("../AllCouriers/ShipxIndia/Courier/couriers.controller");
+
 const checkServiceabilityAll = async (service, id, pincode) => {
   try {
     const currentOrder = await Order.findById(id);
@@ -338,7 +342,47 @@ const checkServiceabilityAll = async (service, id, pincode) => {
 
       return await checkShadowfaxServiceability(deliveryPincode, service.provider);
     }
+    if (service.provider.toLowerCase() === "shipexindia") {
+      const local = await checkLocalServiceability();
+      if (local.success) return local;
+
+      const payload = {
+        pickUpPincode: pickupPincode,
+        deliveryPincode: deliveryPincode,
+        applicableWeight: currentOrder.packageDetails?.applicableWeight || 0.5,
+        length: currentOrder.packageDetails.volumetricWeight?.length || 10,
+        width: currentOrder.packageDetails.volumetricWeight?.width || 10,
+        height: currentOrder.packageDetails.volumetricWeight?.height || 10,
+        paymentType: paymentMethod,
+        declaredValue: currentOrder.paymentDetails?.amount || 0,
+      };
+      const res = await checkShipexIndiaServiceability(payload);
+      if (res && res.success && Array.isArray(res.data)) {
+        let shipexCourierName = service.name;
+        try {
+          const CourierService = require("../models/CourierService.Schema");
+          const serviceDoc = await CourierService.findOne({ name: service.name, provider: "ShipexIndia" });
+          if (serviceDoc) {
+            shipexCourierName = serviceDoc.courier || serviceDoc.name;
+          }
+        } catch (dbErr) {
+          console.error("Error fetching CourierService details from DB:", dbErr.message);
+        }
+
+        const matchedCourier = res.data.find(
+          (item) =>
+            item.courierServiceName &&
+            item.courierServiceName.toLowerCase().replace(/\s+/g, "") ===
+              shipexCourierName.toLowerCase().replace(/\s+/g, "")
+        );
+        if (matchedCourier && matchedCourier.serviceable === true) {
+          return { ...res, success: true };
+        }
+      }
+      return false;
+    }
     if (service.provider.toLowerCase() === "losung360") {
+
       return { success: true };
     }
 

@@ -40,6 +40,8 @@ const { createOrderProship } = require("../AllCouriers/Proship/Courier/bulkShipm
 const { createShipmentFunctionShipRocket } = require("../AllCouriers/ShipRocket/Courier/bulkShipment.controller");
 const { createOrderShadowfax } = require("../AllCouriers/Shadowfax/Courier/bulkShipment.controller");
 const { createOrderLosung360 } = require("../AllCouriers/Losung360/Courier/bulkShipment.controller");
+const { createShipmentFunctionShipexIndia } = require("../AllCouriers/ShipxIndia/Courier/bulkShipment.controller");
+
 
 const updatePickup = async (req, res) => {
   try {
@@ -231,6 +233,17 @@ const callProviderWithRetry = async (
             priceBreakup
           );
           break;
+        case "ShipexIndia":
+          result = await createShipmentFunctionShipexIndia(
+            serviceDetails,
+            order._id,
+            wh,
+            walletId,
+            charges,
+            priceBreakup
+          );
+          break;
+
 
         default:
           console.error(

@@ -4,6 +4,7 @@ const getZone = zoneManagementController.getZone;
 const Plan = require("../../models/Plan.model");
 const RateCard = require("../../models/rateCards");
 const Order = require("../../models/newOrder.model"); // ✅ import Order model
+const CourierService = require("../../models/CourierService.Schema");
 const {
   checkServiceabilityEcomExpress,
 } = require("../../AllCouriers/EcomExpress/Couriers/couriers.controllers.js");
@@ -40,6 +41,9 @@ const {
 const {
   checkPincodeServiceability: checkShadowfaxServiceability,
 } = require("../../AllCouriers/Shadowfax/Courier/couriers.controller.js");
+const {
+  checkShipexIndiaServiceability,
+} = require("../../AllCouriers/ShipxIndia/Courier/couriers.controller.js");
 
 // Define courier IDs for each provider
 const courierIds = {
@@ -56,6 +60,7 @@ const courierIds = {
   Shiprocket: "11",
   Shadowfax: "12",
   Losung360: "13",
+  ShipexIndia: "14",
 };
 
 // Input Validation Schema
@@ -134,6 +139,11 @@ const availableCourierService = async (req, res) => {
     // ✅ Build isFlatRate lookup by _id — user-specific even if two users share plan name
     const flatRateMap = new Map(
       rateCardDocs.map((doc) => [doc._id.toString(), doc.isFlatRate === true])
+    );
+
+    const shipexServices = await CourierService.find({ provider: "ShipexIndia" }).lean();
+    const shipexServiceMap = new Map(
+      shipexServices.map((s) => [s.name.toLowerCase().trim(), s.courier || s.name])
     );
 
     const providers = [
@@ -265,6 +275,20 @@ const availableCourierService = async (req, res) => {
         name: "Losung360",
         check: async () => ({ success: true }),
       },
+      {
+        name: "ShipexIndia",
+        check: async () =>
+          checkShipexIndiaServiceability({
+            pickUpPincode,
+            deliveryPincode,
+            applicableWeight,
+            paymentType,
+            declaredValue,
+            length: order.packageDetails?.volumetricWeight?.length || 10,
+            width: order.packageDetails?.volumetricWeight?.width || 10,
+            height: order.packageDetails?.volumetricWeight?.height || 10,
+          }),
+      },
     ];
 
     const uniqueChecks = [];
@@ -340,6 +364,25 @@ const availableCourierService = async (req, res) => {
         } else if (sName.includes("dtdc")) {
           isServiceable = !!serviceable.couriers.dtdc;
         }
+      }
+
+      if (provider.toLowerCase() === "shipexindia" && isServiceable) {
+        let isCourierServiceable = false;
+        if (Array.isArray(serviceable.data)) {
+          const mappedName =
+            shipexServiceMap.get(rc.courierServiceName.toLowerCase().trim()) ||
+            rc.courierServiceName;
+          const matchedCourier = serviceable.data.find(
+            (item) =>
+              item.courierServiceName &&
+              item.courierServiceName.toLowerCase().replace(/\s+/g, "") ===
+                mappedName.toLowerCase().replace(/\s+/g, "")
+          );
+          if (matchedCourier && matchedCourier.serviceable === true) {
+            isCourierServiceable = true;
+          }
+        }
+        isServiceable = isCourierServiceable;
       }
 
       if (!isServiceable) continue;

@@ -31,6 +31,8 @@ const { checkEkartServiceability } = require("../AllCouriers/Ekart/Couriers/cour
 const { checkServiceabilityBoxdLogistics } = require("../AllCouriers/BoxdLogistics/Courier/couriers.controller.js");
 const { checkProshipServiceability } = require("../AllCouriers/Proship/Courier/couriers.controller.js");
 const { checkServiceabilityShipRocket } = require("../AllCouriers/ShipRocket/Courier/couriers.controller.js");
+const { checkShipexIndiaServiceability } = require("../AllCouriers/ShipxIndia/Courier/couriers.controller.js");
+
 
 const calculateRate = async (req, res) => {
   try {
@@ -81,6 +83,13 @@ const calculateRate = async (req, res) => {
       rateCardDocs.map((doc) => [doc._id.toString(), doc.isFlatRate === true])
     );
 
+    // Fetch ShipexIndia courier services mapping for O(1) matching in loop
+    const CourierService = require("../models/CourierService.Schema");
+    const shipexServices = await CourierService.find({ provider: "ShipexIndia" }).lean();
+    const shipexServiceMap = new Map(
+      shipexServices.map(s => [s.name.toLowerCase().trim(), s.courier || s.name])
+    );
+
     for (let rc of rateCards) {
       // Use flag from object if present, otherwise fallback to lookup map (for legacy/sync cases)
       const isFlatRate = rc.isFlatRate === true || flatRateMap.get(rc._id?.toString()) === true;
@@ -92,9 +101,42 @@ const calculateRate = async (req, res) => {
       if (!activeCouriersLower.includes(provider.toLowerCase())) continue;
       if (rc.status !== "Active") continue;
 
-      if (!["Delhivery", "Shree Maruti", "Dtdc", "Smartship", "Amazon Shipping", "EcomExpress", "Zipypost", "Ekart", "BoxdLogistics", "Proship", "Shiprocket"].includes(provider)) continue;
+      if (!["Delhivery", "Shree Maruti", "Dtdc", "Smartship", "Amazon Shipping", "EcomExpress", "Zipypost", "Ekart", "BoxdLogistics", "Proship", "Shiprocket", "ShipexIndia"].includes(provider)) continue;
 
-      if (provider === "BoxdLogistics") {
+      if (provider === "ShipexIndia") {
+        if (!serviceabilityCache[provider]) {
+          const payload = {
+            pickUpPincode,
+            deliveryPincode,
+            applicableWeight,
+            length: dimensions?.length || 10,
+            width: dimensions?.width || 10,
+            height: dimensions?.height || 10,
+            paymentType,
+            declaredValue,
+          };
+          serviceabilityCache[provider] = await checkShipexIndiaServiceability(payload);
+        }
+        const shipexResult = serviceabilityCache[provider];
+        if (!shipexResult || shipexResult.success === false) continue;
+
+        let isServiceable = false;
+        if (Array.isArray(shipexResult.data)) {
+          const mappedName = shipexServiceMap.get(rc.courierServiceName.toLowerCase().trim()) || rc.courierServiceName;
+          const matchedCourier = shipexResult.data.find(
+            (item) =>
+              item.courierServiceName &&
+              item.courierServiceName.toLowerCase().replace(/\s+/g, "") ===
+                mappedName.toLowerCase().replace(/\s+/g, "")
+          );
+          if (matchedCourier && matchedCourier.serviceable === true) {
+            isServiceable = true;
+          }
+        }
+        if (!isServiceable) continue;
+        serviceable = { success: true };
+      } else if (provider === "BoxdLogistics") {
+
         if (!serviceabilityCache[provider]) {
           const payload = {
             pickupPincode: pickUpPincode,

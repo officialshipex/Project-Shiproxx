@@ -1495,6 +1495,128 @@ const submitNdrToProship = async ({
   }
 };
 
+const submitNdrToShipexIndia = async ({
+  awb_number,
+  action,
+  comments,
+  scheduled_delivery_date,
+  phone,
+}) => {
+  try {
+    const orderInDb = await Order.findOne({ awb_number });
+    if (!orderInDb) {
+      return { success: false, error: "Order not found in DB" };
+    }
+
+    const { getShipexToken } = require("../AllCouriers/ShipxIndia/Authorize/shipxIndia.controller");
+    const token = await getShipexToken();
+    if (!token) {
+      return { success: false, error: "ShipexIndia token not generated" };
+    }
+
+    // Map action
+    let ndrAction = action === "RTO" ? "RTO" : "RE-ATTEMPT";
+
+    // Map courier ID
+    const provider = orderInDb.provider || "";
+    const courierServiceName = orderInDb.courierServiceName || "";
+    const getShipexCourierId = (prov, serv) => {
+      const p = String(prov).toLowerCase();
+      const s = String(serv).toLowerCase();
+      if (p.includes("delhivery") || s.includes("delhivery")) return "02";
+      if (p.includes("dtdc") || s.includes("dtdc")) return "03";
+      if (p.includes("bluedart") || s.includes("bluedart")) return "13";
+      if (p.includes("amazon") || s.includes("amazon")) return "05";
+      if (p.includes("maruti") || s.includes("maruti")) return "06";
+      if (p.includes("ekart") || s.includes("ekart")) return "08";
+      if (p.includes("xpressbees") || s.includes("xpressbees")) return "09";
+      if (p.includes("shadowfax") || s.includes("shadowfax")) return "12";
+      return "02"; // default fallback
+    };
+    const courierId = getShipexCourierId(provider, courierServiceName);
+
+    // Format dates
+    let formattedDate = scheduled_delivery_date;
+    if (formattedDate) {
+      try {
+        const d = new Date(formattedDate);
+        if (!isNaN(d.getTime())) {
+          formattedDate = d.toISOString().split("T")[0]; // YYYY-MM-DD
+        }
+      } catch (e) {
+        // ignore formatting error
+      }
+    } else {
+      // Default to tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      formattedDate = tomorrow.toISOString().split("T")[0];
+    }
+
+    const payload = {
+      courierId,
+      awb_number,
+      action: ndrAction,
+      comments: comments || "Customer requested reattempt",
+      scheduled_delivery_date: formattedDate,
+      next_attempt_date: formattedDate,
+      phone: phone || orderInDb.receiverAddress?.phoneNumber || "",
+    };
+
+    console.log("ShipexIndia NDR Payload:", JSON.stringify(payload, null, 2));
+
+    const response = await axios.post(
+      "https://api.shipexindia.com/v1/api/external/ndr/create",
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 10000,
+      }
+    );
+
+    console.log("ShipexIndia NDR Response:", response.data);
+
+    if (response.data && response.data.success) {
+      const entry = {
+        action: ndrAction,
+        actionBy: "Shiproxx",
+        remark: comments || "NDR Action Requested",
+        source: "Shiproxx",
+        date: new Date(),
+      };
+
+      pushNdrActionToHistory(orderInDb, entry);
+
+      orderInDb.ndrStatus = "Action_Requested";
+      orderInDb.status = "Action_Requested";
+      orderInDb.reattempt = false;
+      await orderInDb.save();
+
+      return {
+        success: true,
+        message: "ShipexIndia NDR processed successfully",
+        data: response.data,
+      };
+    } else {
+      return {
+        success: false,
+        error: response.data?.message || "ShipexIndia NDR submission failed",
+        details: response.data,
+      };
+    }
+  } catch (error) {
+    console.error("ShipexIndia NDR Error:", error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.message || "Error processing ShipexIndia NDR",
+      details: error.response?.data || error.message,
+    };
+  }
+};
+
 module.exports = {
   getOrderDetails,
   callShiprocketNdrApi,
@@ -1509,4 +1631,6 @@ module.exports = {
   submitNdrToEkart,
   submitNdrToBoxdLogistics,
   submitNdrToProship,
+  submitNdrToShipexIndia,
 };
+

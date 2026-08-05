@@ -50,6 +50,9 @@ const {
   createShipmentFunctionShreeMaruti,
 } = require("../AllCouriers/ShreeMaruti/Couriers/bulkShipment.controller");
 const { createOrderShadowfax } = require("../AllCouriers/Shadowfax/Courier/bulkShipment.controller");
+const { createShipmentFunctionShipexIndia } = require("../AllCouriers/ShipxIndia/Courier/bulkShipment.controller");
+const { cancelShipexIndiaOrder } = require("../AllCouriers/ShipxIndia/Courier/couriers.controller");
+
 
 const { AutoShip } = require("../Orders/AutoShipB2c.controller");
 
@@ -491,7 +494,20 @@ const cancelOrdersAtBooked = async (req, res) => {
               orderId: currentOrder._id,
             };
           }
+        } else if (
+          currentOrder.service_details?.courierProviderName === "ShipexIndia" ||
+          currentOrder.partner === "ShipexIndia"
+        ) {
+          const result = await cancelShipexIndiaOrder(currentOrder.awb_number);
+          if (!result.success) {
+            return {
+              error: result.error || "Failed to cancel order with ShipexIndia",
+              details: result,
+              orderId: currentOrder._id,
+            };
+          }
         } else {
+
           return {
             error: "Unsupported courier provider",
             orderId: currentOrder._id,
@@ -1004,7 +1020,17 @@ const createShipment = async (serviceDetails, order, wh, walletId, charges) => {
           charges
         );
         break;
+      case "ShipexIndia":
+        result = await createShipmentFunctionShipexIndia(
+          serviceDetails,
+          order._id,
+          wh,
+          walletId,
+          charges
+        );
+        break;
       default:
+
         console.error(
           `No function defined for ${serviceDetails.courierProviderName}`
         );

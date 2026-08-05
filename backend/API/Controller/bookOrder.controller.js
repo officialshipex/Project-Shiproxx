@@ -21,6 +21,7 @@ const createProshipShipment = require("../Courier/proshipShipmentCreation.contro
 const createShiprocketShipment = require("../Courier/shiprocketShipmentCreation.controller");
 const createShadowfaxShipment = require("../Courier/shadowfaxShipmentCreation.controller");
 const createLosung360Shipment = require("../Courier/losung360ShipmentCreation.controller");
+const createShipexIndiaShipment = require("../Courier/shipexIndiaShipmentCreation.controller");
 
 // Provider mapping
 const providerMap = {
@@ -37,7 +38,9 @@ const providerMap = {
   "11": "Shiprocket",
   "12": "Shadowfax",
   "13": "Losung360",
+  "14": "ShipexIndia",
 };
+
 
 // Validation schema
 const orderSchema = Joi.object({
@@ -403,6 +406,22 @@ const bookOrder = async (req, res) => {
           walletCreditLimit: wallet.creditLimit || 0,
         });
         break;
+
+      case "ShipexIndia":
+        shipmentResult = await createShipexIndiaShipment({
+          id: order._id,
+          provider,
+          finalCharges,
+          courierServiceName,
+          priceBreakup,
+          userId: userId,
+          walletId: user.Wallet,
+          walletBalance: wallet.balance,
+          walletHoldAmount: wallet.holdAmount || 0,
+          walletCreditLimit: wallet.creditLimit || 0,
+        });
+        break;
+
 
       case "EcomExpress":
         return res.status(400).json({

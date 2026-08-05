@@ -40,6 +40,9 @@ const {
   cancelOrder: cancelShiprocketOrder,
 } = require("../../AllCouriers/ShipRocket/Courier/couriers.controller");
 const {
+  cancelShipexIndiaOrder,
+} = require("../../AllCouriers/ShipxIndia/Courier/couriers.controller");
+const {
   removeFromPickupManifest,
 } = require("../../Orders/scheduledPickup.controller");
 
@@ -109,6 +112,8 @@ const cancelOrdersAtBooked = async (req, res) => {
       provider = "Shadowfax";
     } else if (currentOrder.partner === "Shiprocket" || currentOrder.provider === "Shiprocket") {
       provider = "Shiprocket";
+    } else if (currentOrder.partner === "ShipexIndia" || currentOrder.provider === "ShipexIndia") {
+      provider = "ShipexIndia";
     } else {
       provider = currentOrder.provider;
     }
@@ -150,6 +155,9 @@ const cancelOrdersAtBooked = async (req, res) => {
         break;
       case "Shiprocket":
         result = await cancelShiprocketOrder(currentOrder.awb_number);
+        break;
+      case "ShipexIndia":
+        result = await cancelShipexIndiaOrder(currentOrder.awb_number);
         break;
       default:
         return res.status(400).json({

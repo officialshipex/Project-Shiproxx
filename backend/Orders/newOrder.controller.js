@@ -1463,16 +1463,17 @@ const ShipeNowOrder = async (req, res) => {
     const availableServicesResults = await Promise.all(
       enabledServices.map(async (item) => {
         const provider = item.provider;
-        // Optimization: Cache serviceability results per provider during this request
+        // Optimization: Cache serviceability results per provider+service during this request
         // We cache the PROMISE to handle concurrent requests correctly in Promise.all
-        if (!serviceabilityCache[provider]) {
-          serviceabilityCache[provider] = checkServiceabilityAll(
+        const cacheKey = `${provider}-${item.name}`;
+        if (!serviceabilityCache[cacheKey]) {
+          serviceabilityCache[cacheKey] = checkServiceabilityAll(
             item,
             order._id,
             order.pickupAddress.pinCode,
           );
         }
-        let result = await serviceabilityCache[provider];
+        let result = await serviceabilityCache[cacheKey];
         // console.log("result",result)
         if (result && result.success) {
           if (item.provider?.toLowerCase() === "boxdlogistics" && Array.isArray(result.courier_ids)) {
