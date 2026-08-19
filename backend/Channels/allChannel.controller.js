@@ -6,10 +6,31 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 const Order = require("../models/newOrder.model");
+const PickupAddress = require("../models/pickupAddress.model");
 const { generateUniqueOrderIds } = require("../utils/generateUniqueOrderId");
 const {
   createWooCommerceWebhook,
 } = require("./WooCommerce/woocommerce.controller");
+
+// Verify a Shopify webhook's HMAC SHA256 signature against the store's own
+// API secret key (the same "storeClientSecret" collected at connect time —
+// Shopify signs webhooks with a Custom App's secret key by default).
+const verifyShopifyHmac = (req, storeClientSecret) => {
+  const signature = req.headers["x-shopify-hmac-sha256"];
+  if (!storeClientSecret || !signature || !req.rawBody) return false;
+  const expected = crypto
+    .createHmac("sha256", storeClientSecret)
+    .update(req.rawBody)
+    .digest("base64");
+  try {
+    const expectedBuf = Buffer.from(expected, "base64");
+    const signatureBuf = Buffer.from(signature, "base64");
+    if (expectedBuf.length !== signatureBuf.length) return false;
+    return crypto.timingSafeEqual(expectedBuf, signatureBuf);
+  } catch (err) {
+    return false;
+  }
+};
 
 const createWebhook = async (storeURL, storeAccessToken) => {
   const webhookURL = "https://api.shiproxx.com/v1/channel/webhook/orders";
@@ -108,6 +129,20 @@ const fetchExistingOrders = async (req, res) => {
         .json({ success: false, message: "Shopify channel not connected." });
     }
 
+    // Fetch the seller's own warehouse/pickup address — NOT the customer's
+    // billing address, which was being used below before.
+    const primaryPickup = await PickupAddress.findOne({
+      userId,
+      isPrimary: true,
+    }).lean();
+
+    if (!primaryPickup || !primaryPickup.pickupAddress) {
+      return res.status(400).json({
+        success: false,
+        message: "No primary pickup address configured for this account. Add one before syncing Shopify orders.",
+      });
+    }
+
     const accessToken = channel.storeAccessToken;
     const storeURL = channel.storeURL;
 
@@ -192,15 +227,16 @@ const fetchExistingOrders = async (req, res) => {
         orderId: internalOrderId,
         channelId: order.id,
         compositeOrderId,
+        channel: "Shopify",
+        storeUrl: storeURL,
         pickupAddress: {
-          contactName: order.billing_address?.name || "N/A",
-          email: order.email || "unknown@example.com",
-          phoneNumber: order.billing_address?.phone || "0000000000",
-          address: `${order.billing_address?.address1 || ""}, ${order.billing_address?.address2 || ""
-            }`.trim(),
-          pinCode: order.billing_address?.zip || "000000",
-          city: order.billing_address?.city || "Unknown",
-          state: order.billing_address?.province || "Unknown",
+          contactName: primaryPickup.pickupAddress.contactName,
+          email: primaryPickup.pickupAddress.email,
+          phoneNumber: primaryPickup.pickupAddress.phoneNumber,
+          address: primaryPickup.pickupAddress.address,
+          pinCode: primaryPickup.pickupAddress.pinCode,
+          city: primaryPickup.pickupAddress.city,
+          state: primaryPickup.pickupAddress.state,
         },
         receiverAddress: {
           contactName: order.shipping_address?.name || "N/A",
@@ -275,17 +311,24 @@ const webhookhandler = async (req, res) => {
       return res.status(404).json({ error: "Store not found" });
     }
 
-    // Fetch store location details
-    const location = await axios.get(
-      `https://${storeURL}/admin/api/2024-01/locations.json`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": user.storeAccessToken,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    const locations = location.data.locations[0];
+    if (!verifyShopifyHmac(req, user.storeClientSecret)) {
+      console.warn(`❌ Shopify webhook signature mismatch for store ${storeURL}`);
+      return res.status(401).json({ error: "Invalid webhook signature" });
+    }
+
+    // Fetch the seller's own warehouse/pickup address — NOT the customer's
+    // billing address, which was being used here before.
+    const primaryPickup = await PickupAddress.findOne({
+      userId: user.userId,
+      isPrimary: true,
+    }).lean();
+
+    if (!primaryPickup || !primaryPickup.pickupAddress) {
+      console.warn(`⚠️ No primary pickup address configured for user ${user.userId} — skipping Shopify order sync for store ${storeURL}.`);
+      return res.status(200).json({
+        message: "Order not synced: no primary pickup address configured for this account.",
+      });
+    }
 
     const shopifyOrder = req.body;
     const compositeOrderId = `${storeURL}-${shopifyOrder.id}`;
@@ -334,15 +377,16 @@ const webhookhandler = async (req, res) => {
       orderId: internalOrderId,
       compositeOrderId, // Ensure uniqueness
       channelId: firstLineItemId,
+      channel: "Shopify",
+      storeUrl: storeURL,
       pickupAddress: {
-        contactName: shopifyOrder.billing_address?.name || "N/A",
-        email: shopifyOrder.email || "abc@gmail.com",
-        phoneNumber: shopifyOrder.billing_address?.phone || "0000000000",
-        address: `${shopifyOrder.billing_address?.address1 || ""},${shopifyOrder.billing_address?.address2 || ""
-          }`,
-        pinCode: shopifyOrder.billing_address?.zip || "000000",
-        city: shopifyOrder.billing_address?.city || "abc",
-        state: locations?.localized_province_name || "N/A",
+        contactName: primaryPickup.pickupAddress.contactName,
+        email: primaryPickup.pickupAddress.email,
+        phoneNumber: primaryPickup.pickupAddress.phoneNumber,
+        address: primaryPickup.pickupAddress.address,
+        pinCode: primaryPickup.pickupAddress.pinCode,
+        city: primaryPickup.pickupAddress.city,
+        state: primaryPickup.pickupAddress.state,
       },
       receiverAddress: {
         contactName: shopifyOrder.shipping_address?.name || "N/A",
@@ -470,6 +514,10 @@ const storeAllChannelDetails = async (req, res) => {
       syncInventory,
       syncFromDate: syncDate || null,
       webhookId: webhookId,
+      // Only set for a freshly-created WooCommerce webhook — absent if the
+      // webhook already existed (WooCommerce doesn't return secrets for
+      // pre-existing webhooks) or for Shopify (uses storeClientSecret instead).
+      webhookSecret: webHook?.secret || undefined,
     });
 
     await newChannel.save();
@@ -487,53 +535,6 @@ const storeAllChannelDetails = async (req, res) => {
   }
 };
 
-// ✅ Fetch Orders from Shopify
-// const axios = require('axios');
-// const AllChannel = require('../models/AllChannel'); // Adjust the path accordingly
-// const Order = require('../models/Order'); // Adjust the path accordingly
-
-const getOrders = async (storeURL) => {
-  try {
-    const user = await AllChannel.findOne({ storeURL });
-
-    if (!user) {
-      console.log(`No user found for store: ${storeURL}`);
-      return;
-    }
-
-    const response = await axios.get(
-      `https://${storeURL}/admin/api/2024-01/orders.json`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": user.storeAccessToken,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    const response1 = await axios.get(
-      `https://${storeURL}/admin/api/2024-01/locations.json`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": user.storeAccessToken,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    const locations = response1.data.locations[0];
-    console.log("locations", locations);
-
-    // const orders = response.data.orders;
-    // console.log(orders)
-    console.log("Store Name:", response.data.orders[0].fulfillments);
-
-    console.log("✅ Orders processed successfully!");
-  } catch (error) {
-    console.error("❌ Error fetching orders:", error);
-  }
-};
-
-// getOrders(SHOPIFY_STORE);
 
 const fulfillOrder = async (req, res) => {
   try {
@@ -759,7 +760,6 @@ const deleteChannel = async (req, res) => {
 module.exports = {
   storeAllChannelDetails,
   webhookhandler,
-  getOrders,
   getAllChannel,
   getOneChannel,
   updateChannel,

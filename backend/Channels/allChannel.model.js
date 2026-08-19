@@ -63,6 +63,13 @@ const AllChannel = new mongoose.Schema({
   webhookId:{
     type:Number
   },
+  // WooCommerce webhook signing secret, captured at creation time so incoming
+  // webhooks can be verified. Absent for stores connected before this field
+  // existed, or for a store whose webhook already existed at connect time
+  // (WooCommerce doesn't return the secret for a pre-existing webhook).
+  webhookSecret: {
+    type: String
+  },
   lastSync:{
     type:Date
   }

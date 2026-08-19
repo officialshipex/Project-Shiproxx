@@ -20,7 +20,7 @@ const downloadSampleExcelB2B = async (req, res) => {
          RECEIVER DETAILS (MANDATORY)
       =============================== */
       { header: "*Receiver Contact Name", key: "receiver_contact", width: 25 },
-      { header: "*Receiver Email", key: "receiver_email", width: 30 },
+      { header: "Receiver Email", key: "receiver_email", width: 30 },
       { header: "*Receiver Phone Number", key: "receiver_phone", width: 20 },
       { header: "*Receiver Address", key: "receiver_address", width: 40 },
       { header: "*Receiver Pin Code", key: "receiver_pincode", width: 15 },
@@ -409,7 +409,7 @@ const bulkOrderB2B = async (req, res) => {
           pickupAddress,
           receiverAddress: {
             contactName: row["*Receiver Contact Name"],
-            email: row["*Receiver Email"],
+            email: row["Receiver Email"] || "unknown@example.com",
             phoneNumber: row["*Receiver Phone Number"],
             address: row["*Receiver Address"],
             pinCode: row["*Receiver Pin Code"],

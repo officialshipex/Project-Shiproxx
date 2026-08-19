@@ -403,7 +403,7 @@ const bulkOrder = async (req, res) => {
           pickupAddress: defaultPickupAddress,
           receiverAddress: {
             contactName: row["*Receiver Contact Name"],
-            email: row["*Receiver Email"] || "unknown@example.com",
+            email: row["Receiver Email"] || "unknown@example.com",
             phoneNumber: row["*Receiver Phone Number"],
             address: row["*Receiver Address"] || "",
             pinCode: row["*Receiver Pin Code"],

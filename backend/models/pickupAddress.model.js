@@ -6,7 +6,7 @@ const pickupAddress = new mongoose.Schema({
   isPrimary: { type: Boolean, default: false },
   pickupAddress: {
     contactName: { type: String, required: true },
-    email: { type: String, required: true },
+    email: { type: String },
     phoneNumber: { type: String, required: true },
     address: { type: String, required: true },
     pinCode: { type: String, required: true },

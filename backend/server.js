@@ -27,7 +27,17 @@ const app = express();
 // Trust reverse proxy (e.g. Nginx, Cloudflare, etc.) to get correct client IP for rate limiting
 app.set("trust proxy", 1);
 
-app.use(express.json({ limit: "10mb" }));
+// Capture the raw request body alongside the parsed one, so webhook handlers
+// (Shopify/WooCommerce) can verify HMAC signatures against the exact bytes
+// the sender signed, without needing a separate raw body-parser per route.
+app.use(
+  express.json({
+    limit: "10mb",
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(helmet());
 app.use(cors());

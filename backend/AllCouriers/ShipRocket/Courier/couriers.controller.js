@@ -276,6 +276,7 @@ module.exports = {
   createCustomOrder,
   cancelOrder,
   checkServiceabilityShipRocket,
+  addPickupLocation,
   requestShipmentPickup,
   getTrackingByAWB,
   getAllPickupLocations,

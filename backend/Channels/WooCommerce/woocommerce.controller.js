@@ -1,4 +1,5 @@
 const axios = require("axios");
+const crypto = require("crypto");
 const Order = require("../../models/newOrder.model");
 const { generateUniqueOrderIds } = require("../../utils/generateUniqueOrderId");
 const AllChannel = require("../allChannel.model");
@@ -55,15 +56,28 @@ function mapWCPayment(method, methodTitle) {
   return "Prepaid";
 }
 
-// Validate WooCommerce webhook signature (HMAC SHA256)
-function isWooCommerceRequestValid(req) {
+// Validate a WooCommerce webhook's HMAC SHA256 signature against the store's
+// own webhook secret (captured at webhook-creation time — see
+// createWooCommerceWebhook). Returns "valid" | "invalid" | "unverifiable"
+// ("unverifiable" means we have no secret on file for this store, e.g. it
+// was connected before webhookSecret existed — callers should treat that as
+// fail-open, not reject, so pre-existing connections keep working).
+function verifyWooCommerceSignature(req, webhookSecret) {
+  if (!webhookSecret) return "unverifiable";
   const signature = req.headers["x-wc-webhook-signature"];
-  if (!signature || !WOOCOMMERCE_WEBHOOK_SECRET) return false;
+  if (!signature || !req.rawBody) return "invalid";
   const expected = crypto
-    .createHmac("sha256", WOOCOMMERCE_WEBHOOK_SECRET)
-    .update(JSON.stringify(req.body), "utf8")
+    .createHmac("sha256", webhookSecret)
+    .update(req.rawBody)
     .digest("base64");
-  return expected === signature;
+  try {
+    const expectedBuf = Buffer.from(expected, "base64");
+    const signatureBuf = Buffer.from(signature, "base64");
+    if (expectedBuf.length !== signatureBuf.length) return "invalid";
+    return crypto.timingSafeEqual(expectedBuf, signatureBuf) ? "valid" : "invalid";
+  } catch (err) {
+    return "invalid";
+  }
 }
 //webhook creation
 const checkExistingWooCommerceWebhooks = async (
@@ -112,10 +126,17 @@ const createWooCommerceWebhook = async (
 
     if (existingWebhook) {
       console.log("✅ Webhook already exists:", existingWebhook);
-      return existingWebhook; // Return existing webhook details
+      // WooCommerce never returns a webhook's secret outside of creation, so
+      // a pre-existing webhook has no recoverable secret — the caller will
+      // store webhookSecret as undefined, and signature checks fail open
+      // for this store until it's disconnected/reconnected.
+      return existingWebhook;
     }
 
-    // 🚀 Step 3: Create new webhook if none exists
+    // 🚀 Step 3: Create new webhook if none exists.
+    // We generate and supply our own secret (rather than relying on
+    // WooCommerce's auto-generated one) so we always know it deterministically.
+    const webhookSecret = crypto.randomBytes(32).toString("hex");
     const response = await axios.post(
       `${storeURL}/wp-json/wc/v3/webhooks`,
       {
@@ -124,6 +145,7 @@ const createWooCommerceWebhook = async (
         delivery_url:
           "https://api.shiproxx.com/v1/channel/webhook/woocommerce",
         status: "active",
+        secret: webhookSecret,
       },
       {
         auth: {
@@ -134,7 +156,7 @@ const createWooCommerceWebhook = async (
     );
 
     console.log("✅ Webhook created successfully:", response.data);
-    return response.data; // Return newly created webhook details
+    return { ...response.data, secret: webhookSecret }; // Return newly created webhook details + the secret we set
   } catch (error) {
     console.error(
       "❌ Error creating WooCommerce webhook:",
@@ -168,6 +190,28 @@ const wooCommerceWebhookHandler = async (req, res) => {
     const store = await AllChannel.findOne({ storeURL });
     if (!store) {
       return res.status(404).json({ error: "Store not found" });
+    }
+
+    // Verify webhook signature when we have a secret on file for this store.
+    // Stores connected before webhookSecret existed (or whose webhook already
+    // existed at connect time) have no secret to check against — fail open
+    // for those rather than silently breaking their existing sync.
+    const signatureResult = verifyWooCommerceSignature(req, store.webhookSecret);
+    if (signatureResult === "invalid") {
+      console.warn(`❌ WooCommerce webhook signature mismatch for store ${storeURL}`);
+      return res.status(401).json({ error: "Invalid webhook signature" });
+    }
+    if (signatureResult === "unverifiable") {
+      console.warn(`⚠️ No webhook secret on file for store ${storeURL} — processing unverified (reconnect the store to enable signature verification).`);
+    }
+
+    // Dedup up front using WooCommerce's own order id, before doing any of
+    // the (relatively expensive) per-line-item product lookups below.
+    const compositeOrderId = `${storeURL}-${orderData.id}`;
+    const existingOrder = await Order.findOne({ compositeOrderId });
+    if (existingOrder) {
+      console.log(`Order ${compositeOrderId} already exists, skipping...`);
+      return res.status(200).json({ message: "Duplicate order ignored" });
     }
 
     // Product details + weight/dimensions aggregation
@@ -230,8 +274,6 @@ const wooCommerceWebhookHandler = async (req, res) => {
 
     // Our internal unique orderId
     const internalOrderId = await generateUniqueOrderId();
-    // Composite ID uses WC's own orderId
-    const compositeOrderId = `${store.userId}-${internalOrderId}`;
     // Map payment details
     const paymentMethod = mapWCPayment(
       orderData.payment_method,
@@ -248,14 +290,30 @@ const wooCommerceWebhookHandler = async (req, res) => {
       isPrimary: true
     }).lean();
 
+    if (!primaryPickup || !primaryPickup.pickupAddress) {
+      console.warn(`⚠️ No primary pickup address configured for user ${store.userId} — skipping WooCommerce order sync for ${compositeOrderId}.`);
+      return res.status(200).json({
+        message: "Order not synced: no primary pickup address configured for this account.",
+      });
+    }
+
     // Prepare order payload
     const orderPayload = {
       userId: store.userId, // from the store record
       orderId: internalOrderId, // our own 6-digit ID
-      compositeOrderId, // customer_id + WC orderId
+      compositeOrderId, // `${storeURL}-${WC order id}`, deduped upfront above
       channelId: orderData.id,
       channel: "WooCommerce",
       storeUrl: storeURL,
+      pickupAddress: {
+        contactName: primaryPickup.pickupAddress.contactName,
+        email: primaryPickup.pickupAddress.email,
+        phoneNumber: primaryPickup.pickupAddress.phoneNumber,
+        address: primaryPickup.pickupAddress.address,
+        pinCode: primaryPickup.pickupAddress.pinCode,
+        city: primaryPickup.pickupAddress.city,
+        state: primaryPickup.pickupAddress.state,
+      },
       receiverAddress: {
         contactName: `${orderData.shipping.first_name} ${orderData.shipping.last_name}`,
         email: orderData.billing.email,
@@ -286,19 +344,6 @@ const wooCommerceWebhookHandler = async (req, res) => {
         },
       ],
     };
-
-    // Only add pickupAddress if a primary one was found
-    if (primaryPickup && primaryPickup.pickupAddress) {
-      orderPayload.pickupAddress = {
-        contactName: primaryPickup.pickupAddress.contactName,
-        email: primaryPickup.pickupAddress.email,
-        phoneNumber: primaryPickup.pickupAddress.phoneNumber,
-        address: primaryPickup.pickupAddress.address,
-        pinCode: primaryPickup.pickupAddress.pinCode,
-        city: primaryPickup.pickupAddress.city,
-        state: primaryPickup.pickupAddress.state,
-      };
-    }
 
     try {
       await Order.create(orderPayload);

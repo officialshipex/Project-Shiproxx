@@ -7,7 +7,6 @@ const createPickupAddress = async (req, res) => {
     // === Field Validation ===
     const missingFields = [];
     if (!contactName) missingFields.push("contactName");
-    if (!email) missingFields.push("email");
     if (!phoneNumber) missingFields.push("phoneNumber");
     if (!address) missingFields.push("address");
     if (!pinCode) missingFields.push("pinCode");
@@ -24,9 +23,9 @@ const createPickupAddress = async (req, res) => {
       });
     }
 
-    // === Email Validation ===
+    // === Email Validation (only if provided, since email is optional) ===
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (email && !emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
         code: 400,

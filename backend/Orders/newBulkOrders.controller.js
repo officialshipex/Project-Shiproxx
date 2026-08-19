@@ -1,6 +1,9 @@
+const mongoose = require("mongoose");
 const Services = require("../models/CourierService.Schema");
 const Courier = require("../models/AllCourierSchema");
 const Order = require("../models/newOrder.model");
+const BulkShipJob = require("../models/bulkShipJob.model");
+const { getActor } = require("./bulkShipJob.controller");
 const plan = require("../models/Plan.model");
 const User = require("../models/User.model");
 const EDDMap = require("../models/EDDMap.model");
@@ -88,7 +91,9 @@ const callProviderWithRetry = async (
 ) => {
   // console.log("service details",serviceDetails)
   // console.log("service",serviceDetails.provider)
+  let lastError = null;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    let attemptError = null;
     try {
       let result;
       switch (serviceDetails.provider) {
@@ -249,18 +254,22 @@ const callProviderWithRetry = async (
           console.error(
             `No shipment function defined for ${serviceDetails.provider}`
           );
-          return false;
+          return { __bulkShipFailed: true, error: `No shipment function defined for ${serviceDetails.provider}` };
       }
 
       if (result?.status === 200 || result?.status === 201 || result?.success) {
         return result;
-      } else throw new Error("Provider call failed");
+      } else {
+        attemptError = result?.message || result?.error || "Provider call failed";
+        throw new Error(attemptError);
+      }
     } catch (error) {
+      lastError = attemptError || error.message || "Provider call failed";
       console.error(`Attempt ${attempt} failed for order ${order._id}:`, error);
       if (attempt < maxRetries) await delay(retryDelay);
     }
   }
-  return false;
+  return { __bulkShipFailed: true, error: lastError || "Provider call failed" };
 };
 
 const shipBulkOrder = async (req, res) => {
@@ -495,6 +504,7 @@ const createBulkOrder = async (req, res) => {
       }
 
       // Try couriers sequentially
+      const courierErrors = [];
       for (const courier of eligibleCouriers) {
         try {
           const details = {
@@ -516,6 +526,7 @@ const createBulkOrder = async (req, res) => {
 
           if (!charges || isNaN(charges) || charges <= 0) {
             // skip this courier
+            courierErrors.push(`${courier.courierServiceName}: No rate available`);
             continue;
           }
 
@@ -540,7 +551,7 @@ const createBulkOrder = async (req, res) => {
             priceBreakup
           );
 
-          if (result) {
+          if (result && !result.__bulkShipFailed) {
             // success — provider returned AWB etc inside callProviderWithRetry
             return {
               success: true,
@@ -548,21 +559,24 @@ const createBulkOrder = async (req, res) => {
               orderId,
             };
           }
+          courierErrors.push(`${courier.courierServiceName}: ${result?.error || "failed"}`);
         } catch (err) {
           // try next courier
           console.warn(
             `Courier ${courier.courierServiceName} failed for order ${orderId}:`,
             err.message
           );
+          courierErrors.push(`${courier.courierServiceName}: ${err.message}`);
           continue;
         }
       }
 
       // if reached here, all couriers failed
+      const failureDetail = courierErrors.join("; ") || "All couriers failed";
       await Order.findByIdAndUpdate(orderId, {
-        $set: { status: "new", failureReason: "All couriers failed" },
+        $set: { status: "new", failureReason: failureDetail },
       });
-      return { success: false, reason: "all_couriers_failed", orderId };
+      return { success: false, reason: "all_couriers_failed", orderId, detail: failureDetail };
     } catch (err) {
       // unexpected error - mark order as new & return failure
       try {
@@ -576,92 +590,140 @@ const createBulkOrder = async (req, res) => {
     }
   } // end processSingleOrder
 
-  // Background processor used when immediate response is sent
-  async function processBulkOrdersBackground(selectedOrdersArr) {
-    console.log(
-      "BACKGROUND bulk processing started for",
-      selectedOrdersArr.length,
-      "orders"
-    );
-    let bgSuccess = 0;
-    let bgFail = 0;
+  function humanizeFailureReason(result) {
+    const map = {
+      already_claimed: "This order was already picked up by another shipment batch.",
+      no_weight_slab: "No courier plan covers this order's weight.",
+      all_couriers_failed: "All eligible couriers rejected or failed to ship this order.",
+    };
+    const base = map[result.reason] || result.reason || "Unknown error";
+    return result.detail ? `${base} — ${result.detail}` : base;
+  }
 
-    for (const oid of selectedOrdersArr) {
-      try {
-        const result = await processSingleOrder(oid);
-        if (result.success) bgSuccess++;
-        else bgFail++;
-        // optionally: emit websocket / notification or update a job collection for UI
-      } catch (err) {
-        console.error("Background order processing error", oid, err.message);
-        bgFail++;
+  // Runs after the 202 response has been sent. Tracks per-order progress on
+  // the BulkShipJob doc so the frontend can poll live status instead of
+  // waiting on a single all-or-nothing response.
+  async function runBulkShipJob(jobId, selectedOrdersArr) {
+    try {
+      for (let i = 0; i < selectedOrdersArr.length; i++) {
+        const oid = selectedOrdersArr[i];
+        try {
+          await BulkShipJob.updateOne(
+            { _id: jobId },
+            { $set: { [`results.${i}.status`]: "processing" } }
+          );
+
+          const result = await processSingleOrder(oid); // UNCHANGED shipment-creation logic
+
+          if (result.success) {
+            await BulkShipJob.updateOne(
+              { _id: jobId },
+              {
+                $set: {
+                  [`results.${i}.status`]: "success",
+                  [`results.${i}.courierServiceName`]: result.courier,
+                  [`results.${i}.completedAt`]: new Date(),
+                },
+                $inc: { successCount: 1 },
+              }
+            );
+          } else {
+            await BulkShipJob.updateOne(
+              { _id: jobId },
+              {
+                $set: {
+                  [`results.${i}.status`]: "failed",
+                  [`results.${i}.failureReason`]: humanizeFailureReason(result),
+                  [`results.${i}.completedAt`]: new Date(),
+                },
+                $inc: { failureCount: 1 },
+              }
+            );
+          }
+        } catch (iterErr) {
+          console.error("Unexpected error processing order in bulk-ship job", jobId, oid, iterErr);
+          await BulkShipJob.updateOne(
+            { _id: jobId },
+            {
+              $set: {
+                [`results.${i}.status`]: "failed",
+                [`results.${i}.failureReason`]: "Unexpected error: " + iterErr.message,
+                [`results.${i}.completedAt`]: new Date(),
+              },
+              $inc: { failureCount: 1 },
+            }
+          );
+        }
       }
-      // do NOT delay in background to keep throughput (you can add small sleep if providers block you)
+    } finally {
+      await BulkShipJob.updateOne(
+        { _id: jobId },
+        { $set: { status: "completed", completedAt: new Date() } }
+      );
     }
-
-    console.log(`BACKGROUND complete: success=${bgSuccess}, failure=${bgFail}`);
   }
 
   // ---------- MAIN controller flow ----------
   try {
-    // If large batch — return immediately and process background
-    if (selectedOrders.length >= 15) {
-      const approxMinutes = Math.ceil(selectedOrders.length * 0.15); // heuristic
-      // Respond right away
-      res.status(202).json({
-        success: true,
-        message: `Bulk shipment started for ${selectedOrders.length} orders. Please check Ready To Ship tab after approx ${approxMinutes} minutes.`,
-      });
+    const dedupedOrders = [...new Set(selectedOrders)].filter((id) =>
+      mongoose.Types.ObjectId.isValid(id)
+    );
+    if (dedupedOrders.length === 0) {
+      return res.status(400).json({ success: false, message: "No valid orders provided" });
+    }
 
-      // Run background processing without blocking response
-      // setImmediate ensures this runs after the response has been sent
-      setImmediate(() => {
-        processBulkOrdersBackground(selectedOrders).catch((err) => {
-          console.error("Background processing failed:", err);
+    const actor = getActor(req);
+    if (!actor.id) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const ordersFound = await Order.find({ _id: { $in: dedupedOrders } }).select("orderId");
+    const displayIdMap = new Map(ordersFound.map((o) => [String(o._id), o.orderId]));
+    const results = dedupedOrders.map((id) => ({
+      orderId: id,
+      displayOrderId: displayIdMap.get(String(id)) ?? null,
+      status: "pending",
+    }));
+
+    let job;
+    try {
+      job = await BulkShipJob.create({
+        initiatedById: actor.id,
+        initiatedByType: actor.type,
+        totalOrders: dedupedOrders.length,
+        results,
+        activeSlot: true,
+      });
+    } catch (createErr) {
+      if (createErr.code === 11000) {
+        const existing = await BulkShipJob.findOne({
+          initiatedById: actor.id,
+          initiatedByType: actor.type,
+          activeSlot: true,
+        }).select("-results");
+        return res.status(409).json({
+          success: false,
+          message: "A bulk shipment is already in progress or awaiting review. Please close it before starting a new one.",
+          existingJobId: existing?._id,
+          totalOrders: existing?.totalOrders,
         });
-      });
-
-      return; // done
-    }
-
-    // ---------- Small batch synchronous processing (< 15 orders) ----------
-    let successCount = 0;
-    let failureCount = 0;
-
-    for (const orderId of selectedOrders) {
-      const result = await processSingleOrder(orderId);
-      if (result.success) successCount++;
-      else failureCount++;
-
-      // Preserve small-batch delay if you want (keeps old behavior)
-      if (typeof delay === "function") {
-        try {
-          await delay(1000);
-        } catch (e) {
-          // ignore delay errors
-        }
       }
+      throw createErr;
     }
 
-    return res.status(201).json({
-      success: true,
-      message: `${successCount} orders created successfully & ${failureCount} failed.`,
-      successCount,
-      failureCount,
+    res.status(202).json({ success: true, jobId: job._id, totalOrders: job.totalOrders });
+
+    setImmediate(() => {
+      runBulkShipJob(job._id, dedupedOrders).catch((err) => {
+        console.error("Bulk ship job failed unexpectedly:", job._id, err);
+      });
     });
   } catch (outerErr) {
     console.error("Bulk order creation error:", outerErr);
-    // If response has not been sent yet, send server error, otherwise just log
     if (!res.headersSent) {
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
         message: outerErr.message,
       });
-    } else {
-      // response already sent (shouldn't happen because large batches responded earlier),
-      // but log error for debugging
-      return;
     }
   }
 };
