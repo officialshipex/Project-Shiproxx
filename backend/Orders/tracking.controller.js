@@ -1847,6 +1847,30 @@ const trackSingleOrder = async (order) => {
         })();
       }
 
+      // 🔹 Sync status back to Shopify if this is a Shopify order
+      if (order.channel === "Shopify") {
+        (async () => {
+          try {
+            const AllChannelModel = require("../Channels/allChannel.model");
+            const { markShopifyOrderAsShipped } = require("../Channels/allChannel.controller");
+            const store = await AllChannelModel.findOne({ userId: order.userId, channel: "Shopify" });
+            if (store?.storeURL) {
+              await markShopifyOrderAsShipped(
+                store.storeURL,
+                order.orderId,      // internal Shiproxx orderId
+                order.awb_number,
+                order.provider,     // courier provider name
+                order.status
+              );
+            } else {
+              console.warn(`⚠️ No Shopify store found for userId: ${order.userId}`);
+            }
+          } catch (e) {
+            console.error(`⚠️ Shopify status sync failed for AWB ${order.awb_number}:`, e.message);
+          }
+        })();
+      }
+
       console.log("saved");
     }
 

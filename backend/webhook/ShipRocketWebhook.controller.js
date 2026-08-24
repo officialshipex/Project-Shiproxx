@@ -334,6 +334,22 @@ const ShipRocketWebhook = async (req, res) => {
       })();
     }
 
+    // Sync to Shopify if applicable
+    if (order.channel === "Shopify") {
+      (async () => {
+        try {
+          const AllChannelModel = require("../Channels/allChannel.model");
+          const { markShopifyOrderAsShipped } = require("../Channels/allChannel.controller");
+          const store = await AllChannelModel.findOne({ userId: order.userId, channel: "Shopify" });
+          if (store?.storeURL) {
+            await markShopifyOrderAsShipped(store.storeURL, order.orderId, order.awb_number, order.provider, order.status);
+          }
+        } catch (e) {
+          console.error(`⚠️ Shopify sync failed for AWB ${order.awb_number}:`, e.message);
+        }
+      })();
+    }
+
     return res.status(200).json({ success: true, message: "Webhook processed successfully" });
   } catch (error) {
     console.error("ShipRocket Webhook Error:", error);

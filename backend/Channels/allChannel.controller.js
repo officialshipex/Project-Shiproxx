@@ -557,6 +557,164 @@ const storeAllChannelDetails = async (req, res) => {
 };
 
 
+// Statuses that create the FIRST Shopify fulfillment for an order (mirrors
+// the manual fulfillOrder flow below — COD/payment gate, location lookup,
+// tracking_info on creation).
+const SHOPIFY_CREATE_FULFILLMENT_STATUSES = ["Booked", "Ready To Ship", "Pickup Completed"];
+
+// Shopify fulfillment events only accept this fixed vocabulary — there's no
+// native "RTO" concept, so RTO/undelivered/lost map to "failure" with the
+// real Shiproxx status preserved in the order's tracking history (not lost,
+// just not representable as a distinct Shopify fulfillment event).
+const shiproxxToShopifyFulfillmentEvent = (shiproxxStatus) => {
+  const map = {
+    "In-transit": "in_transit",
+    "Out for Delivery": "out_for_delivery",
+    "Delivered": "delivered",
+    "Undelivered": "failure",
+    "Lost": "failure",
+    "RTO": "failure",
+    "RTO In-transit": "failure",
+    "RTO Delivered": "failure",
+  };
+  return map[shiproxxStatus] || null;
+};
+
+// Auto-triggered Shopify status/tracking push-back — the Shopify analogue of
+// markWooOrderAsShipped (Channels/WooCommerce/woocommerce.controller.js).
+// Called from Orders/tracking.controller.js and the courier webhook
+// controllers whenever an order's status changes, gated on
+// order.channel === "Shopify". Unlike WooCommerce (a simple order-status
+// field), Shopify's model is: create one Fulfillment on first shipment scan,
+// then post Fulfillment Events for subsequent status changes.
+const markShopifyOrderAsShipped = async (
+  storeUrl,
+  orderId,
+  trackingNumber,
+  courierName,
+  shiproxxStatus
+) => {
+  try {
+    const store = await AllChannel.findOne({
+      storeURL: { $regex: storeUrl.replace(/\/$/, ""), $options: "i" },
+      channel: "Shopify",
+    });
+    if (!store) {
+      console.error(`❌ Shopify store not found for URL: ${storeUrl}`);
+      return;
+    }
+
+    const dbOrder = await Order.findOne({
+      $or: [{ orderId }, { channelId: orderId }],
+    });
+    if (dbOrder && dbOrder.channel && dbOrder.channel !== "Shopify") {
+      console.error(`❌ Order ${orderId} is a ${dbOrder.channel} order, not Shopify. Push-back skipped.`);
+      return;
+    }
+
+    const shopifyOrderId = dbOrder?.channelId;
+    if (!shopifyOrderId) {
+      console.error(`❌ No Shopify order id (channelId) found for order ${orderId}. Push-back skipped.`);
+      return;
+    }
+
+    const accessToken = store.storeAccessToken;
+    const baseUrl = `https://${store.storeURL}/admin/api/2024-04`;
+    const authHeaders = { headers: { "X-Shopify-Access-Token": accessToken, "Content-Type": "application/json" } };
+
+    let shopifyOrder;
+    try {
+      const response = await axios.get(`${baseUrl}/orders/${shopifyOrderId}.json`, authHeaders);
+      shopifyOrder = response.data.order;
+    } catch (err) {
+      console.error(`❌ Error fetching Shopify order ${shopifyOrderId}:`, err.response?.data || err.message);
+      return;
+    }
+
+    const existingFulfillment = shopifyOrder.fulfillments?.[0];
+
+    // --- First shipment scan: create the fulfillment ---
+    if (!existingFulfillment) {
+      if (!SHOPIFY_CREATE_FULFILLMENT_STATUSES.includes(shiproxxStatus)) {
+        console.log(`ℹ️ No Shopify fulfillment exists yet for order ${shopifyOrderId} and status "${shiproxxStatus}" doesn't create one — skipping.`);
+        return;
+      }
+      if (shopifyOrder.fulfillment_status === "fulfilled") return; // already fulfilled elsewhere
+
+      const isCOD = shopifyOrder.payment_gateway_names?.includes("cash_on_delivery");
+      if (!isCOD && shopifyOrder.financial_status === "pending") {
+        console.log(`ℹ️ Shopify order ${shopifyOrderId} not fulfilled — payment still pending.`);
+        return;
+      }
+
+      let locationId;
+      try {
+        const locRes = await axios.get(`${baseUrl}/locations.json`, authHeaders);
+        locationId = locRes.data.locations?.[0]?.id;
+      } catch (err) {
+        console.error(`❌ Error fetching Shopify locations for ${shopifyOrderId}:`, err.response?.data || err.message);
+        return;
+      }
+      if (!locationId) {
+        console.error(`❌ No Shopify location found for store ${storeUrl}.`);
+        return;
+      }
+
+      try {
+        await axios.post(
+          `${baseUrl}/orders/${shopifyOrderId}/fulfillments.json`,
+          {
+            fulfillment: {
+              notify_customer: true,
+              location_id: locationId,
+              tracking_info: {
+                number: trackingNumber,
+                company: courierName,
+                url: `https://www.shiproxx.com/track/${trackingNumber}`,
+              },
+            },
+          },
+          authHeaders
+        );
+        console.log(`✅ Shopify order ${shopifyOrderId} fulfilled (${shiproxxStatus}).`);
+      } catch (err) {
+        console.error(`❌ Error creating fulfillment for Shopify order ${shopifyOrderId}:`, err.response?.data || err.message);
+      }
+      return;
+    }
+
+    // --- Fulfillment already exists: cancel or post a status event ---
+    if (shiproxxStatus === "Cancelled") {
+      try {
+        await axios.post(`${baseUrl}/fulfillments/${existingFulfillment.id}/cancel.json`, {}, authHeaders);
+        console.log(`✅ Shopify fulfillment ${existingFulfillment.id} cancelled.`);
+      } catch (err) {
+        console.error(`❌ Error cancelling Shopify fulfillment ${existingFulfillment.id}:`, err.response?.data || err.message);
+      }
+      return;
+    }
+
+    const eventStatus = shiproxxToShopifyFulfillmentEvent(shiproxxStatus);
+    if (!eventStatus) {
+      console.log(`ℹ️ No Shopify fulfillment-event mapping for status "${shiproxxStatus}" — skipping.`);
+      return;
+    }
+
+    try {
+      await axios.post(
+        `${baseUrl}/fulfillments/${existingFulfillment.id}/events.json`,
+        { event: { status: eventStatus } },
+        authHeaders
+      );
+      console.log(`✅ Shopify fulfillment ${existingFulfillment.id} event posted: ${shiproxxStatus} → ${eventStatus}`);
+    } catch (err) {
+      console.error(`❌ Error posting fulfillment event for Shopify order ${shopifyOrderId}:`, err.response?.data || err.message);
+    }
+  } catch (err) {
+    console.error("❌ Unexpected error in markShopifyOrderAsShipped:", err.message);
+  }
+};
+
 const fulfillOrder = async (req, res) => {
   try {
     console.log("body", req.body);
@@ -843,4 +1001,5 @@ module.exports = {
   fulfillOrder,
   fetchExistingOrders,
   createWebhook,
+  markShopifyOrderAsShipped,
 };
