@@ -1,4 +1,14 @@
 const mongoose = require("mongoose");
+const dns = require("dns");
+
+// Some mobile carrier / hotspot DNS resolvers don't properly support SRV
+// record lookups, which mongodb+srv:// connection strings depend on to find
+// the cluster (fails as `querySrv ECONNREFUSED ...mongodb.net`). Point
+// Node's resolver at public DNS servers that do support it. Only applied
+// outside production so the deployed server's DNS behavior is unaffected.
+if (process.env.NODE_ENV !== "production") {
+  dns.setServers(["1.1.1.1", "8.8.8.8"]);
+}
 
 async function connectDB() {
   try {

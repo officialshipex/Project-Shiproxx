@@ -476,27 +476,48 @@ const storeAllChannelDetails = async (req, res) => {
     }
 
     // ✅ Register Webhook
+    // Webhook registration must fully succeed before we save the channel —
+    // saving a channel with no webhookId leaves it looking "connected" while
+    // no webhook actually exists on the store, so orders silently never sync.
     let webHook;
     let webhookId;
     if (channel === "Shopify") {
       webHook = await createWebhook(storeURL, storeAccessToken);
-      console.log("✅ Webhook created successfully:", webHook);
-      if (webHook.error === "socket hang up") {
+      console.log("✅ Webhook response:", webHook);
+      if (webHook?.error) {
+        console.error("❌ Shopify webhook registration failed:", webHook.error);
         return res.status(400).json({
-          message: "URL or Token or Secret key or Client ID are not matching",
+          success: false,
+          message: "Failed to register the Shopify webhook. Please check your Store URL, Client ID, Client Secret, and Access Token.",
+          error: webHook.error,
         });
       }
-      webhookId = webHook?.webhook?.id || "";
+      webhookId = webHook?.webhook?.id;
     }
     if (channel === "WooCommerce") {
-      webHook = await createWooCommerceWebhook(
-        storeURL,
-        storeClientId,
-        storeClientSecret
-      );
-      webhookId = webHook?.id || webHook?.webhook?.id || "";
+      try {
+        webHook = await createWooCommerceWebhook(
+          storeURL,
+          storeClientId,
+          storeClientSecret
+        );
+      } catch (wcErr) {
+        console.error("❌ WooCommerce webhook registration failed:", wcErr.message);
+        return res.status(400).json({
+          success: false,
+          message: "Failed to register the WooCommerce webhook. Please check your Store URL, Consumer Key, and Consumer Secret.",
+          error: wcErr.message,
+        });
+      }
+      webhookId = webHook?.id || webHook?.webhook?.id;
     }
-    console.log("wekdfn", webHook);
+    if (!webhookId) {
+      console.error(`❌ ${channel} webhook call succeeded but returned no webhook id:`, webHook);
+      return res.status(400).json({
+        success: false,
+        message: `${channel} did not return a webhook ID — the store was not connected. Please verify your credentials and try again.`,
+      });
+    }
     const newChannel = new AllChannel({
       userId,
       channel,
@@ -723,15 +744,70 @@ const updateChannel = async (req, res) => {
     }
 
     // Update the channel details
-    const updatedChannel = await AllChannel.findByIdAndUpdate(
+    let updatedChannel = await AllChannel.findByIdAndUpdate(
       id,
       { $set: updatedData }, // Ensure syncDate is properly formatted
       { new: true } // Return the updated document
     );
 
+    // (Re-)register the webhook using whatever credentials are now on the
+    // document — updating a channel's credentials previously just patched
+    // the DB with no attempt to actually verify/register anything with
+    // Shopify/WooCommerce, so a corrected token could be saved while
+    // webhookId silently stayed empty and orders kept not syncing.
+    let webhookStatus = "skipped";
+    let webhookError = null;
+
+    if (updatedChannel.channel === "Shopify") {
+      const webHook = await createWebhook(updatedChannel.storeURL, updatedChannel.storeAccessToken);
+      if (webHook?.error) {
+        webhookStatus = "failed";
+        webhookError = webHook.error;
+        console.error(`❌ Shopify webhook (re-)registration failed for channel ${id}:`, webHook.error);
+      } else if (webHook?.webhook?.id) {
+        updatedChannel = await AllChannel.findByIdAndUpdate(
+          id,
+          { $set: { webhookId: webHook.webhook.id } },
+          { new: true }
+        );
+        webhookStatus = "ok";
+      } else {
+        webhookStatus = "failed";
+        webhookError = "Shopify returned no webhook id.";
+        console.error(`❌ Shopify webhook call for channel ${id} returned no id:`, webHook);
+      }
+    } else if (updatedChannel.channel === "WooCommerce") {
+      try {
+        const webHook = await createWooCommerceWebhook(
+          updatedChannel.storeURL,
+          updatedChannel.storeClientId,
+          updatedChannel.storeClientSecret
+        );
+        const webhookId = webHook?.id || webHook?.webhook?.id;
+        if (webhookId) {
+          updatedChannel = await AllChannel.findByIdAndUpdate(
+            id,
+            { $set: { webhookId, ...(webHook?.secret ? { webhookSecret: webHook.secret } : {}) } },
+            { new: true }
+          );
+          webhookStatus = "ok";
+        } else {
+          webhookStatus = "failed";
+          webhookError = "WooCommerce returned no webhook id.";
+          console.error(`❌ WooCommerce webhook call for channel ${id} returned no id:`, webHook);
+        }
+      } catch (wcErr) {
+        webhookStatus = "failed";
+        webhookError = wcErr.message;
+        console.error(`❌ WooCommerce webhook (re-)registration failed for channel ${id}:`, wcErr.message);
+      }
+    }
+
     res.status(200).json({
       message: "Channel updated successfully",
       channel: updatedChannel,
+      webhookStatus, // "ok" | "failed" | "skipped" (skipped = not Shopify/WooCommerce)
+      webhookError,
     });
   } catch (error) {
     console.error("Error updating channel:", error);
@@ -766,4 +842,5 @@ module.exports = {
   deleteChannel,
   fulfillOrder,
   fetchExistingOrders,
+  createWebhook,
 };
