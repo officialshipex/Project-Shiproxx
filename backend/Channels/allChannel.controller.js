@@ -81,7 +81,7 @@ const createWebhook = async (storeURL, storeAccessToken) => {
     console.log("Webhook Created:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Error creating webhook:", error.response?.data || error);
+    console.error("Error creating webhook:", error.response?.data || error.message);
     return { error: error.response?.data || error.message };
   }
 };
@@ -109,7 +109,7 @@ const getProductDetails = async (productId, storeURL, accessToken) => {
 
     return { length: 10, width: 10, height: 10, weight };
   } catch (error) {
-    console.error("Error fetching product details:", error);
+    console.error("Error fetching product details:", error.response?.data || error.message);
     return { length: 10, width: 10, height: 10, weight: 0.5 }; // Couldn't reach Shopify for this product — same default as above
   }
 };
@@ -454,7 +454,7 @@ const webhookhandler = async (req, res) => {
       orderId: newOrder.orderId,
     });
   } catch (error) {
-    console.error("Error syncing Shopify order:", error);
+    console.error("Error syncing Shopify order:", error.response?.data || error.message);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
@@ -571,7 +571,7 @@ const storeAllChannelDetails = async (req, res) => {
       data: newChannel,
     });
   } catch (error) {
-    console.error("❌ Error storing channel details:", error);
+    console.error("❌ Error storing channel details:", error.response?.data || error.message);
     return res
       .status(500)
       .json({ success: false, message: "Internal Server Error." });
@@ -817,7 +817,7 @@ const fulfillOrder = async (req, res) => {
       locationId = shopData.data.locations?.[0]?.id;
       console.log("location", locationId);
     } catch (error) {
-      console.error("Error fetching locations:", error.response?.data || error);
+      console.error("Error fetching locations:", error.response?.data || error.message);
       return res
         .status(500)
         .json({ message: "Error fetching locations from Shopify" });
@@ -863,15 +863,15 @@ const fulfillOrder = async (req, res) => {
         },
       });
     } catch (error) {
-      console.error("Error fulfilling order:", error.response?.data || error);
+      console.error("Error fulfilling order:", error.response?.data || error.message);
       return res.status(500).json({
         message: "Error fulfilling order on Shopify",
         error: error.response?.data,
       });
     }
   } catch (error) {
-    console.error("Unexpected error in fulfillOrder:", error);
-    return res.status(500).json({ message: "Internal server error", error });
+    console.error("Unexpected error in fulfillOrder:", error.response?.data || error.message);
+    return res.status(500).json({ message: "Internal server error", error: error.response?.data || error.message });
   }
 };
 
@@ -884,7 +884,7 @@ const getAllChannel = async (req, res) => {
     const allChannels = await AllChannel.find({ userId: userId });
     res.status(200).json({ success: true, data: allChannels });
   } catch (error) {
-    console.error("Error fetching channels:", error);
+    console.error("Error fetching channels:", error.message);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
@@ -902,7 +902,7 @@ const getOneChannel = async (req, res) => {
 
     res.status(200).json(channel);
   } catch (error) {
-    console.error("Error fetching channel:", error);
+    console.error("Error fetching channel:", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -990,7 +990,7 @@ const updateChannel = async (req, res) => {
       webhookError,
     });
   } catch (error) {
-    console.error("Error updating channel:", error);
+    console.error("Error updating channel:", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -1008,7 +1008,7 @@ const deleteChannel = async (req, res) => {
 
     res.status(200).json({ message: "Channel deleted successfully" });
   } catch (error) {
-    console.error("Error deleting channel:", error);
+    console.error("Error deleting channel:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 };

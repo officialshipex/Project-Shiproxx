@@ -376,7 +376,7 @@ const wooCommerceWebhookHandler = async (req, res) => {
       throw err;
     }
   } catch (error) {
-    console.error("Error syncing WooCommerce order:", error);
+    console.error("Error syncing WooCommerce order:", error.response?.data || error.message);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
