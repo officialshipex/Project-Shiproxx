@@ -103,15 +103,29 @@ const getProductDetails = async (productId, storeURL, accessToken) => {
     const product = response.data.product;
 
     // Extract weight from the first variant (assuming single variant per product)
-    const weight = product.variants?.[0]?.weight || 1; // Default 0 if not found
+    const weight = product.variants?.[0]?.weight || 0.5; // Shopify didn't provide a weight — use a sane default, not 0
 
     // console.log("variants", product.variants);
 
     return { length: 10, width: 10, height: 10, weight };
   } catch (error) {
     console.error("Error fetching product details:", error);
-    return { length: 10, width: 10, height: 10, weight: 0 }; // Default values
+    return { length: 10, width: 10, height: 10, weight: 0.5 }; // Couldn't reach Shopify for this product — same default as above
   }
+};
+
+// Used whenever a synced order is missing data we'd otherwise require (no
+// primary pickup address configured yet, etc.) — the order still gets
+// created with an obvious placeholder rather than silently never syncing,
+// so the seller can see it landed and knows exactly what to fix.
+const DUMMY_PICKUP_ADDRESS = {
+  contactName: "Pickup Address Not Set",
+  email: "pickup-not-set@shiproxx.com",
+  phoneNumber: "0000000000",
+  address: "Pickup address not configured — please update in Set Up & Manage",
+  pinCode: "000000",
+  city: "Not Set",
+  state: "Not Set",
 };
 
 const fetchExistingOrders = async (req, res) => {
@@ -130,18 +144,18 @@ const fetchExistingOrders = async (req, res) => {
     }
 
     // Fetch the seller's own warehouse/pickup address — NOT the customer's
-    // billing address, which was being used below before.
+    // billing address, which was being used below before. If none is
+    // configured, fall back to a placeholder rather than blocking the whole
+    // sync — orders still get created and the seller can fix it afterward.
     const primaryPickup = await PickupAddress.findOne({
       userId,
       isPrimary: true,
     }).lean();
 
     if (!primaryPickup || !primaryPickup.pickupAddress) {
-      return res.status(400).json({
-        success: false,
-        message: "No primary pickup address configured for this account. Add one before syncing Shopify orders.",
-      });
+      console.warn(`⚠️ No primary pickup address configured for user ${userId} — using placeholder pickup address.`);
     }
+    const pickupAddressData = primaryPickup?.pickupAddress || DUMMY_PICKUP_ADDRESS;
 
     const accessToken = channel.storeAccessToken;
     const storeURL = channel.storeURL;
@@ -186,7 +200,8 @@ const fetchExistingOrders = async (req, res) => {
       }
 
       // Extract product details
-      const productDetails = order.line_items.map((item) => ({
+      const orderLineItems = order.line_items || [];
+      const productDetails = orderLineItems.map((item) => ({
         id: item.id,
         quantity: item.quantity,
         name: item.name,
@@ -200,7 +215,7 @@ const fetchExistingOrders = async (req, res) => {
         totalWidth = 10,
         totalHeight = 10;
 
-      for (const item of order.line_items) {
+      for (const item of orderLineItems) {
         try {
           const productInfo = await getProductDetails(
             item.product_id,
@@ -208,7 +223,7 @@ const fetchExistingOrders = async (req, res) => {
             accessToken
           );
 
-          totalWeight += productInfo.weight || 0;
+          totalWeight += productInfo.weight || 0.5;
           totalLength = Math.max(totalLength, productInfo.length || 0);
           totalWidth = Math.max(totalWidth, productInfo.width || 0);
           totalHeight = Math.max(totalHeight, productInfo.height || 0);
@@ -216,8 +231,10 @@ const fetchExistingOrders = async (req, res) => {
           console.warn(
             `Failed to fetch details for product ${item.product_id}`
           );
+          totalWeight += 0.5; // couldn't determine this product's weight — use the same default as elsewhere
         }
       }
+      if (orderLineItems.length === 0) totalWeight = 0.5;
 
       // Generate a unique internal orderId (do not use Shopify's order_number to avoid duplicates)
       const internalOrderId = await generateUniqueOrderIds(1);
@@ -230,13 +247,13 @@ const fetchExistingOrders = async (req, res) => {
         channel: "Shopify",
         storeUrl: storeURL,
         pickupAddress: {
-          contactName: primaryPickup.pickupAddress.contactName,
-          email: primaryPickup.pickupAddress.email,
-          phoneNumber: primaryPickup.pickupAddress.phoneNumber,
-          address: primaryPickup.pickupAddress.address,
-          pinCode: primaryPickup.pickupAddress.pinCode,
-          city: primaryPickup.pickupAddress.city,
-          state: primaryPickup.pickupAddress.state,
+          contactName: pickupAddressData.contactName,
+          email: pickupAddressData.email,
+          phoneNumber: pickupAddressData.phoneNumber,
+          address: pickupAddressData.address,
+          pinCode: pickupAddressData.pinCode,
+          city: pickupAddressData.city,
+          state: pickupAddressData.state,
         },
         receiverAddress: {
           contactName: order.shipping_address?.name || "N/A",
@@ -317,22 +334,24 @@ const webhookhandler = async (req, res) => {
     }
 
     // Fetch the seller's own warehouse/pickup address — NOT the customer's
-    // billing address, which was being used here before.
+    // billing address, which was being used here before. If none is
+    // configured yet, fall back to an obvious placeholder rather than
+    // dropping the order — a synced order with a placeholder the seller can
+    // fix is far better than an order that silently never showed up at all.
     const primaryPickup = await PickupAddress.findOne({
       userId: user.userId,
       isPrimary: true,
     }).lean();
 
     if (!primaryPickup || !primaryPickup.pickupAddress) {
-      console.warn(`⚠️ No primary pickup address configured for user ${user.userId} — skipping Shopify order sync for store ${storeURL}.`);
-      return res.status(200).json({
-        message: "Order not synced: no primary pickup address configured for this account.",
-      });
+      console.warn(`⚠️ No primary pickup address configured for user ${user.userId} — using placeholder pickup address for store ${storeURL}.`);
     }
+    const pickupAddressData = primaryPickup?.pickupAddress || DUMMY_PICKUP_ADDRESS;
 
     const shopifyOrder = req.body;
     const compositeOrderId = `${storeURL}-${shopifyOrder.id}`;
-    const firstLineItemId = shopifyOrder.line_items?.[0]?.id;
+    const lineItems = shopifyOrder.line_items || [];
+    const firstLineItemId = lineItems[0]?.id;
 
     // Check for existing order using compositeOrderId
     const existingOrder = await Order.findOne({ compositeOrderId });
@@ -342,7 +361,7 @@ const webhookhandler = async (req, res) => {
     }
 
     // Extract product details
-    const productDetails = shopifyOrder.line_items.map((item) => ({
+    const productDetails = lineItems.map((item) => ({
       id: item.id,
       quantity: item.quantity,
       name: item.name,
@@ -356,7 +375,7 @@ const webhookhandler = async (req, res) => {
       totalWidth = 10,
       totalHeight = 10;
 
-    for (const item of shopifyOrder.line_items) {
+    for (const item of lineItems) {
       const productInfo = await getProductDetails(
         item.product_id,
         storeURL,
@@ -368,6 +387,9 @@ const webhookhandler = async (req, res) => {
       totalWidth = Math.max(totalWidth, productInfo.width);
       totalHeight = Math.max(totalHeight, productInfo.height);
     }
+    // No line items at all (shouldn't normally happen) — still create the
+    // order rather than leave it at 0 weight, which courier APIs would reject.
+    if (lineItems.length === 0) totalWeight = 0.5;
 
     // Generate a unique internal orderId (do not use Shopify's order_number to avoid duplicates)
     const internalOrderId = await generateUniqueOrderIds(1);
@@ -380,13 +402,13 @@ const webhookhandler = async (req, res) => {
       channel: "Shopify",
       storeUrl: storeURL,
       pickupAddress: {
-        contactName: primaryPickup.pickupAddress.contactName,
-        email: primaryPickup.pickupAddress.email,
-        phoneNumber: primaryPickup.pickupAddress.phoneNumber,
-        address: primaryPickup.pickupAddress.address,
-        pinCode: primaryPickup.pickupAddress.pinCode,
-        city: primaryPickup.pickupAddress.city,
-        state: primaryPickup.pickupAddress.state,
+        contactName: pickupAddressData.contactName,
+        email: pickupAddressData.email,
+        phoneNumber: pickupAddressData.phoneNumber,
+        address: pickupAddressData.address,
+        pinCode: pickupAddressData.pinCode,
+        city: pickupAddressData.city,
+        state: pickupAddressData.state,
       },
       receiverAddress: {
         contactName: shopifyOrder.shipping_address?.name || "N/A",
@@ -412,7 +434,7 @@ const webhookhandler = async (req, res) => {
         amount:
           shopifyOrder.financial_status === "paid"
             ? 0
-            : shopifyOrder.total_price,
+            : parseFloat(shopifyOrder.total_price) || 0,
       },
       status: "new",
       tracking: [

@@ -5,6 +5,20 @@ const { generateUniqueOrderIds } = require("../../utils/generateUniqueOrderId");
 const AllChannel = require("../allChannel.model");
 const PickupAddress = require("../../models/pickupAddress.model");
 
+// Used whenever a synced order is missing data we'd otherwise require (no
+// primary pickup address configured yet, etc.) — the order still gets
+// created with an obvious placeholder rather than silently never syncing,
+// so the seller can see it landed and knows exactly what to fix.
+const DUMMY_PICKUP_ADDRESS = {
+  contactName: "Pickup Address Not Set",
+  email: "pickup-not-set@shiproxx.com",
+  phoneNumber: "0000000000",
+  address: "Pickup address not configured — please update in Set Up & Manage",
+  pinCode: "000000",
+  city: "Not Set",
+  state: "Not Set",
+};
+
 // Helper to extract HSN code from WooCommerce metadata
 const extractHSN = (metaDataArray) => {
   if (!Array.isArray(metaDataArray)) return null;
@@ -284,18 +298,21 @@ const wooCommerceWebhookHandler = async (req, res) => {
       amount: parseFloat(orderData.total) || 0,
     };
 
-    // Fetch primary pickup address for this user
+    // Fetch primary pickup address for this user. If none is configured,
+    // fall back to a placeholder rather than dropping the order — the seller
+    // can see it landed and fix their pickup address afterward.
     const primaryPickup = await PickupAddress.findOne({
       userId: store.userId,
       isPrimary: true
     }).lean();
 
     if (!primaryPickup || !primaryPickup.pickupAddress) {
-      console.warn(`⚠️ No primary pickup address configured for user ${store.userId} — skipping WooCommerce order sync for ${compositeOrderId}.`);
-      return res.status(200).json({
-        message: "Order not synced: no primary pickup address configured for this account.",
-      });
+      console.warn(`⚠️ No primary pickup address configured for user ${store.userId} — using placeholder pickup address for ${compositeOrderId}.`);
     }
+    const pickupAddressData = primaryPickup?.pickupAddress || DUMMY_PICKUP_ADDRESS;
+
+    const shipping = orderData.shipping || {};
+    const billing = orderData.billing || {};
 
     // Prepare order payload
     const orderPayload = {
@@ -306,22 +323,22 @@ const wooCommerceWebhookHandler = async (req, res) => {
       channel: "WooCommerce",
       storeUrl: storeURL,
       pickupAddress: {
-        contactName: primaryPickup.pickupAddress.contactName,
-        email: primaryPickup.pickupAddress.email,
-        phoneNumber: primaryPickup.pickupAddress.phoneNumber,
-        address: primaryPickup.pickupAddress.address,
-        pinCode: primaryPickup.pickupAddress.pinCode,
-        city: primaryPickup.pickupAddress.city,
-        state: primaryPickup.pickupAddress.state,
+        contactName: pickupAddressData.contactName,
+        email: pickupAddressData.email,
+        phoneNumber: pickupAddressData.phoneNumber,
+        address: pickupAddressData.address,
+        pinCode: pickupAddressData.pinCode,
+        city: pickupAddressData.city,
+        state: pickupAddressData.state,
       },
       receiverAddress: {
-        contactName: `${orderData.shipping.first_name} ${orderData.shipping.last_name}`,
-        email: orderData.billing.email,
-        phoneNumber: orderData.shipping.phone || orderData.billing.phone,
-        address: orderData.shipping.address_1,
-        pinCode: orderData.shipping.postcode,
-        city: orderData.shipping.city,
-        state: orderData.shipping.state,
+        contactName: `${shipping.first_name || ""} ${shipping.last_name || ""}`.trim() || "N/A",
+        email: billing.email || "unknown@example.com",
+        phoneNumber: shipping.phone || billing.phone || "0000000000",
+        address: shipping.address_1 || "Not Provided",
+        pinCode: shipping.postcode || "000000",
+        city: shipping.city || "Unknown",
+        state: shipping.state || "Unknown",
       },
       productDetails,
       packageDetails: {
@@ -338,7 +355,7 @@ const wooCommerceWebhookHandler = async (req, res) => {
       tracking: [
         {
           status: "new",
-          StatusLocation: orderData.shipping.city || "N/A",
+          StatusLocation: shipping.city || "N/A",
           StatusDateTime: new Date(),
           Instructions: "Order synced from WooCommerce",
         },
@@ -405,7 +422,7 @@ const getWooCommerceProductDetails = async (
       "Error fetching WooCommerce product details:",
       error.response?.data || error.message || error
     );
-    return { weight: 0, length: 10, width: 10, height: 10 };
+    return { weight: 0.5, length: 10, width: 10, height: 10 }; // couldn't reach WooCommerce for this product — same default used elsewhere
   }
 };
 
