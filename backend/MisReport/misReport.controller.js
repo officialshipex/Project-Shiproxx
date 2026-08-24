@@ -8,6 +8,23 @@ const { PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const transporter = require("../notification/configEmailpass");
 
+// Finds the earliest tracking entry matching any of the given statuses and
+// returns its timestamp, or null if none exist. Used for milestone columns
+// (Delivered At, RTO Initiated At, RTO Delivered At) that have no dedicated
+// field on the order and can only be reconstructed from tracking history.
+const findTrackingDate = (tracking, statuses) => {
+  if (!Array.isArray(tracking) || tracking.length === 0) return null;
+  let earliest = null;
+  for (const entry of tracking) {
+    if (statuses.includes(entry.status) && entry.StatusDateTime) {
+      if (!earliest || new Date(entry.StatusDateTime) < new Date(earliest)) {
+        earliest = entry.StatusDateTime;
+      }
+    }
+  }
+  return earliest;
+};
+
 exports.generateMisReport = async (req, res) => {
   try {
     const { reportType, dateFilterType, fromDate, toDate, email, userSearch } = req.body;
@@ -101,11 +118,15 @@ exports.generateMisReport = async (req, res) => {
         worksheet.columns = [
           { header: "User ID", key: "userId", width: 15 },
           { header: "Order ID", key: "orderId", width: 15 },
+          { header: "Booked At", key: "bookedAt", width: 20 },
+          { header: "Picked At", key: "pickedAt", width: 20 },
+          { header: "Delivered At", key: "deliveredAt", width: 20 },
           { header: "AWB Number", key: "awb_number", width: 20 },
           { header: "Courier / Provider", key: "provider", width: 20 },
           { header: "Courier Service Name", key: "courierServiceName", width: 25 },
           { header: "Payment Method", key: "paymentMethod", width: 15 },
           { header: "Amount", key: "amount", width: 15 },
+          { header: "Collected Amount", key: "collectedAmount", width: 15 },
           { header: "Status", key: "status", width: 15 },
           { header: "Order Type", key: "orderType", width: 10 },
           { header: "AWB Assigned Date", key: "createdAt", width: 20 },
@@ -113,6 +134,9 @@ exports.generateMisReport = async (req, res) => {
           { header: "Dead Weight (kg)", key: "deadWeight", width: 15 },
           { header: "Volumetric Dimensions", key: "volumetricDims", width: 20 },
           { header: "Applicable Weight (kg)", key: "applicableWeight", width: 18 },
+          { header: "Zone", key: "zone", width: 12 },
+          { header: "RTO Initiated At", key: "rtoInitiatedAt", width: 20 },
+          { header: "RTO Delivered At", key: "rtoDeliveredAt", width: 20 },
           { header: "Product Details", key: "productDetails", width: 40 },
           { header: "Freight Charge", key: "freightCharge", width: 15 },
           { header: "COD Charge", key: "codCharge", width: 15 },
@@ -120,6 +144,7 @@ exports.generateMisReport = async (req, res) => {
           { header: "RTO Freight Charge", key: "rtoFreight", width: 15 },
           { header: "RTO GST Charge", key: "rtoGst", width: 15 },
           { header: "Total Shipping Charge", key: "totalShipping", width: 20 },
+          { header: "Hub Name", key: "hubName", width: 20 },
           { header: "Pickup City", key: "pickupCity", width: 15 },
           { header: "Pickup State", key: "pickupState", width: 15 },
           { header: "Pickup Pincode", key: "pickupPincode", width: 15 },
@@ -127,6 +152,7 @@ exports.generateMisReport = async (req, res) => {
           { header: "Receiver Phone", key: "receiverPhone", width: 20 },
           { header: "Receiver Email", key: "receiverEmail", width: 25 },
           { header: "Receiver Address", key: "receiverAddress", width: 40 },
+          { header: "Receiver Pincode", key: "receiverPincode", width: 15 },
           { header: "isNDR", key: "isNDR", width: 10 },
           { header: "NDR Reason", key: "ndrReason", width: 25 },
           { header: "NDR Reason Date", key: "ndrReasonDate", width: 20 },
@@ -152,13 +178,22 @@ exports.generateMisReport = async (req, res) => {
           userMap[u._id.toString()] = u.userId || "N/A";
         });
 
-        const cursor = Shipment.find(orderQuery)
-          .select("-tracking")
-          .cursor();
+        // tracking is needed now for Delivered At / RTO Initiated At / RTO Delivered At
+        const cursor = Shipment.find(orderQuery).cursor();
+
+        const fmtDate = (d) => (d ? new Date(d).toLocaleDateString() : "N/A");
 
         for await (const order of cursor) {
           const isNDR = (order.ndrHistory && order.ndrHistory.length > 0) || ["undelivered", "ndr"].includes(String(order.ndrStatus || '').toLowerCase()) ? "Yes" : "No";
           const isRTO = String(order.status || '').toLowerCase().includes("rto") ? "Yes" : "No";
+
+          // Delivered/RTO milestones have no dedicated field — reconstruct
+          // from tracking history. "RTO In-transit" is included for RTO
+          // Initiated because some couriers (e.g. Amazon) never emit a bare
+          // "RTO" status and jump straight to "RTO In-transit".
+          const deliveredAt = findTrackingDate(order.tracking, ["Delivered"]);
+          const rtoInitiatedAt = findTrackingDate(order.tracking, ["RTO", "RTO In-transit"]);
+          const rtoDeliveredAt = findTrackingDate(order.tracking, ["RTO Delivered"]);
 
           const productDetailsStr = order.productDetails && order.productDetails.length > 0
             ? order.productDetails.map(p => `${p.name || "N/A"} (SKU: ${p.sku || "N/A"}, Qty: ${p.quantity || 0}, Price: ${p.unitPrice || 0})`).join(" | ")
@@ -180,11 +215,15 @@ exports.generateMisReport = async (req, res) => {
           worksheet.addRow({
             userId: userMap[order.userId?.toString()] || "N/A",
             orderId: order.orderId,
+            bookedAt: fmtDate(order.shipmentCreatedAt),
+            pickedAt: fmtDate(order.invoiceDate), // invoiceDate = actual pickup date (see models/newOrder.model.js); pickupDate field is only an estimate
+            deliveredAt: fmtDate(deliveredAt),
             awb_number: order.awb_number || "N/A",
             provider: order.provider || "N/A",
             courierServiceName: order.courierServiceName || "N/A",
             paymentMethod: order.paymentDetails?.method || "N/A",
             amount: order.paymentDetails?.amount || 0,
+            collectedAmount: order.paymentDetails?.method === "Prepaid" ? (order.paymentDetails?.amount || 0) : 0,
             status: order.status,
             orderType: order.orderType || "B2C",
             createdAt: order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "N/A",
@@ -192,6 +231,9 @@ exports.generateMisReport = async (req, res) => {
             deadWeight: order.packageDetails?.deadWeight || 0,
             volumetricDims: volumetricDimsStr,
             applicableWeight: order.packageDetails?.applicableWeight || 0,
+            zone: order.zone || "N/A",
+            rtoInitiatedAt: fmtDate(rtoInitiatedAt),
+            rtoDeliveredAt: fmtDate(rtoDeliveredAt),
             productDetails: productDetailsStr,
             freightCharge: order.priceBreakup?.freight || 0,
             codCharge: order.priceBreakup?.cod || 0,
@@ -199,13 +241,15 @@ exports.generateMisReport = async (req, res) => {
             rtoFreight: order.priceBreakup?.rto?.freight || 0,
             rtoGst: order.priceBreakup?.rto?.gst || 0,
             totalShipping: order.priceBreakup?.total || 0,
+            hubName: order.pickupAddress?.contactName || "N/A",
             pickupCity: order.pickupAddress?.city || "N/A",
             pickupState: order.pickupAddress?.state || "N/A",
             pickupPincode: order.pickupAddress?.pinCode || "N/A",
             receiverName: "*****",
             receiverPhone: "*****",
             receiverEmail: "*****",
-            receiverAddress: "*****",
+            receiverAddress: order.receiverAddress?.address || "N/A",
+            receiverPincode: order.receiverAddress?.pinCode || "N/A",
             isNDR,
             ndrReason: order.ndrReason?.reason || "N/A",
             ndrReasonDate: order.ndrReason?.date ? new Date(order.ndrReason.date).toLocaleDateString() : "N/A",

@@ -164,7 +164,7 @@ const EkartWebhook = async (req, res) => {
 
       order.tracking.push({
         Instructions: normalizedData.Instructions,
-        Status: "Cancelled",
+        status: "Cancelled", // must be lowercase to match the schema (models/newOrder.model.js) — capitalized "Status" was silently dropped by Mongoose's strict mode
         StatusDateTime: normalizedData.StatusDateTime,
         StatusLocation: location || "Unknown",
       });
@@ -333,7 +333,7 @@ const EkartWebhook = async (req, res) => {
        ======================================================== */
     order.tracking.push({
       Instructions: normalizedData.Instructions,
-      Status: normalizedData.Status,
+      status: normalizedData.Status, // must be lowercase to match the schema — capitalized "Status" was silently dropped by Mongoose's strict mode
       StatusDateTime: normalizedData.StatusDateTime,
       StatusLocation: location || "Unknown",
     });

@@ -250,7 +250,7 @@ const ShadowfaxWebhook = async (req, res) => {
       // ── Save Tracking Entry ──
       order.tracking.push({
         Instructions: sfxStatusId,
-        Status: statusDescription,
+        status: statusDescription, // must be lowercase to match the schema — capitalized "Status" was silently dropped by Mongoose's strict mode
         StatusDateTime: timestamp,
         StatusLocation: location,
       });

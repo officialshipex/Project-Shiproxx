@@ -344,7 +344,7 @@ const ProshipWebhook = async (req, res) => {
       // Avoid pushing to tracking array twice if we already handled it above (though we didn't in this refactor)
       order.tracking.push({
         Instructions: remark,
-        Status: statusDescription,
+        status: statusDescription, // must be lowercase to match the schema — capitalized "Status" was silently dropped by Mongoose's strict mode
         StatusDateTime: timestamp,
         StatusLocation: location,
       });

@@ -310,7 +310,7 @@ const ShipRocketWebhook = async (req, res) => {
     ================================================================ */
     order.tracking.push({
       Instructions: remark,
-      Status: statusText,
+      status: statusText, // must be lowercase to match the schema — capitalized "Status" was silently dropped by Mongoose's strict mode
       StatusDateTime: timestamp,
       StatusLocation: location,
     });
