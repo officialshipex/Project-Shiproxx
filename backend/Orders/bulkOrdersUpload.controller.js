@@ -9,6 +9,7 @@ const File = require("../model/bulkOrderFiles.model.js");
 const bulkOrdersExcel = require("../model/bulkOrdersExcel.model.js");
 const bulkOrdersCSV = require("../model/bulkOrderCSV.model.js");
 const PickupAddress = require("../models/pickupAddress.model.js");
+const AppNotification = require("../models/appNotification.model.js");
 
 const downloadSampleExcel = async (req, res) => {
   try {
@@ -470,8 +471,22 @@ const bulkOrder = async (req, res) => {
     fileData.noOfOrders = orders.length;
     fileData.successfullyUploaded = orderDocs.length;
     fileData.errorOrders = rowErrors.length;
+    fileData.rowResults = rowErrors;
+    fileData.category = "B2C";
 
     await fileData.save();
+
+    try {
+      await AppNotification.create({
+        actorId: userID,
+        actorType: "user",
+        refModel: "BulkOrderFiles",
+        refId: fileData._id,
+        title: `Bulk Order Upload (B2C) — ${orders.length} rows`,
+      });
+    } catch (notifErr) {
+      console.error("Failed to create bulk-upload notification:", notifErr.message);
+    }
 
     fs.unlinkSync(req.file.path);
 

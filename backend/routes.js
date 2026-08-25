@@ -108,8 +108,10 @@ router.use("/ratecalculate", isAuthorized, RateCalculate);
 router.use("/allCourier", AllCourierRoutes);
 const newOrderRoute = require("./routes/newOrder.router");
 const bulk = require("./routes/newBulkOrders.routes");
+const appNotifications = require("./routes/appNotification.router");
 
 router.use("/bulk", isAuthorized, bulk);
+router.use("/app-notifications", isAuthorized, appNotifications);
 const Razorpay = require("./recharge/recharge.route");
 
 const serviceablePincodeRoutes = require("./checkPincodeServiceability/checkPincodeServiceability.route");

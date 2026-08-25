@@ -3,6 +3,7 @@ const Services = require("../models/CourierService.Schema");
 const Courier = require("../models/AllCourierSchema");
 const Order = require("../models/newOrder.model");
 const BulkShipJob = require("../models/bulkShipJob.model");
+const AppNotification = require("../models/appNotification.model");
 const { getActor } = require("./bulkShipJob.controller");
 const plan = require("../models/Plan.model");
 const User = require("../models/User.model");
@@ -656,9 +657,14 @@ const createBulkOrder = async (req, res) => {
         }
       }
     } finally {
+      // Unset activeSlot here (not just on acknowledge) so the partial
+      // unique index self-cleans once processing finishes — nothing in the
+      // new notification-driven UI ever calls acknowledgeBulkShipJob, so if
+      // this weren't unset here, an actor's very first bulk-ship job would
+      // permanently block every subsequent one with a 409.
       await BulkShipJob.updateOne(
         { _id: jobId },
-        { $set: { status: "completed", completedAt: new Date() } }
+        { $set: { status: "completed", completedAt: new Date() }, $unset: { activeSlot: "" } }
       );
     }
   }
@@ -707,6 +713,20 @@ const createBulkOrder = async (req, res) => {
         });
       }
       throw createErr;
+    }
+
+    try {
+      await AppNotification.create({
+        actorId: actor.id,
+        actorType: actor.type,
+        refModel: "BulkShipJob",
+        refId: job._id,
+        title: `Bulk Ship — ${dedupedOrders.length} orders`,
+      });
+    } catch (notifErr) {
+      // Visibility is secondary to the actual shipment processing below —
+      // never let a notification failure block or fail the bulk-ship request.
+      console.error("Failed to create bulk-ship notification:", notifErr.message);
     }
 
     res.status(202).json({ success: true, jobId: job._id, totalOrders: job.totalOrders });
