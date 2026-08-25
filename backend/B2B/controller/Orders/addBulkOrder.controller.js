@@ -7,6 +7,7 @@ const { generateUniqueOrderIds } = require("../../../utils/generateUniqueOrderId
 const PickupAddress = require("../../../models/pickupAddress.model");
 const File = require("../../../model/bulkOrderFiles.model");
 const AppNotification = require("../../../models/appNotification.model");
+const { getActor } = require("../../../Orders/bulkShipJob.controller");
 
 const downloadSampleExcelB2B = async (req, res) => {
   try {
@@ -463,13 +464,16 @@ const bulkOrderB2B = async (req, res) => {
     await fileData.save();
 
     try {
-      await AppNotification.create({
-        actorId: userId,
-        actorType: "user",
-        refModel: "BulkOrderFiles",
-        refId: fileData._id,
-        title: `Bulk Order Upload (B2B) — ${rows.length} rows`,
-      });
+      const actor = getActor(req);
+      if (actor.id) {
+        await AppNotification.create({
+          actorId: actor.id,
+          actorType: actor.type,
+          refModel: "BulkOrderFiles",
+          refId: fileData._id,
+          title: `Bulk Order Upload (B2B) — ${rows.length} rows`,
+        });
+      }
     } catch (notifErr) {
       console.error("Failed to create bulk-upload notification:", notifErr.message);
     }
