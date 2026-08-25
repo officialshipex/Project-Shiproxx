@@ -111,6 +111,10 @@ const reconcileStuckBulkShipJobs = async () => {
     job.failureCount = (job.failureCount || 0) + recoveredFailures;
     job.status = "completed";
     job.completedAt = new Date();
+    // Without this, a job stuck "running" by a crash never gets its
+    // activeSlot lock released — nothing else will ever clear it, so the
+    // actor would stay permanently locked out of every future bulk-ship.
+    job.activeSlot = undefined;
     await job.save();
   }
 };
