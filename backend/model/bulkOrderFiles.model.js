@@ -26,12 +26,15 @@ const bulkOrdersFileSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
-    // Per-row failure detail — previously computed in memory during upload
-    // and discarded once the HTTP response was sent, so a past upload's
-    // failures could never be revisited. Now persisted for the notification
-    // detail view.
+    // Per-row outcome — previously only failures were kept in memory during
+    // upload and discarded once the HTTP response was sent, so neither a past
+    // upload's failures nor which order each successful row became could ever
+    // be revisited. Now persisted (both outcomes) for the notification detail
+    // view.
     rowResults: [{
         row: Number,
+        status: { type: String, enum: ['success', 'failed'] },
+        orderId: Number,
         message: String,
     }],
     // Display-only — both B2C and B2B uploads share this one collection
@@ -40,7 +43,7 @@ const bulkOrdersFileSchema = new mongoose.Schema({
         type: String,
         enum: ['B2C', 'B2B'],
     },
-});
+}, { timestamps: true });
 
 const BulkOrderFiles = mongoose.model('BulkOrderFiles', bulkOrdersFileSchema);
 module.exports = BulkOrderFiles;

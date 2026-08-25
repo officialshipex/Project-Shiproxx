@@ -258,6 +258,11 @@ const bulkOrderB2B = async (req, res) => {
     =============================== */
     const orderDocs = [];
     const rowErrors = [];
+    // Combined success + failure outcome per row, in upload order, persisted
+    // for the notification detail view (rowErrors above stays exactly as
+    // before — it's also used for the response body's `errors` field and the
+    // errorOrders count, untouched).
+    const rowResults = [];
 
     // Pre-generate a batch of unique order IDs for all rows. When exactly one
     // ID is requested, generateUniqueOrderIds returns a bare number instead of
@@ -441,11 +446,13 @@ const bulkOrderB2B = async (req, res) => {
           channel: "custom",
           status: "new",
         });
+        rowResults.push({ row: rowNumber, status: "success", orderId });
       } catch (err) {
         rowErrors.push({
           row: rowNumber,
           message: err.message,
         });
+        rowResults.push({ row: rowNumber, status: "failed", message: err.message });
       }
     }
 
@@ -464,7 +471,7 @@ const bulkOrderB2B = async (req, res) => {
     fileData.noOfOrders = rows.length;
     fileData.successfullyUploaded = orderDocs.length;
     fileData.errorOrders = rowErrors.length;
-    fileData.rowResults = rowErrors;
+    fileData.rowResults = rowResults;
     fileData.category = "B2B";
     await fileData.save();
 
