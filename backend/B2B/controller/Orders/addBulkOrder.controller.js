@@ -259,8 +259,13 @@ const bulkOrderB2B = async (req, res) => {
     const orderDocs = [];
     const rowErrors = [];
 
-    // Pre-generate a batch of unique order IDs for all rows
-    const uniqueOrderIds = await generateUniqueOrderIds(rows.length);
+    // Pre-generate a batch of unique order IDs for all rows. When exactly one
+    // ID is requested, generateUniqueOrderIds returns a bare number instead of
+    // an array (its contract for every other caller, which always requests
+    // exactly 1) — normalize here so a single-row upload doesn't silently end
+    // up indexing a number and getting undefined.
+    const rawUniqueOrderIds = await generateUniqueOrderIds(rows.length);
+    const uniqueOrderIds = Array.isArray(rawUniqueOrderIds) ? rawUniqueOrderIds : [rawUniqueOrderIds];
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
