@@ -1,9 +1,28 @@
 const Plan = require("../models/Plan.model");
 
+// Same pattern as getpickupAddress (Orders/newOrder.controller.js) — a plain
+// customer session always uses their own id (an override is never honored,
+// or any customer could target another customer's Plan); an admin/employee
+// session must supply an explicit, validated userId since req.user is never
+// populated for an employee JWT in this backend.
+const resolveTargetUserId = (req) => {
+  const isAdmin = req.user?.isAdmin === true && req.user?.adminTab === true;
+  const isEmployee = req.isEmployee === true || !!req.employee;
+  if (!isAdmin && !isEmployee) {
+    return req.user?._id?.toString() || null;
+  }
+  const raw = req.query?.userId;
+  const isValid = raw && !["all", "undefined", "null", ""].includes(raw.trim());
+  return isValid ? raw.trim() : null;
+};
+
 const saveCourierPriority = async (req, res) => {
   try {
     const { type, couriers } = req.body;
-    const userId = req.user._id;
+    const userId = resolveTargetUserId(req);
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "Unable to determine target user." });
+    }
 
     // console.log("Incoming data:", req.body);
 
@@ -38,21 +57,25 @@ const saveCourierPriority = async (req, res) => {
         mode: c.mode,
       }));
 
-      // ✅ Reorder rateCard based on courierPriority
-      const priorityNames = plan.courierPriority.map((c) => c.name);
+      // ✅ Reorder rateCard based on courierPriority — keyed on name+provider+mode,
+      // not name alone, since two rateCard rows can share a courierServiceName
+      // with a different mode (e.g. Surface vs Air for the same courier), and
+      // matching by name alone collapsed both to the same rank.
+      const keyOf = (name, provider, mode) => `${name || ""}|||${provider || ""}|||${mode || ""}`;
+      const priorityKeys = plan.courierPriority.map((c) => keyOf(c.name, c.provider, c.mode));
 
       const reorderedRateCard = [
         // first: match rateCard with courierPriority order
         ...plan.rateCard
-          .filter((item) => priorityNames.includes(item.courierServiceName))
+          .filter((item) => priorityKeys.includes(keyOf(item.courierServiceName, item.courierProviderName, item.mode)))
           .sort(
             (a, b) =>
-              priorityNames.indexOf(a.courierServiceName) -
-              priorityNames.indexOf(b.courierServiceName)
+              priorityKeys.indexOf(keyOf(a.courierServiceName, a.courierProviderName, a.mode)) -
+              priorityKeys.indexOf(keyOf(b.courierServiceName, b.courierProviderName, b.mode))
           ),
         // then: keep remaining rateCard items
         ...plan.rateCard.filter(
-          (item) => !priorityNames.includes(item.courierServiceName)
+          (item) => !priorityKeys.includes(keyOf(item.courierServiceName, item.courierProviderName, item.mode))
         ),
       ];
       // console.log("courierPriority", plan.courierPriority);
@@ -83,10 +106,12 @@ const saveCourierPriority = async (req, res) => {
 
 const getCourierServices = async (req, res) => {
   try {
-    const userId = req.user._id;
-    // console.log("userId", userId);
+    const userId = resolveTargetUserId(req);
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "Unable to determine target user." });
+    }
 
-    // Find the plan for the logged-in user
+    // Find the plan for the target user
     const plan = await Plan.findOne({ userId });
 
     if (!plan) {
