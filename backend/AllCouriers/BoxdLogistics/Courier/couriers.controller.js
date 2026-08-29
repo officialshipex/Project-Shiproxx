@@ -5,6 +5,7 @@ const User = require("../../../models/User.model");
 const Wallet = require("../../../models/wallet");
 const WalletTransaction = require("../../../models/WalletTransaction.model");
 const PickupAddress = require("../../../models/pickupAddress.model");
+const CourierService = require("../../../models/CourierService.Schema");
 const { getZone } = require("../../../Rate/zoneManagementController");
 const { assignPickupManifest } = require("../../../Orders/scheduledPickup.controller");
 
@@ -242,6 +243,23 @@ const checkServiceabilityBoxdLogistics = async ({
             return { success: false, message: "Required parameters are missing" };
         }
 
+        // Which BoxdLogistics courier_ids are actually offered is configured via
+        // the "Add Courier Service" admin screen (each service record stores its
+        // own courier_id there), not hardcoded here — read it from CourierService
+        // so enabling/disabling/adding a BoxdLogistics service takes effect
+        // immediately, same pattern already used for Delhivery/Losung360/ShipexIndia.
+        const enabledServices = await CourierService.find({
+            provider: "BoxdLogistics",
+            status: "Enable",
+        }).select("courier_id");
+        const enabledCourierIds = enabledServices
+            .map((s) => parseInt(s.courier_id))
+            .filter((cid) => !isNaN(cid));
+
+        if (enabledCourierIds.length === 0) {
+            return { success: false, message: "No BoxdLogistics courier service is configured/enabled" };
+        }
+
         const response = await axios.get(`${BASE_URL}/rate-calculator/`, {
             headers: { Authorization: `Token ${BOXDLOGISTICS_TOKEN}` },
             params: {
@@ -257,13 +275,11 @@ const checkServiceabilityBoxdLogistics = async ({
         });
 
         const couriers = response.data || [];
-        // console.log("couriers", couriers)
         const matchedCouriers = couriers
-            .filter((c) => c.courier_id === 4 || c.courier_id === 6 || c.courier_id === 7 || c.courier_id === 47)
+            .filter((c) => enabledCourierIds.includes(c.courier_id))
             .map((c) => c.courier_id);
 
         if (matchedCouriers.length > 0) {
-            // console.log("matchedCouriers", matchedCouriers)
             return {
                 success: true,
                 courier_ids: matchedCouriers,
@@ -272,7 +288,7 @@ const checkServiceabilityBoxdLogistics = async ({
 
         return {
             success: false,
-            message: "Courier 4, 6, 7 or 47 not available",
+            message: "No enabled BoxdLogistics courier is serviceable for this route",
         };
     } catch (error) {
         console.log("error", error.response?.data || error.message)
@@ -400,10 +416,29 @@ const createBoxdLogisticsOrder = async (req, res) => {
             });
         }
 
-        // Step 2: Ship (assign courier) — courier_id comes from serviceability
+        // Step 2: Ship (assign courier) — courier_id comes from serviceability,
+        // which only ever returns IDs of currently enabled BoxdLogistics
+        // CourierService records. Re-validate against the same source of truth
+        // here rather than falling back to an arbitrary hardcoded courier_id if
+        // the request is missing/malformed — silently shipping via a courier
+        // nobody configured (or one since disabled) is worse than rejecting it.
+        const courierId = parseInt(courier);
+        const isEnabledCourier = !isNaN(courierId) && await CourierService.exists({
+            provider: "BoxdLogistics",
+            status: "Enable",
+            courier_id: String(courierId),
+        });
+        if (!isEnabledCourier) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({
+                success: false,
+                message: "Selected courier is not an enabled BoxdLogistics service",
+            });
+        }
+
         let shipRes;
         try {
-            const courierId = parseInt(courier) || 3; // courier passed from frontend, fallback 3
             shipRes = await shipBoxdOrder(boxdOrderId, courierId);
             console.log("BoxdLogistics ship response:", shipRes);
         } catch (err) {
