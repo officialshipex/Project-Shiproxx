@@ -1479,10 +1479,12 @@ const ShipeNowOrder = async (req, res) => {
         if (result && result.success) {
           if (item.provider?.toLowerCase() === "boxdlogistics" && Array.isArray(result.courier_ids)) {
             // Which courierId this service maps to is whatever was set on it
-            // in the "Add Courier Service" admin screen (item.courier_id) —
-            // not guessed from its display name, which silently dropped any
-            // service whose name didn't match one of a fixed set of phrases.
-            const requiredCid = parseInt(item.courier_id);
+            // in the "Add Courier Service" admin screen — not guessed from its
+            // display name, which silently dropped any service whose name
+            // didn't match one of a fixed set of phrases. BoxdLogistics
+            // services store the numeric courier id in `courier`, not
+            // `courier_id` (that field is used by other providers).
+            const requiredCid = parseInt(item.courier);
             if (!isNaN(requiredCid) && result.courier_ids.includes(requiredCid)) {
               return [{ item, courierId: requiredCid, virtualName: normalize(item.name) }];
             }

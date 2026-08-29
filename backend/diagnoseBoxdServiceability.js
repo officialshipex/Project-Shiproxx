@@ -50,7 +50,7 @@ async function main() {
     console.log("  None found at all (any status). This alone would explain zero results.");
   } else {
     boxdServices.forEach((s) => {
-      console.log(`  - name="${s.name}"  status=${s.status}  courier_id=${JSON.stringify(s.courier_id)}`);
+      console.log(`  - name="${s.name}"  status=${s.status}  courier=${JSON.stringify(s.courier)}  (courier_id=${JSON.stringify(s.courier_id)}, unused for BoxdLogistics)`);
     });
   }
 

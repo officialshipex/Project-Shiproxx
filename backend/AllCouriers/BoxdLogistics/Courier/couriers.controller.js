@@ -244,16 +244,17 @@ const checkServiceabilityBoxdLogistics = async ({
         }
 
         // Which BoxdLogistics courier_ids are actually offered is configured via
-        // the "Add Courier Service" admin screen (each service record stores its
-        // own courier_id there), not hardcoded here — read it from CourierService
-        // so enabling/disabling/adding a BoxdLogistics service takes effect
-        // immediately, same pattern already used for Delhivery/Losung360/ShipexIndia.
+        // the "Add Courier Service" admin screen, not hardcoded here — read it
+        // from CourierService so enabling/disabling/adding a BoxdLogistics
+        // service takes effect immediately. BoxdLogistics services store the
+        // numeric courier id in the `courier` field, not `courier_id` (that
+        // field is used by other providers like Delhivery/Losung360/ShipexIndia).
         const enabledServices = await CourierService.find({
             provider: "BoxdLogistics",
             status: "Enable",
-        }).select("courier_id");
+        }).select("courier");
         const enabledCourierIds = enabledServices
-            .map((s) => parseInt(s.courier_id))
+            .map((s) => parseInt(s.courier))
             .filter((cid) => !isNaN(cid));
 
         if (enabledCourierIds.length === 0) {
@@ -275,9 +276,12 @@ const checkServiceabilityBoxdLogistics = async ({
         });
 
         const couriers = response.data || [];
+        console.log("checkServiceabilityBoxdLogistics", couriers)
         const matchedCouriers = couriers
             .filter((c) => enabledCourierIds.includes(c.courier_id))
             .map((c) => c.courier_id);
+
+        console.log("matchedCouriers", matchedCouriers)
 
         if (matchedCouriers.length > 0) {
             return {
@@ -426,7 +430,7 @@ const createBoxdLogisticsOrder = async (req, res) => {
         const isEnabledCourier = !isNaN(courierId) && await CourierService.exists({
             provider: "BoxdLogistics",
             status: "Enable",
-            courier_id: String(courierId),
+            courier: String(courierId),
         });
         if (!isEnabledCourier) {
             await session.abortTransaction();

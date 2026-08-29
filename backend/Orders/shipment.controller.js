@@ -296,7 +296,9 @@ const checkServiceabilityAll = async (service, id, pincode) => {
         // the "Add Courier Service" admin screen — not guessed from its
         // display name, which silently misclassified any "Flat 2kg" service
         // (courier_id 7) as courier_id 47 (only "Flat 0.5kg" is 47) here.
-        const requiredCid = parseInt(service.courier_id);
+        // BoxdLogistics services store the numeric courier id in the `courier`
+        // field, not `courier_id` (that's used by other providers).
+        const requiredCid = parseInt(service.courier);
         return { ...res, success: !isNaN(requiredCid) && res.courier_ids.includes(requiredCid) };
       }
       return res;
