@@ -1478,10 +1478,12 @@ const ShipeNowOrder = async (req, res) => {
         // console.log("result",result)
         if (result && result.success) {
           if (item.provider?.toLowerCase() === "boxdlogistics" && Array.isArray(result.courier_ids)) {
-            // Determine which courierId this specific service name maps to
-            const sName = item.name?.toLowerCase() || "";
-            const requiredCid = (sName.includes("flat 0.5kg") || sName.includes("flat 0.5")) ? 47 : sName.includes("flat 2kg") ? 7 : sName.includes("surface") ? 4 : sName.includes("air") ? 6 : null;
-            if (requiredCid !== null && result.courier_ids.includes(requiredCid)) {
+            // Which courierId this service maps to is whatever was set on it
+            // in the "Add Courier Service" admin screen (item.courier_id) —
+            // not guessed from its display name, which silently dropped any
+            // service whose name didn't match one of a fixed set of phrases.
+            const requiredCid = parseInt(item.courier_id);
+            if (!isNaN(requiredCid) && result.courier_ids.includes(requiredCid)) {
               return [{ item, courierId: requiredCid, virtualName: normalize(item.name) }];
             }
             return [];

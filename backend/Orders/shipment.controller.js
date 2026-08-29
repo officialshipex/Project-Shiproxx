@@ -292,14 +292,12 @@ const checkServiceabilityAll = async (service, id, pincode) => {
       const res = await checkServiceabilityBoxdLogistics(payload);
 
       if (res && res.success && Array.isArray(res.courier_ids)) {
-        const sName = service.name.toLowerCase();
-        if (sName.includes("flat")) {
-          return { ...res, success: res.courier_ids.includes(47) };
-        } else if (sName.includes("surface")) {
-          return { ...res, success: res.courier_ids.includes(4) };
-        } else if (sName.includes("air")) {
-          return { ...res, success: res.courier_ids.includes(6) };
-        }
+        // Which courier_id this service maps to is whatever was set on it in
+        // the "Add Courier Service" admin screen — not guessed from its
+        // display name, which silently misclassified any "Flat 2kg" service
+        // (courier_id 7) as courier_id 47 (only "Flat 0.5kg" is 47) here.
+        const requiredCid = parseInt(service.courier_id);
+        return { ...res, success: !isNaN(requiredCid) && res.courier_ids.includes(requiredCid) };
       }
       return res;
     }
