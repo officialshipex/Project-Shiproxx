@@ -11,6 +11,12 @@ const { assignPickupManifest } = require("../../../Orders/scheduledPickup.contro
 const BOXDLOGISTICS_TOKEN = process.env.BOXDLOGISTICS_TOKEN;
 const BASE_URL = "https://api.boxdlogistics.com/seller/v1";
 
+// BoxdLogistics error responses use `detail` (e.g. { detail: "Wallet balance
+// is low for seller 484" }), not `message` — pulling `.message` alone left
+// the caller with only the generic fallback text, hiding the real reason.
+const extractBoxdErrorMessage = (err, fallback) =>
+    err.response?.data?.detail || err.response?.data?.message || err.message || fallback;
+
 // ─── Helper: Cache and Warehouse Creation ───────────────────────────────────
 const boxdWarehouseCache = new Map();
 
@@ -378,7 +384,7 @@ const createBoxdLogisticsOrder = async (req, res) => {
             console.error("❌ BoxdLogistics create order failed:", err.response?.data || err.message);
             return res.status(500).json({
                 success: false,
-                message: err.response?.data?.message || err.message || "Failed to create order",
+                message: extractBoxdErrorMessage(err, "Failed to create order"),
                 error: err.response?.data || err.message,
             });
         }
@@ -406,7 +412,7 @@ const createBoxdLogisticsOrder = async (req, res) => {
             console.error("❌ BoxdLogistics ship order failed:", err.response?.data || err.message);
             return res.status(500).json({
                 success: false,
-                message: err.response?.data?.message || "Failed to ship order",
+                message: extractBoxdErrorMessage(err, "Failed to ship order"),
                 error: err.response?.data || err.message,
             });
         }
