@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const RateCard = require("../models/rateCards");
 // const CourierServiceSecond = require("../models/courierServiceSecond.model");
 const Plan = require("../models/Plan.model");
