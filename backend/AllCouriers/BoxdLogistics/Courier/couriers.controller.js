@@ -276,12 +276,12 @@ const checkServiceabilityBoxdLogistics = async ({
         });
 
         const couriers = response.data || [];
-        // console.log("checkServiceabilityBoxdLogistics", couriers)
+        console.log("checkServiceabilityBoxdLogistics", couriers)
         const matchedCouriers = couriers
             .filter((c) => enabledCourierIds.includes(c.courier_id))
             .map((c) => c.courier_id);
 
-        // console.log("matchedCouriers", matchedCouriers)
+        console.log("matchedCouriers", matchedCouriers)
 
         if (matchedCouriers.length > 0) {
             return {
