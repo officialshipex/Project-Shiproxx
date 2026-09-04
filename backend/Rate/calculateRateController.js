@@ -90,6 +90,16 @@ const calculateRate = async (req, res) => {
       shipexServices.map(s => [s.name.toLowerCase().trim(), s.courier || s.name])
     );
 
+    // Fetch Jiffy courier services mapping (RateCard.courierServiceName -> the
+    // Jiffy courier_code stored in CourierService.courier) for O(1) matching.
+    const {
+      checkServiceabilityJiffy,
+    } = require("../AllCouriers/Jiffy/Courier/couriers.controller");
+    const jiffyServices = await CourierService.find({ provider: "Jiffy" }).lean();
+    const jiffyServiceMap = new Map(
+      jiffyServices.map(s => [s.name.toLowerCase().trim(), s.courier])
+    );
+
     for (let rc of rateCards) {
       // Use flag from object if present, otherwise fallback to lookup map (for legacy/sync cases)
       const isFlatRate = rc.isFlatRate === true || flatRateMap.get(rc._id?.toString()) === true;
@@ -101,9 +111,42 @@ const calculateRate = async (req, res) => {
       if (!activeCouriersLower.includes(provider.toLowerCase())) continue;
       if (rc.status !== "Active") continue;
 
-      if (!["Delhivery", "Shree Maruti", "Dtdc", "Smartship", "Amazon Shipping", "EcomExpress", "Zipypost", "Ekart", "BoxdLogistics", "Proship", "Shiprocket", "ShipexIndia"].includes(provider)) continue;
+      if (!["Delhivery", "Shree Maruti", "Dtdc", "Smartship", "Amazon Shipping", "EcomExpress", "Zipypost", "Ekart", "BoxdLogistics", "Proship", "Shiprocket", "ShipexIndia", "Jiffy"].includes(provider)) continue;
 
-      if (provider === "ShipexIndia") {
+      if (provider === "Jiffy") {
+        if (!serviceabilityCache[provider]) {
+          const payload = {
+            pickupPincode: pickUpPincode,
+            deliveryPincode,
+            rtoPincode: pickUpPincode,
+            paymentMode: paymentType === "COD" ? "cod" : "prepaid",
+            collectableAmount: paymentType === "COD" ? declaredValue : 0,
+            weight: applicableWeight,
+            length: dimensions?.length || 10,
+            breadth: dimensions?.width || 10,
+            height: dimensions?.height || 10,
+          };
+          serviceabilityCache[provider] = await checkServiceabilityJiffy(payload);
+        }
+        const jiffyResult = serviceabilityCache[provider];
+        if (!jiffyResult || jiffyResult.success === false) continue;
+
+        // Match on Jiffy's own `code` (same value stored in CourierService.courier
+        // and sent as courier_code when booking) — not the display name.
+        let isServiceable = false;
+        const targetCode = jiffyServiceMap.get(rc.courierServiceName.toLowerCase().trim());
+        if (targetCode && Array.isArray(jiffyResult.data)) {
+          const matchedCourier = jiffyResult.data.find(
+            (item) => item.code && item.code.toUpperCase() === targetCode.toUpperCase()
+          );
+          const paymentKey = paymentType === "COD" ? "cod" : "prepaid";
+          if (matchedCourier && matchedCourier.is_active && matchedCourier.services?.[paymentKey]) {
+            isServiceable = true;
+          }
+        }
+        if (!isServiceable) continue;
+        serviceable = { success: true };
+      } else if (provider === "ShipexIndia") {
         if (!serviceabilityCache[provider]) {
           const payload = {
             pickUpPincode,

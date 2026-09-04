@@ -41,6 +41,11 @@ const {
 const {
   checkPincodeServiceability: checkShadowfaxServiceability,
 } = require("../../AllCouriers/Shadowfax/Courier/couriers.controller.js");
+const {
+  checkServiceabilityJiffy,
+} = require("../../AllCouriers/Jiffy/Courier/couriers.controller.js");
+const { getReverseProviderMap } = require("../../utils/providerIdRegistry");
+const CourierService = require("../../models/CourierService.Schema");
 
 // ✅ Input Validation Schema
 const serviceabilitySchema = Joi.object({
@@ -59,22 +64,6 @@ const serviceabilitySchema = Joi.object({
   paymentType: Joi.string().valid("COD", "Prepaid").required(),
   declaredValue: Joi.number().positive().allow(0).required(),
 });
-
-const courierIds = {
-  EcomExpress: "01",
-  Delhivery: "02",
-  Dtdc: "03",
-  Smartship: "04",
-  "Amazon Shipping": "05",
-  "Shree Maruti": "06",
-  ZipyPost: "07",
-  Ekart: "08",
-  BoxdLogistics: "09",
-  Proship: "10",
-  Shiprocket: "11",
-  Shadowfax: "12",
-  Losung360: "13",
-};
 
 const pincodeServiceability = async (req, res) => {
   const { error, value: validated } = serviceabilitySchema.validate(req.body, {
@@ -148,6 +137,16 @@ const pincodeServiceability = async (req, res) => {
     );
 
     const activeCourierNames = activeCouriers.map((c) => c.courierProvider);
+
+    // ✅ courierId map + Jiffy courier_code lookup (both DB-driven — see
+    // utils/providerIdRegistry.js and the Jiffy-specific note below)
+    const [courierIds, jiffyServices] = await Promise.all([
+      getReverseProviderMap(),
+      CourierService.find({ provider: "Jiffy" }).lean(),
+    ]);
+    const jiffyServiceMap = new Map(
+      jiffyServices.map((s) => [s.name.toLowerCase().trim(), s.courier])
+    );
 
     // ✅ Step 4: Courier serviceability checks
     const providers = [
@@ -271,6 +270,21 @@ const pincodeServiceability = async (req, res) => {
         name: "Losung360",
         check: async () => ({ success: true }),
       },
+      {
+        name: "Jiffy",
+        check: async () =>
+          checkServiceabilityJiffy({
+            pickupPincode: pickUpPincode,
+            deliveryPincode,
+            rtoPincode: pickUpPincode,
+            paymentMode: paymentType === "COD" ? "cod" : "prepaid",
+            collectableAmount: paymentType === "COD" ? declaredValue : 0,
+            weight: applicableWeight,
+            length,
+            breadth: width,
+            height,
+          }),
+      },
     ].filter((p) =>
       activeCourierNames.some(
         (name) => name.toLowerCase() === p.name.toLowerCase()
@@ -354,6 +368,23 @@ const pincodeServiceability = async (req, res) => {
         } else if (sName.includes("dtdc")) {
           isServiceable = !!serviceable.couriers.dtdc;
         }
+      }
+
+      if (provider.toLowerCase() === "jiffy" && isServiceable) {
+        // Match on Jiffy's own `code` (same value stored in CourierService.courier
+        // and sent as courier_code when booking) — not the display name.
+        let isCourierServiceable = false;
+        const targetCode = jiffyServiceMap.get(rc.courierServiceName.toLowerCase().trim());
+        if (targetCode && Array.isArray(serviceable.data)) {
+          const matchedCourier = serviceable.data.find(
+            (item) => item.code && item.code.toUpperCase() === targetCode.toUpperCase()
+          );
+          const paymentKey = paymentType === "COD" ? "cod" : "prepaid";
+          if (matchedCourier && matchedCourier.is_active && matchedCourier.services?.[paymentKey]) {
+            isCourierServiceable = true;
+          }
+        }
+        isServiceable = isCourierServiceable;
       }
 
       if (!isServiceable) continue;
