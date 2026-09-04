@@ -13,6 +13,7 @@ const {
   submitNdrToBoxdLogistics,
   submitNdrToProship,
   submitNdrToShipexIndia,
+  submitNdrToJiffy,
 } = require("../services/ndrService");
 
 
@@ -168,6 +169,12 @@ const runNdrTask = async (orderId, actionDetails) => {
         comments: finalRemarks,
         scheduled_delivery_date: finalDate,
         phone,
+      });
+    } else if (finalPartner === "Jiffy") {
+      apiResponse = await submitNdrToJiffy({
+        awb_number: finalAwb,
+        action,
+        remarks: finalRemarks,
       });
     } else {
 

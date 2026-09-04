@@ -1617,6 +1617,89 @@ const submitNdrToShipexIndia = async ({
   }
 };
 
+const submitNdrToJiffy = async ({
+  awb_number,
+  action,
+  remarks,
+}) => {
+  try {
+    const orderInDb = await Order.findOne({ awb_number });
+    if (!orderInDb) {
+      return { success: false, error: "Order not found in DB" };
+    }
+
+    const { getJiffyToken, JIFFY_BASE_URL } = require("../AllCouriers/Jiffy/Authorize/jiffy.controller");
+    const token = await getJiffyToken();
+    if (!token) {
+      return { success: false, error: "Jiffy token not generated" };
+    }
+
+    const actionUpper = String(action).toUpperCase();
+    const jiffyAction = actionUpper === "RTO" ? "rto" : "re-attempt";
+
+    const payload = {
+      awb: awb_number,
+      action: jiffyAction,
+      remarks: remarks || "Customer requested reattempt",
+    };
+
+    console.log("Jiffy NDR Payload:", JSON.stringify(payload, null, 2));
+
+    const response = await axios.post(
+      `${JIFFY_BASE_URL}/ndr/action`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 10000,
+      }
+    );
+
+    console.log("Jiffy NDR Response:", response.data);
+
+    const bulkResult = response.data?.data;
+    const failed = bulkResult?.results?.failed || [];
+
+    if (response.data && response.data.success && failed.length === 0) {
+      const entry = {
+        action: actionUpper === "RTO" ? "RTO" : "RE-ATTEMPT",
+        actionBy: "Shiproxx",
+        remark: remarks || "NDR Action Requested",
+        source: "Shiproxx",
+        date: new Date(),
+      };
+
+      pushNdrActionToHistory(orderInDb, entry);
+
+      orderInDb.ndrStatus = actionUpper === "RTO" ? "RTO" : "Action_Requested";
+      orderInDb.status = "Action_Requested";
+      orderInDb.reattempt = false;
+      await orderInDb.save();
+
+      return {
+        success: true,
+        message: "Jiffy NDR processed successfully",
+        data: response.data,
+      };
+    } else {
+      return {
+        success: false,
+        error: failed[0]?.error || response.data?.error?.message || "Jiffy NDR submission failed",
+        details: response.data,
+      };
+    }
+  } catch (error) {
+    console.error("Jiffy NDR Error:", error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.error?.message || "Error processing Jiffy NDR",
+      details: error.response?.data || error.message,
+    };
+  }
+};
+
 module.exports = {
   getOrderDetails,
   callShiprocketNdrApi,
@@ -1627,6 +1710,7 @@ module.exports = {
   submitNdrToAmazon,
   callSmartshipNdrApi,
   submitNdrToZipypost,
+  submitNdrToJiffy,
   submitNdrToShreeMaruti,
   submitNdrToEkart,
   submitNdrToBoxdLogistics,

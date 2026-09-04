@@ -71,6 +71,7 @@ const {
 const { cancelShadowfaxOrder } = require("../AllCouriers/Shadowfax/Courier/couriers.controller");
 const { cancelLosung360Order } = require("../AllCouriers/Losung360/Courier/couriers.controller");
 const { cancelShipexIndiaOrder } = require("../AllCouriers/ShipxIndia/Courier/couriers.controller");
+const { cancelOrderJiffy } = require("../AllCouriers/Jiffy/Courier/couriers.controller");
 const WeightDiscrepancy = require("../WeightDispreancy/weightDispreancy.model");
 // Create a shipment
 const newOrder = async (req, res) => {
@@ -1728,7 +1729,20 @@ const cancelOrdersAtBooked = async (req, res) => {
       return res.status(400).send({ error: "Order is not ready to Cancelled" });
     }
 
-    if (currentOrder.partner === "ShipexIndia" || currentOrder.provider === "ShipexIndia") {
+    if (currentOrder.partner === "Jiffy") {
+      // Must be checked before any generic `provider === "X"` branch below —
+      // Jiffy orders carry whatever underlying carrier name Jiffy assigned
+      // (Delhivery, Ekart, DTDC, etc.) in `provider`, which would otherwise
+      // false-match one of those branches and call the wrong courier's API.
+      const result = await cancelOrderJiffy(currentOrder.awb_number);
+      if (result.error || result.success === false) {
+        return res.status(400).json({
+          error: result.error || result.message || "Failed to cancel shipment with Jiffy",
+          details: result,
+          orderId: currentOrder._id,
+        });
+      }
+    } else if (currentOrder.partner === "ShipexIndia" || currentOrder.provider === "ShipexIndia") {
       const result = await cancelShipexIndiaOrder(currentOrder.awb_number);
       if (result.error || result.success === false) {
         return res.status(400).json({
@@ -2176,7 +2190,14 @@ const bulkCancelOrder = async (req, res) => {
           // Call provider cancel API
           let cancelResponse;
           try {
-            if (partner === "ShipexIndia" || provider === "ShipexIndia") {
+            if (partner === "Jiffy") {
+              // Must be checked before any generic `provider === "X"` branch
+              // below — Jiffy orders carry whatever underlying carrier name
+              // Jiffy assigned (Delhivery, Ekart, DTDC, etc.) in `provider`,
+              // which would otherwise false-match one of those branches and
+              // call the wrong courier's API.
+              cancelResponse = await cancelOrderJiffy(currentOrder.awb_number);
+            } else if (partner === "ShipexIndia" || provider === "ShipexIndia") {
               cancelResponse = await cancelShipexIndiaOrder(currentOrder.awb_number);
             } else if (provider === "Shiprocket" || partner === "Shiprocket") {
               cancelResponse = await cancelShiprocketOrder(currentOrder.awb_number);

@@ -44,24 +44,10 @@ const {
 const {
   checkShipexIndiaServiceability,
 } = require("../../AllCouriers/ShipxIndia/Courier/couriers.controller.js");
-
-// Define courier IDs for each provider
-const courierIds = {
-  EcomExpress: "01",
-  Delhivery: "02",
-  Dtdc: "03",
-  Smartship: "04",
-  "Amazon Shipping": "05",
-  "Shree Maruti": "06",
-  ZipyPost: "07",
-  Ekart: "08",
-  BoxdLogistics: "09",
-  Proship: "10",
-  Shiprocket: "11",
-  Shadowfax: "12",
-  Losung360: "13",
-  ShipexIndia: "14",
-};
+const {
+  checkServiceabilityJiffy,
+} = require("../../AllCouriers/Jiffy/Courier/couriers.controller.js");
+const { getReverseProviderMap } = require("../../utils/providerIdRegistry");
 
 // Input Validation Schema
 const serviceabilitySchema = Joi.object({
@@ -116,10 +102,11 @@ const availableCourierService = async (req, res) => {
     const rateCards = plan.rateCard;
     const rcIds = rateCards.map((r) => r._id).filter(Boolean);
 
-    // Fetch Zone and RateCard documents in parallel to optimize response time
-    const [zoneResult, rateCardDocs] = await Promise.all([
+    // Fetch Zone, RateCard documents, and the provider id map in parallel to optimize response time
+    const [zoneResult, rateCardDocs, courierIds] = await Promise.all([
       getZone(pickUpPincode, deliveryPincode),
       RateCard.find({ _id: { $in: rcIds } }),
+      getReverseProviderMap(),
     ]);
 
     if (!zoneResult || !zoneResult.zone) {
@@ -144,6 +131,13 @@ const availableCourierService = async (req, res) => {
     const shipexServices = await CourierService.find({ provider: "ShipexIndia" }).lean();
     const shipexServiceMap = new Map(
       shipexServices.map((s) => [s.name.toLowerCase().trim(), s.courier || s.name])
+    );
+
+    // RateCard entries only carry courierServiceName (= CourierService.name), not
+    // the Jiffy courier code — look it up by name once here.
+    const jiffyServices = await CourierService.find({ provider: "Jiffy" }).lean();
+    const jiffyServiceMap = new Map(
+      jiffyServices.map((s) => [s.name.toLowerCase().trim(), s.courier])
     );
 
     const providers = [
@@ -289,6 +283,21 @@ const availableCourierService = async (req, res) => {
             height: order.packageDetails?.volumetricWeight?.height || 10,
           }),
       },
+      {
+        name: "Jiffy",
+        check: async () =>
+          checkServiceabilityJiffy({
+            pickupPincode: pickUpPincode,
+            deliveryPincode,
+            rtoPincode: pickUpPincode,
+            paymentMode: paymentType === "COD" ? "cod" : "prepaid",
+            collectableAmount: paymentType === "COD" ? declaredValue : 0,
+            weight: applicableWeight,
+            length: order.packageDetails?.volumetricWeight?.length || 10,
+            breadth: order.packageDetails?.volumetricWeight?.width || 10,
+            height: order.packageDetails?.volumetricWeight?.height || 10,
+          }),
+      },
     ];
 
     const uniqueChecks = [];
@@ -379,6 +388,25 @@ const availableCourierService = async (req, res) => {
                 mappedName.toLowerCase().replace(/\s+/g, "")
           );
           if (matchedCourier && matchedCourier.serviceable === true) {
+            isCourierServiceable = true;
+          }
+        }
+        isServiceable = isCourierServiceable;
+      }
+
+      if (provider.toLowerCase() === "jiffy" && isServiceable) {
+        // Match on Jiffy's own `code` (e.g. "EK09") — the same value stored in
+        // CourierService.courier and sent as courier_code when booking — not
+        // the display name (courier_name), which is verbose/dynamic on Jiffy's
+        // side and won't reliably equal what the admin typed as the service name.
+        let isCourierServiceable = false;
+        const targetCode = jiffyServiceMap.get(rc.courierServiceName.toLowerCase().trim());
+        if (targetCode && Array.isArray(serviceable.data)) {
+          const matchedCourier = serviceable.data.find(
+            (item) => item.code && item.code.toUpperCase() === targetCode.toUpperCase()
+          );
+          const paymentKey = paymentType === "COD" ? "cod" : "prepaid";
+          if (matchedCourier && matchedCourier.is_active && matchedCourier.services?.[paymentKey]) {
             isCourierServiceable = true;
           }
         }

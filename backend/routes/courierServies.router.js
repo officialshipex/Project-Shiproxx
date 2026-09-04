@@ -133,6 +133,40 @@ const cascadeBulkProviderChange = async (serviceNames, targetProvider) => {
   }
 };
 
+// Background helper for cascading a courier-service rename — RateCard and
+// every Plan.rateCard entry store their own independent copy of
+// courierServiceName (not a live reference, see cascadeProviderChange above),
+// so renaming a CourierService leaves every rate card that already priced it
+// pointing at the old name until this runs.
+const cascadeNameChange = async (oldName, newName) => {
+  try {
+    console.log(`[Background-Cascade] Starting name update cascade: "${oldName}" -> "${newName}"`);
+    const startTime = Date.now();
+
+    const rateCardResult = await RateCard.updateMany(
+      { courierServiceName: oldName },
+      { $set: { courierServiceName: newName } }
+    );
+    console.log(`[Background-Cascade] RateCard collection updated. Matched/Modified: ${rateCardResult.matchedCount}/${rateCardResult.modifiedCount}`);
+
+    const result = await Plan.updateMany(
+      { "rateCard.courierServiceName": oldName },
+      {
+        $set: {
+          "rateCard.$[rc].courierServiceName": newName,
+        },
+      },
+      {
+        arrayFilters: [{ "rc.courierServiceName": oldName }],
+      }
+    );
+
+    console.log(`[Background-Cascade] Successfully updated plans for rename. Matched: ${result.matchedCount}, Modified: ${result.modifiedCount} in ${Date.now() - startTime}ms.`);
+  } catch (error) {
+    console.error("[Background-Cascade] Error in cascading name change:", error);
+  }
+};
+
 // ✅ Update Courier Service
 router.put("/couriers/:id", async (req, res) => {
   try {
@@ -145,6 +179,7 @@ router.put("/couriers/:id", async (req, res) => {
     }
 
     const providerChanged = updateData.provider && updateData.provider !== oldService.provider;
+    const nameChanged = updateData.name && updateData.name !== oldService.name;
 
     const updatedCourier = await CourierService.findByIdAndUpdate(
       id,
@@ -152,12 +187,21 @@ router.put("/couriers/:id", async (req, res) => {
       { new: true }
     );
 
-    if (providerChanged) {
-      const serviceName = updatedCourier.name;
-      const targetProvider = updateData.provider;
-
-      // Trigger background cascade
-      cascadeProviderChange(serviceName, targetProvider).catch(err => {
+    if (nameChanged || providerChanged) {
+      // Run both cascades in the background (don't block the response), but
+      // rename must finish first: cascadeProviderChange matches RateCard/Plan
+      // rows by courierServiceName using the NEW name, which won't exist on
+      // those rows yet if the rename cascade hasn't landed — running them out
+      // of order would silently no-op the provider cascade whenever a request
+      // changes both name and provider together.
+      (async () => {
+        if (nameChanged) {
+          await cascadeNameChange(oldService.name, updateData.name);
+        }
+        if (providerChanged) {
+          await cascadeProviderChange(updatedCourier.name, updateData.provider);
+        }
+      })().catch(err => {
         console.error("[Background-Cascade] Trigger error:", err);
       });
     }

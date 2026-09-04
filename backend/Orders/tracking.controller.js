@@ -52,6 +52,9 @@ const {
 const {
   trackLosung360Order,
 } = require("../AllCouriers/Losung360/Courier/couriers.controller");
+const {
+  trackOrderJiffy,
+} = require("../AllCouriers/Jiffy/Courier/couriers.controller");
 const Bottleneck = require("bottleneck");
 const {
   sendWhatsAppMessage,
@@ -99,6 +102,7 @@ const trackSingleOrder = async (order) => {
       Shadowfax: trackShadowfaxOrder,
       Ekart: trackEkartShipment,
       Losung360: trackLosung360Order,
+      Jiffy: trackOrderJiffy,
     };
 
     // if (!trackingFunctions[provider]) {
@@ -118,6 +122,8 @@ const trackSingleOrder = async (order) => {
       result = await trackingFunctions["Shiprocket"](awb_number);
     } else if (partner && partner === "Shadowfax") {
       result = await trackingFunctions["Shadowfax"](awb_number);
+    } else if (partner && partner === "Jiffy") {
+      result = await trackingFunctions["Jiffy"](awb_number);
     } else if (provider && provider === "Shadowfax") {
       result = await trackingFunctions["Shadowfax"](awb_number);
     } else if (provider && trackingFunctions[provider]) {
@@ -136,7 +142,7 @@ const trackSingleOrder = async (order) => {
     // Normalize only the latest one
     const normalizedData = mapTrackingResponse(
       [result.data],
-      (partner === "ZipyPost" || partner === "BoxdLogistics" || partner === "Proship" || partner === "Shiprocket" || partner === "Ekart" || partner === "Losung360") ? partner : provider,
+      (partner === "ZipyPost" || partner === "BoxdLogistics" || partner === "Proship" || partner === "Shiprocket" || partner === "Ekart" || partner === "Losung360" || partner === "Jiffy") ? partner : provider,
     );
     // console.log("normalized", normalizedData);
 
@@ -1283,6 +1289,115 @@ const trackSingleOrder = async (order) => {
 
     }
 
+    // ── Jiffy Status Handling ────────────────────────────────────────────────
+    // Jiffy tracking_history items: { status, timestamp, location, description }
+    // status enum: booked, pending pickup, in transit, out for delivery,
+    // exception, delivered, rto in transit, rto delivered, lost, damaged, cancelled
+    if (partner === "Jiffy") {
+      const statusCode = normalizedData.Instructions?.toLowerCase(); // raw `status` value
+
+      if (statusCode === "booked" || statusCode === "pending pickup") {
+        order.status = "Ready To Ship";
+      }
+
+      if (statusCode === "in transit") {
+        order.status = "In-transit";
+        order.ndrStatus = "In-transit";
+        if (!order.invoiceDate) {
+          order.invoiceDate = normalizedData.StatusDateTime;
+        }
+        order.reattempt = false;
+      }
+
+      if (statusCode === "out for delivery") {
+        order.status = "Out for Delivery";
+        order.ndrStatus = "Out for Delivery";
+        order.reattempt = false;
+      }
+
+      if (statusCode === "delivered") {
+        order.status = "Delivered";
+        order.reattempt = false;
+        if (
+          order.ndrStatus === "Undelivered" ||
+          order.ndrStatus === "Out for Delivery" ||
+          order.ndrStatus === "Action_Requested"
+        ) {
+          order.ndrStatus = "Delivered";
+        }
+      }
+
+      // --- Undelivered / NDR ---
+      if (statusCode === "exception") {
+        if (order.ndrStatus !== "Action_Requested") {
+          order.status = "Undelivered";
+          order.ndrStatus = "Undelivered";
+          order.ndrReason = {
+            date: normalizedData.StatusDateTime,
+            reason: normalizedData.Description || normalizedData.Instructions,
+          };
+
+          const lastNdr = order.ndrHistory[order.ndrHistory.length - 1];
+          const lastAction = lastNdr?.actions?.[lastNdr.actions.length - 1];
+          const lastEntryDate = lastAction?.date
+            ? new Date(lastAction.date).getTime()
+            : null;
+          const currentStatusDate = new Date(normalizedData.StatusDateTime).getTime();
+
+          if (order.ndrHistory.length === 0 || lastEntryDate < currentStatusDate) {
+            const attemptCount = order.ndrHistory?.length + 1 || 0;
+            order.reattempt = true;
+            const newHistoryEntry = {
+              actions: [
+                {
+                  action: `NDR ${attemptCount} Raised`,
+                  actionBy: order.courierServiceName,
+                  remark: normalizedData.Description || "Delivery Exception",
+                  source: order.provider,
+                  date: normalizedData.StatusDateTime,
+                },
+              ],
+            };
+            order.ndrHistory.push(newHistoryEntry);
+          }
+        }
+      }
+
+      if (order.ndrHistory.length >= 4) {
+        order.reattempt = false;
+      }
+
+      // --- RTO ---
+      if (statusCode === "rto in transit") {
+        order.status = "RTO In-transit";
+        order.ndrStatus = "RTO In-transit";
+        order.reattempt = false;
+      }
+
+      if (statusCode === "rto delivered") {
+        order.status = "RTO Delivered";
+        order.ndrStatus = "RTO Delivered";
+        order.reattempt = false;
+      }
+
+      // --- Lost / Damaged ---
+      if (statusCode === "lost" || statusCode === "damaged") {
+        order.status = "Lost";
+        order.reattempt = false;
+      }
+
+      // --- Cancelled ---
+      if (statusCode === "cancelled") {
+        order.status = "Cancelled";
+        order.ndrStatus = "Cancelled";
+        balanceTobeAdded =
+          order.totalFreightCharges === "N/A"
+            ? 0
+            : parseFloat(order.totalFreightCharges);
+        shouldUpdateWallet = true;
+      }
+    }
+
 
     if (partner === "Proship") {
       console.log("pro tracking", normalizedData);
@@ -1784,7 +1899,7 @@ const trackSingleOrder = async (order) => {
       // If API returned a full list of tracking events
       const newTrackingArray = scansArray.map((item) => {
         const mapped =
-          partner === "ZipyPost" || partner === "BoxdLogistics" || partner === "Proship" || partner === "Shiprocket" || partner === "Ekart" || partner === "Losung360"
+          partner === "ZipyPost" || partner === "BoxdLogistics" || partner === "Proship" || partner === "Shiprocket" || partner === "Ekart" || partner === "Losung360" || partner === "Jiffy"
             ? mapTrackingResponse([item], partner)
             : mapTrackingResponse([item], provider, result?.remark);
 
@@ -2210,6 +2325,33 @@ const mapTrackingResponse = (data, provider, remark) => {
       StatusDateTime: formatBoxdDateTime(latestScan?.datetime || latestScan?.created_at),
       Instructions: latestScan?.status || "N/A",     // used for status-matching logic
       Remarks: latestScan?.remarks || null,
+    };
+  }
+
+  if (provider === "Jiffy") {
+    // Real API response item: { status, timestamp, location, description }
+    // timestamp is a naive IST string like '2026-01-21 15:52:59' (no timezone
+    // suffix). The frontend (TrackingDetailsSection.jsx) reads this back via
+    // getUTCHours()/getUTCDate()/etc with timeZone:"UTC" forced — i.e. it
+    // displays whatever raw digits are in the UTC representation, with no
+    // timezone conversion. So this must append a bare "Z" (NOT a real
+    // "+05:30" offset — that would have Date math shift the actual UTC
+    // instant back by 5.5 hours, and getUTCHours() would then return the
+    // wrong number). Same "as-is" convention used for Boxd/ShreeMaruti above.
+    const formatJiffyDateTime = (rawDate) => {
+      if (!rawDate) return null;
+      if (rawDate.includes("Z") || rawDate.includes("+")) return rawDate;
+      return rawDate.replace(" ", "T") + "Z";
+    };
+
+    const scanArray = Array.isArray(data[0]) ? data[0] : (Array.isArray(data) ? data : []);
+    const latestScan = scanArray?.[scanArray.length - 1];
+    return {
+      Status: latestScan?.status || "N/A",
+      Description: latestScan?.description || "N/A",
+      StatusLocation: latestScan?.location || "Unknown",
+      StatusDateTime: formatJiffyDateTime(latestScan?.timestamp),
+      Instructions: latestScan?.status || "N/A", // used for status-matching logic
     };
   }
 

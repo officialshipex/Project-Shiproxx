@@ -50,6 +50,9 @@ const {
 const {
   checkShipexIndiaServiceability,
 } = require("../AllCouriers/ShipxIndia/Courier/couriers.controller");
+const {
+  checkServiceabilityJiffy,
+} = require("../AllCouriers/Jiffy/Courier/couriers.controller");
 
 const checkServiceabilityAll = async (service, id, pincode) => {
   try {
@@ -384,6 +387,37 @@ const checkServiceabilityAll = async (service, id, pincode) => {
     if (service.provider.toLowerCase() === "losung360") {
 
       return { success: true };
+    }
+    if (service.provider.toLowerCase() === "jiffy") {
+      const local = await checkLocalServiceability();
+      if (local.success) return local;
+
+      const payload = {
+        pickupPincode: pickupPincode,
+        deliveryPincode: deliveryPincode,
+        rtoPincode: pickupPincode,
+        paymentMode: paymentMethod === "COD" ? "cod" : "prepaid",
+        collectableAmount: paymentMethod === "COD" ? (currentOrder.paymentDetails?.amount || 0) : 0,
+        weight: currentOrder.packageDetails?.applicableWeight || 0.5,
+        length: currentOrder.packageDetails.volumetricWeight?.length || 10,
+        breadth: currentOrder.packageDetails.volumetricWeight?.width || 10,
+        height: currentOrder.packageDetails.volumetricWeight?.height || 10,
+      };
+      const res = await checkServiceabilityJiffy(payload);
+      if (res && res.success && Array.isArray(res.data) && service.courier) {
+        // Match on Jiffy's own `code` (service.courier here is CourierService.courier,
+        // the same code sent as courier_code when booking) — not the display name,
+        // which is verbose/dynamic on Jiffy's side.
+        const targetCode = String(service.courier).toUpperCase();
+        const matchedCourier = res.data.find(
+          (item) => item.code && item.code.toUpperCase() === targetCode
+        );
+        const paymentKey = paymentMethod === "COD" ? "cod" : "prepaid";
+        if (matchedCourier && matchedCourier.is_active && matchedCourier.services?.[paymentKey]) {
+          return { ...res, success: true };
+        }
+      }
+      return false;
     }
 
     // Default

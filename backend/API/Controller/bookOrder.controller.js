@@ -22,24 +22,8 @@ const createShiprocketShipment = require("../Courier/shiprocketShipmentCreation.
 const createShadowfaxShipment = require("../Courier/shadowfaxShipmentCreation.controller");
 const createLosung360Shipment = require("../Courier/losung360ShipmentCreation.controller");
 const createShipexIndiaShipment = require("../Courier/shipexIndiaShipmentCreation.controller");
-
-// Provider mapping
-const providerMap = {
-  // "01": "EcomExpress",
-  "02": "Delhivery",
-  "03": "Dtdc",
-  "04": "Smartship",
-  "05": "Amazon Shipping",
-  "06": "Shree Maruti",
-  "07": "ZipyPost",
-  "08": "Ekart",
-  "09": "BoxdLogistics",
-  "10": "Proship",
-  "11": "Shiprocket",
-  "12": "Shadowfax",
-  "13": "Losung360",
-  "14": "ShipexIndia",
-};
+const createJiffyShipment = require("../Courier/jiffyShipmentCreation.controller");
+const { getProviderMap } = require("../../utils/providerIdRegistry");
 
 
 // Validation schema
@@ -72,14 +56,15 @@ const bookOrder = async (req, res) => {
   }
 
   const { orderId, courierServiceName, courierId } = value;
-  const provider = providerMap[courierId] || null;
 
   try {
-    // ✅ Fetch order, user in parallel (fast DB reads)
-    const [order, user] = await Promise.all([
+    // ✅ Fetch order, user, and provider map in parallel (fast DB reads)
+    const [order, user, providerMap] = await Promise.all([
       Order.findOne({ orderId, userId }),
       User.findById(userId),
+      getProviderMap(),
     ]);
+    const provider = providerMap[courierId] || null;
     // console.log(order,user)
     if (!order) {
       return res.status(404).json({
@@ -413,6 +398,22 @@ const bookOrder = async (req, res) => {
           provider,
           finalCharges,
           courierServiceName,
+          priceBreakup,
+          userId: userId,
+          walletId: user.Wallet,
+          walletBalance: wallet.balance,
+          walletHoldAmount: wallet.holdAmount || 0,
+          walletCreditLimit: wallet.creditLimit || 0,
+        });
+        break;
+
+      case "Jiffy":
+        shipmentResult = await createJiffyShipment({
+          id: order._id,
+          provider,
+          finalCharges,
+          courierServiceName,
+          courier: courierService?.courier,
           priceBreakup,
           userId: userId,
           walletId: user.Wallet,

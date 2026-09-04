@@ -61,6 +61,7 @@ const ProshipRouter = require("./AllCouriersRoutes/proship.router")
 const ShadowfaxRouter = require("./AllCouriersRoutes/shadowfax.router")
 const Losung360Router = require("./AllCouriersRoutes/losung360.router")
 const ShipexIndiaRouter = require("./AllCouriersRoutes/shipexindia.router")
+const JiffyRouter = require("./AllCouriersRoutes/jiffy.router")
 
 const CourierRouter = require("./routes/courier.router")
 const referralRoute = require("./Referral/referal.router")
@@ -164,6 +165,7 @@ router.use("/Proship", ProshipRouter)
 router.use("/Shadowfax", ShadowfaxRouter)
 router.use("/Losung360", Losung360Router)
 router.use("/ShipexIndia", ShipexIndiaRouter)
+router.use("/Jiffy", JiffyRouter)
 
 
 router.use("/label", LabelRouter);

@@ -604,7 +604,7 @@ const trackOrderBoxdLogistics = async (AWBNo) => {
             (a, b) => new Date(b.datetime || b.created_at) - new Date(a.datetime || a.created_at)
         );
 
-        // console.log("BoxdLogistics tracking data:", sorted);
+        // console.log("BoxdLogistics tracking Data:", sorted);
         return { success: true, data: sorted.reverse() };
     } catch (error) {
         console.error("BoxdLogistics tracking error:", error.response?.data || error.message);
@@ -612,7 +612,7 @@ const trackOrderBoxdLogistics = async (AWBNo) => {
     }
 };
 
-// trackOrderBoxdLogistics("76890137936");
+// trackOrderBoxdLogistics("50845017095970");
 
 module.exports = {
     checkServiceabilityBoxdLogistics,
