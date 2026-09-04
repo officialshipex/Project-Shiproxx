@@ -322,7 +322,24 @@ const webhookhandler = async (req, res) => {
     const storeURL = req.headers["x-shopify-shop-domain"];
     console.log("storeURL", storeURL);
 
-    const user = await AllChannel.findOne({ storeURL: storeURL });
+    if (!storeURL) {
+      console.error("Missing x-shopify-shop-domain header on webhook request");
+      return res.status(400).json({ error: "Missing shop domain header" });
+    }
+
+    // Shopify always sends the bare canonical domain here, but storeURL is
+    // saved verbatim from whatever the seller typed when connecting the
+    // store (no trim/case normalization anywhere in that path) — a stray
+    // trailing slash or case difference breaks an exact match forever even
+    // though the store connected fine. Match tolerantly, same as the other
+    // Shopify/WooCommerce store lookups in this codebase (see
+    // markShopifyOrderAsShipped below and woocommerce.controller.js).
+    const escapedStoreURL = storeURL
+      .replace(/\/$/, "")
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const user = await AllChannel.findOne({
+      storeURL: { $regex: `^${escapedStoreURL}/?$`, $options: "i" },
+    });
     if (!user) {
       console.error("Store not found in AllChannel");
       return res.status(404).json({ error: "Store not found" });
@@ -468,7 +485,7 @@ const storeAllChannelDetails = async (req, res) => {
     const {
       channel,
       storeName,
-      storeURL,
+      storeURL: rawStoreURL,
       storeClientId,
       storeClientSecret,
       storeAccessToken,
@@ -480,6 +497,19 @@ const storeAllChannelDetails = async (req, res) => {
       syncDate,
     } = req.body;
     // console.log("req",req.body)
+
+    // Normalize what the seller typed into the bare canonical domain (strip
+    // protocol/trailing slash, lowercase, trim whitespace) so the saved
+    // storeURL always matches the exact string Shopify sends back in the
+    // x-shopify-shop-domain header on every webhook call. Without this, a
+    // stray trailing slash or copy-pasted "https://" silently breaks
+    // inbound order sync forever even though the store connects fine.
+    const storeURL = (rawStoreURL || "")
+      .trim()
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/+$/, "")
+      .toLowerCase();
+
     if (
       !storeName ||
       !storeURL ||
@@ -914,6 +944,16 @@ const updateChannel = async (req, res) => {
   // Convert syncDate to Date object if provided
   if (req.body.syncDate) {
     updatedData.syncFromDate = new Date(req.body.syncDate);
+  }
+
+  // Same normalization as storeAllChannelDetails — an edited storeURL must
+  // stay in the bare canonical domain form or inbound webhook lookups break.
+  if (typeof updatedData.storeURL === "string") {
+    updatedData.storeURL = updatedData.storeURL
+      .trim()
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/+$/, "")
+      .toLowerCase();
   }
 
   try {
