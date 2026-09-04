@@ -305,17 +305,27 @@ const calculateRate = async (req, res) => {
         rc.weightPriceAdditional[0][currentZone],
       );
 
-      const count = Math.ceil(
-        (chargedWeight - rc.weightPriceBasic[0].weight) /
-        rc.weightPriceAdditional[0].weight,
-      );
-
-      let finalCharge =
-        rc.weightPriceBasic[0].weight >= chargedWeight
-          ? basicCharge
-          : basicCharge + additionalCharge * count;
-
       const isFlat = isFlatRate;
+
+      // A flat-rate service always charges basicCharge regardless of weight —
+      // skip the tiered per-slab math entirely. Without this, a flat-rate
+      // RateCard whose weightPriceBasic[0].weight/weightPriceAdditional[0].weight
+      // are entered in kg (e.g. 0.5) rather than the grams chargedWeight is
+      // computed in gets compared against a value 1000x too small, producing
+      // a runaway "additional slabs" count and a wildly inflated charge.
+      let finalCharge;
+      if (isFlat) {
+        finalCharge = basicCharge;
+      } else {
+        const count = Math.ceil(
+          (chargedWeight - rc.weightPriceBasic[0].weight) /
+          rc.weightPriceAdditional[0].weight,
+        );
+        finalCharge =
+          rc.weightPriceBasic[0].weight >= chargedWeight
+            ? basicCharge
+            : basicCharge + additionalCharge * count;
+      }
       // Step 6: COD charges
       let cod = 0;
       if (paymentType === "COD" && !isFlat) {
@@ -409,20 +419,31 @@ async function calculateRateForService(payload) {
       // console.log("basicChargeForward", basicChargeForward);
       // console.log("additionalChargeForward", additionalChargeForward);
 
+      // A flat-rate service always charges basicChargeForward regardless of
+      // weight — skip the tiered per-slab math entirely. Without this, a
+      // flat-rate RateCard whose weightPriceBasic[0].weight/
+      // weightPriceAdditional[0].weight are entered in kg (e.g. 0.5) rather
+      // than the grams chargedWeight is computed in gets compared against a
+      // value 1000x too small, producing a runaway "additional slabs" count
+      // and a wildly inflated charge.
       let totalForwardCharge;
-      const count = Math.ceil(
-        (chargedWeight - rc.weightPriceBasic[0].weight) /
-        rc.weightPriceAdditional[0].weight,
-      );
-      // console.log("count", count);
-      // console.log("chargedWeight", chargedWeight);
-      if (rc.weightPriceBasic[0].weight >= chargedWeight) {
+      if (isFlatRate) {
         totalForwardCharge = basicChargeForward;
-        // console.log("totalForwardCharge111", totalForwardCharge);
-      } else if (rc.weightPriceBasic[0].weight < chargedWeight) {
-        totalForwardCharge =
-          basicChargeForward + additionalChargeForward * count;
-        // console.log("totalForwardCharge222", totalForwardCharge);
+      } else {
+        const count = Math.ceil(
+          (chargedWeight - rc.weightPriceBasic[0].weight) /
+          rc.weightPriceAdditional[0].weight,
+        );
+        // console.log("count", count);
+        // console.log("chargedWeight", chargedWeight);
+        if (rc.weightPriceBasic[0].weight >= chargedWeight) {
+          totalForwardCharge = basicChargeForward;
+          // console.log("totalForwardCharge111", totalForwardCharge);
+        } else if (rc.weightPriceBasic[0].weight < chargedWeight) {
+          totalForwardCharge =
+            basicChargeForward + additionalChargeForward * count;
+          // console.log("totalForwardCharge222", totalForwardCharge);
+        }
       }
       let codCharge = 0;
       if (cod === "Yes" && !isFlatRate) {
