@@ -15,15 +15,40 @@ const getJiffyToken = async () => {
   let email = process.env.JIFFY_EMAIL;
   let password = process.env.JIFFY_PASSWORD;
 
-  // DB configuration takes precedence over .env fallback
-  try {
-    const doc = await AllCourier.findOne({ courierProvider: "Jiffy" });
-    if (doc) {
-      if (doc.email) email = doc.email;
-      if (doc.password) password = doc.password;
+  // DB configuration takes precedence over .env fallback. The token cache
+  // above is in-memory, so it's always empty right after a server
+  // restart/deploy — if the very first Jiffy call lands while Mongoose is
+  // still finishing its initial connection, this query would otherwise
+  // buffer and time out (10s), silently falling through to whatever's in
+  // .env. Retry a couple of times first so a momentary startup race doesn't
+  // immediately give up and attempt a login with placeholder/stale .env
+  // credentials.
+  let dbErrored = false;
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const doc = await AllCourier.findOne({ courierProvider: "Jiffy" });
+      if (doc) {
+        if (doc.email) email = doc.email;
+        if (doc.password) password = doc.password;
+      }
+      dbErrored = false;
+      break;
+    } catch (e) {
+      dbErrored = true;
+      console.error(`Error loading Jiffy credentials from DB (attempt ${attempt}/${maxAttempts}):`, e.message);
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+      }
     }
-  } catch (e) {
-    console.error("Error loading Jiffy credentials from DB:", e.message);
+  }
+
+  if (dbErrored) {
+    // DB was unreachable for every attempt — don't fall through to .env
+    // values that may just be unconfigured placeholders; fail clearly
+    // instead of wasting a login call on credentials nobody set up.
+    console.error("❌ Jiffy: could not read credentials from DB after retries — DB may still be reconnecting.");
+    return null;
   }
 
   if (!email || !password) {

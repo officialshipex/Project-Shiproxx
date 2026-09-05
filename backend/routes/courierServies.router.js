@@ -261,7 +261,63 @@ router.post("/changeProvider", async (req, res) => {
   }
 });
 
-// ✅ Delete Courier Service
+// ✅ Bulk Delete Courier Services — same cascade as the single-delete route
+// below, applied to every selected service. Each service keeps its own
+// service+provider pair when matching RateCard/Plan rows (rather than
+// cross-matching any selected name against any selected provider), so
+// selecting services from different providers in one bulk action is safe.
+router.post("/couriers/bulkDelete", async (req, res) => {
+  try {
+    const { serviceIds } = req.body;
+
+    if (!serviceIds || !Array.isArray(serviceIds) || serviceIds.length === 0) {
+      return res.status(400).json({ success: false, message: "No services selected" });
+    }
+
+    const services = await CourierService.find({ _id: { $in: serviceIds } });
+    if (services.length === 0) {
+      return res.status(404).json({ success: false, message: "Selected services not found" });
+    }
+
+    const pairs = services.map((s) => ({
+      courierServiceName: s.name,
+      courierProviderName: s.provider,
+    }));
+
+    await CourierService.deleteMany({ _id: { $in: serviceIds } });
+
+    const rateCardResult = await RateCard.deleteMany({ $or: pairs });
+
+    const planResult = await Plan.updateMany(
+      { $or: pairs.map((p) => ({ "rateCard.courierServiceName": p.courierServiceName, "rateCard.courierProviderName": p.courierProviderName })) },
+      { $pull: { rateCard: { $or: pairs } } }
+    );
+
+    console.log(
+      `[Cascade-Delete] Bulk deleted ${services.length} courier service(s). RateCards deleted: ${rateCardResult.deletedCount}. Plans updated: ${planResult.modifiedCount}.`
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Deleted ${services.length} courier service(s), ${rateCardResult.deletedCount} rate card(s), and updated ${planResult.modifiedCount} plan(s).`,
+      servicesDeleted: services.length,
+      rateCardsDeleted: rateCardResult.deletedCount,
+      plansUpdated: planResult.modifiedCount,
+    });
+  } catch (error) {
+    console.error("Bulk Delete Courier Error:", error);
+    res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+  }
+});
+
+// ✅ Delete Courier Service — cascades to the RateCard collection and every
+// Plan that has embedded a rate for this exact service+provider. RateCard
+// and Plan.rateCard entries store their own independent copy of
+// courierServiceName/courierProviderName rather than a live reference (see
+// cascadeNameChange above), so deleting only the CourierService doc would
+// leave orphaned rate cards and plan entries behind forever. Run
+// synchronously (unlike the rename/provider-change cascades) so the
+// response only reports success once the cascade has actually completed.
 router.delete("/couriers/:id", async (req, res) => {
   try {
     const deletedCourier = await CourierService.findByIdAndDelete(
@@ -270,8 +326,40 @@ router.delete("/couriers/:id", async (req, res) => {
     if (!deletedCourier) {
       return res.status(404).json({ message: "Courier not found" });
     }
-    res.status(200).json({ message: "Courier deleted successfully" });
+
+    const { name: serviceName, provider } = deletedCourier;
+
+    const rateCardResult = await RateCard.deleteMany({
+      courierServiceName: serviceName,
+      courierProviderName: provider,
+    });
+
+    const planResult = await Plan.updateMany(
+      {
+        "rateCard.courierServiceName": serviceName,
+        "rateCard.courierProviderName": provider,
+      },
+      {
+        $pull: {
+          rateCard: {
+            courierServiceName: serviceName,
+            courierProviderName: provider,
+          },
+        },
+      }
+    );
+
+    console.log(
+      `[Cascade-Delete] Deleted courier "${serviceName}" (${provider}). RateCards deleted: ${rateCardResult.deletedCount}. Plans updated: ${planResult.modifiedCount}.`
+    );
+
+    res.status(200).json({
+      message: "Courier deleted successfully",
+      rateCardsDeleted: rateCardResult.deletedCount,
+      plansUpdated: planResult.modifiedCount,
+    });
   } catch (error) {
+    console.error("Delete Courier Error:", error);
     res.status(500).json({ error: error.message });
   }
 });

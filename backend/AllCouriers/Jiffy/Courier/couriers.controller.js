@@ -375,6 +375,7 @@ const trackOrderJiffy = async (awb_number) => {
       // stored as and what every "latest scan = array[length-1]" consumer in
       // this codebase (mapTrackingResponse, tracking.controller.js) expects.
       const history = response.data.data?.tracking_history || [];
+      // console.log("jiffy tracking",history)
       return { success: true, data: [...history].reverse() };
     }
     return { success: false, error: response.data?.error?.message || "Tracking failed" };
@@ -383,7 +384,7 @@ const trackOrderJiffy = async (awb_number) => {
     return { success: false, error: extractJiffyErrorMessage(error, "Failed to fetch tracking"), status: 500 };
   }
 };
-
+// trackOrderJiffy("57261714328870")
 // ─── NDR List ────────────────────────────────────────────────────────────────
 const getJiffyNdrList = async (req, res) => {
   try {
