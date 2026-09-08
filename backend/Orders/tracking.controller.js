@@ -2062,26 +2062,44 @@ const trackOrders = async (includeWebhooks = false) => {
       // "Losung360"
     ];
 
+    // Aggregators with NO inbound webhook at all (Jiffy confirmed — no
+    // webhook/JiffyWebhook.controller.js exists, purely poll-based) must
+    // always stay poll-eligible regardless of `provider`. For these orders
+    // `provider` holds whatever underlying carrier the aggregator assigned
+    // (e.g. "Delhivery", "Ekart") — not a native direct integration — so it
+    // can collide with webhookNames and get wrongly excluded below, even
+    // though Shiproxx never receives a direct webhook from that carrier for
+    // an aggregator-routed shipment.
+    const pollOnlyPartners = ["Jiffy"];
+    const notWebhookSourced = {
+      $or: [
+        { provider: { $nin: webhookNames }, partner: { $nin: webhookNames } },
+        { partner: { $in: pollOnlyPartners } },
+      ],
+    };
+
     let query = {};
 
     if (includeWebhooks) {
       query = {
-        $or: [
-          {
-            provider: { $nin: webhookNames },
-            partner: { $nin: webhookNames },
-            status: { $nin: ["new", "Cancelled", "Delivered", "RTO Delivered"] },
-          },
+        $and: [
           {
             $or: [
-              { provider: { $in: webhookNames } },
-              { partner: { $in: webhookNames } },
+              {
+                ...notWebhookSourced,
+                status: { $nin: ["new", "Cancelled", "Delivered", "RTO Delivered"] },
+              },
+              {
+                $or: [
+                  { provider: { $in: webhookNames } },
+                  { partner: { $in: webhookNames } },
+                ],
+                partner: { $nin: pollOnlyPartners },
+                status: { $in: ["Out for Delivery", "Undelivered", "Action_Requested"] },
+                createdAt: { $gte: fifteenDaysAgo },
+              },
             ],
-            status: { $in: ["Out for Delivery", "Undelivered", "Action_Requested"] },
-            createdAt: { $gte: fifteenDaysAgo },
           },
-        ],
-        $and: [
           {
             $or: [
               { lastTrackedAt: { $exists: false } },
@@ -2105,21 +2123,24 @@ const trackOrders = async (includeWebhooks = false) => {
     } else {
       query = {
         status: { $nin: ["new", "Cancelled", "Delivered", "RTO Delivered"] },
-        provider: { $nin: webhookNames },
-        partner: { $nin: webhookNames },
-        $or: [
-          { lastTrackedAt: { $exists: false } },
-          { lastTrackedAt: null },
+        ...notWebhookSourced,
+        $and: [
           {
-            $and: [
-              { status: "Out for Delivery" },
-              { lastTrackedAt: { $lt: twoHoursAgo } },
-            ],
-          },
-          {
-            $and: [
-              { status: { $ne: "Out for Delivery" } },
-              { lastTrackedAt: { $lt: threeHoursAgo } },
+            $or: [
+              { lastTrackedAt: { $exists: false } },
+              { lastTrackedAt: null },
+              {
+                $and: [
+                  { status: "Out for Delivery" },
+                  { lastTrackedAt: { $lt: twoHoursAgo } },
+                ],
+              },
+              {
+                $and: [
+                  { status: { $ne: "Out for Delivery" } },
+                  { lastTrackedAt: { $lt: threeHoursAgo } },
+                ],
+              },
             ],
           },
         ],
