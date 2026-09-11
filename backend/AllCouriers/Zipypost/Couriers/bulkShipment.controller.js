@@ -114,9 +114,7 @@ const createOrderZipypost = async (
       !Array.isArray(serviceability.data) ||
       serviceability.data.length === 0
     ) {
-      return res
-        .status(400)
-        .json({ success: false, message: "No serviceability data found" });
+      return { success: false, message: "No serviceability data found" };
     }
 
     const validCouriers = serviceability.data.filter(
@@ -131,11 +129,11 @@ const createOrderZipypost = async (
       courier_id = 10;
 
     if (courier_id === 0) {
-      return res.status(400).json({
+      return {
         success: false,
         message:
           "Invalid courier name. Only Xpressbees and Bluedart supported.",
-      });
+      };
     }
 
     // Step 5: Find the courier entry for selected courier
@@ -161,10 +159,10 @@ const createOrderZipypost = async (
     }
 
     if (!selectedMode) {
-      return res.status(400).json({
+      return {
         success: false,
         message: "Unable to determine mode_id for the courier",
-      });
+      };
     }
 
     const mode_id = selectedMode.mode_id;

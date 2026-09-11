@@ -7,14 +7,6 @@ const { getZone } = require("../../../Rate/zoneManagementController");
 const { bookJiffyShipment, extractJiffyErrorMessage } = require("./couriers.controller");
 const { assignPickupManifest } = require("../../../Orders/scheduledPickup.controller");
 
-const revertOrderToNew = async (orderId) => {
-  try {
-    await Order.updateOne({ _id: orderId, status: "processing" }, { $set: { status: "new" } });
-  } catch (revertErr) {
-    console.error("[Jiffy bulk] Failed to revert order status after failure:", revertErr.message);
-  }
-};
-
 const createOrderJiffy = async (
   serviceDetails,
   orderId,
@@ -23,15 +15,19 @@ const createOrderJiffy = async (
   charges,
   priceBreakup
 ) => {
-  // Atomically lock the order — without this, two concurrent bulk-ship calls
-  // for the same order could both pass and double-book/double-charge.
-  const currentOrder = await Order.findOneAndUpdate(
-    { _id: orderId, status: "new" },
-    { $set: { status: "processing" } },
-    { new: true }
-  );
+  // This is only ever called from newBulkOrders.controller.js's
+  // callProviderWithRetry, which already atomically claims the order
+  // (status: "new" -> "processing") once, up front, before trying each
+  // eligible courier in turn. Do NOT re-claim or revert status here: if this
+  // courier fails, the order must stay "processing" so the next courier in
+  // the same fallback attempt can still be tried — a competing claim/revert
+  // here previously made every courier after the first one in the list fail
+  // with a false "already processing" error. The outer loop is solely
+  // responsible for resetting status back to "new" once all couriers are
+  // exhausted.
+  const currentOrder = await Order.findById(orderId);
   if (!currentOrder) {
-    return { success: false, message: "Shipment already created or order is being processed." };
+    return { success: false, message: "Order not found" };
   }
 
   try {
@@ -44,23 +40,19 @@ const createOrderJiffy = async (
     ]);
 
     if (!user) {
-      await revertOrderToNew(orderId);
       return { success: false, message: "User not found" };
     }
     if (!currentWallet) {
-      await revertOrderToNew(orderId);
       return { success: false, message: "Wallet not found" };
     }
 
     const effectiveBalance = currentWallet.balance - (currentWallet.holdAmount || 0);
     const balance = effectiveBalance + (currentWallet.creditLimit || 0);
     if (balance < charges) {
-      await revertOrderToNew(orderId);
       return { success: false, message: "Insufficient Wallet Balance" };
     }
 
     if (!zone) {
-      await revertOrderToNew(orderId);
       return { success: false, message: "Pincode not serviceable" };
     }
 
@@ -79,7 +71,6 @@ const createOrderJiffy = async (
       console.log("Jiffy bulk create response:", shipmentData);
     } catch (err) {
       console.error("❌ Jiffy bulk create failed:", err.response?.data || err.message);
-      await revertOrderToNew(orderId);
       return { success: false, message: extractJiffyErrorMessage(err, "Failed to create shipment") };
     }
 
@@ -108,13 +99,14 @@ const createOrderJiffy = async (
       await currentOrder.save();
     } catch (saveErr) {
       // Jiffy already booked the shipment (we have its AWB) but Shiproxx
-      // failed to persist it — nothing committed here, so it's safe to
-      // revert and let this order be retried.
+      // failed to persist it. Do NOT revert status to "new" — Jiffy has
+      // already committed a real shipment, so letting this order be retried
+      // automatically would double-book it. Leave it "processing" and flag
+      // loudly for manual reconciliation instead.
       console.error(
         `🚨 JIFFY ORPHANED SHIPMENT (bulk) — order ${orderId} booked at Jiffy with AWB ${awb} but failed to save. Manual reconciliation required.`,
         saveErr.message
       );
-      await revertOrderToNew(orderId);
       return { success: false, message: `Shipment was booked with the courier (AWB ${awb}) but could not be saved — please contact support.` };
     }
 
@@ -163,7 +155,6 @@ const createOrderJiffy = async (
     };
   } catch (error) {
     console.error("❌ Jiffy bulk shipment error:", error.response?.data || error.message);
-    await revertOrderToNew(orderId);
     return {
       success: false,
       message: extractJiffyErrorMessage(error, "Failed to create shipment"),

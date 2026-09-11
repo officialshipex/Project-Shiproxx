@@ -391,11 +391,26 @@ const createShiprocketShipment = async ({
         continue;
       }
 
-      console.error("Shiprocket Creation Error:", error.response?.data || error.message);
+      const errData = error.response?.data;
+      console.error("Shiprocket Creation Error:", errData || error.message);
+
+      // Shiprocket's top-level `message` is too generic to act on — the
+      // useful detail is in `errors`, a { field: [reasons] } map. Fold it in
+      // so the UI shows e.g. "Oops! Invalid Data. — billing_email: The
+      // billing email must be a valid email address." instead of just
+      // "Invalid Data".
+      let detail = errData?.message || error.message;
+      if (errData?.errors && typeof errData.errors === "object") {
+        const fieldMessages = Object.entries(errData.errors)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(", ") : msgs}`)
+          .join("; ");
+        if (fieldMessages) detail = `${detail} — ${fieldMessages}`;
+      }
+
       return {
         success: false,
-        message: "Error creating shipment",
-        error: error.response?.data?.message || error.message,
+        message: detail,
+        error: detail,
       };
     }
   }

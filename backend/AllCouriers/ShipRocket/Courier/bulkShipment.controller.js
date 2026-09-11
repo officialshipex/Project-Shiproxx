@@ -118,7 +118,7 @@ const createShipmentFunctionShipRocket = async (
       billing_pincode: String(currentOrder.pickupAddress.pinCode),
       billing_state: currentOrder.pickupAddress.state,
       billing_country: "India",
-      billing_email: currentOrder.pickupAddress.email || user.email || SHIPROCKET_EMAIL,
+      billing_email: currentOrder.pickupAddress.email || SHIPROCKET_EMAIL,
       billing_phone: cleanPhone(currentOrder.pickupAddress.phoneNumber),
       shipping_is_billing: false,
       shipping_customer_name: receiverName.first,
@@ -200,8 +200,23 @@ const createShipmentFunctionShipRocket = async (
 
     return { status: 201, message: "Shipment Created Successfully", waybill: awb_number, orderId: currentOrder.orderId };
   } catch (error) {
-    console.error("ShipRocket Bulk Shipment Error:", error.response?.data || error.message);
-    return { status: 500, error: "Internal Server Error", message: error.response?.data?.message || error.message };
+    const errData = error.response?.data;
+    console.error("ShipRocket Bulk Shipment Error:", errData || error.message);
+
+    // Shiprocket's top-level `message` (e.g. "Oops! Invalid Data.") is too
+    // generic for a seller to act on — the actually useful detail is in
+    // `errors`, a { field: [reasons] } map. Fold it into the message so the
+    // UI shows e.g. "Oops! Invalid Data. — billing_email: The billing email
+    // must be a valid email address." instead of just "Invalid Data".
+    let message = errData?.message || error.message;
+    if (errData?.errors && typeof errData.errors === "object") {
+      const fieldMessages = Object.entries(errData.errors)
+        .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(", ") : msgs}`)
+        .join("; ");
+      if (fieldMessages) message = `${message} — ${fieldMessages}`;
+    }
+
+    return { status: 500, error: "Internal Server Error", message };
   }
 };
 

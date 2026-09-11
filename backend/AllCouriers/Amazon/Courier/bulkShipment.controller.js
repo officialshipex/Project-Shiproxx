@@ -47,7 +47,7 @@ const createShipmentAmazon = async (
     );
     if (!zone) {
       // console.log("sone");
-      return res.status(400).json({ message: "Pincode not serviceable" });
+      return { success: false, message: "Pincode not serviceable" };
     }
 
     const eddData = await estimatedDeliveryDate.findOne({
