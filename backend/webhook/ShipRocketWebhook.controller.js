@@ -143,7 +143,7 @@ const ShipRocketWebhook = async (req, res) => {
       case 60: // FC Allocated
       case 61: // Picklist Generated
       case 72: // PACKED EXCEPTION
-        order.status = "Booked";
+        order.status = "Ready To Ship";
         break;
 
       case 6:  // Shipped
