@@ -151,6 +151,27 @@ const bookJiffyShipment = async (currentOrder, courierCode) => {
   return response.data.data;
 };
 
+// ─── Helper: GET /shipments/awb/:awb/label ──────────────────────────────────
+// Jiffy's /shipments response doesn't include a label — it must be fetched
+// separately, keyed by AWB number, once the shipment is booked. Only called
+// for services whose name marks them as Amazon-fulfilled ("ATS" — Amazon's
+// own carrier code), so the seller downloads Amazon's original label
+// instead of Shiproxx's generated one.
+const fetchJiffyLabelUrl = async (awbNumber) => {
+  try {
+    const token = await getJiffyToken();
+    if (!token) return null;
+    const response = await axios.get(`${JIFFY_BASE_URL}/shipments/awb/${awbNumber}/label`, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 15000,
+    });
+    return response.data?.data?.pdf_url || null;
+  } catch (error) {
+    console.error("Jiffy ATS label fetch failed:", error.response?.data || error.message);
+    return null;
+  }
+};
+
 // ─── Main: Create Jiffy Shipment (single order via HTTP) ───────────────────
 const createJiffyShipment = async (req, res) => {
   const session = await mongoose.startSession();
@@ -235,6 +256,15 @@ const createJiffyShipment = async (req, res) => {
     const balanceToDeduct = parseFloat(finalCharges) || 0;
     const providerWord = (shipmentData.courier_name || courierServiceName).split(" ")[0];
 
+    // Amazon-fulfilled services booked through Jiffy are named with "ATS"
+    // (Amazon's own carrier code) by convention — fetch Jiffy's real label
+    // for those so the seller downloads Amazon's original label instead of
+    // Shiproxx's generated one. Every other Jiffy courier is unaffected.
+    let atsLabelUrl = null;
+    if (/ats/i.test(courierServiceName || "")) {
+      atsLabelUrl = await fetchJiffyLabelUrl(awb);
+    }
+
     // Order status, wallet debit, and the ledger entry all commit together —
     // if any one fails the whole transaction aborts and the order reverts to
     // "new", so a booked shipment can never end up unpaid (or a wallet debited
@@ -257,6 +287,7 @@ const createJiffyShipment = async (req, res) => {
               zone: zone.zone,
               estimatedDeliveryDate: estimatedDeliveryDate || "",
               priceBreakup,
+              ...(atsLabelUrl ? { label: atsLabelUrl } : {}),
             },
             $push: {
               tracking: {
@@ -420,4 +451,5 @@ module.exports = {
   bookJiffyShipment,
   buildJiffyShipmentPayload,
   extractJiffyErrorMessage,
+  fetchJiffyLabelUrl,
 };

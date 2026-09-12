@@ -44,6 +44,27 @@ const ensureAddress = (addr) => {
   return clean;
 };
 
+// Fetches Shiprocket's own generated label PDF for a shipment. Only called
+// for services whose name marks them as Amazon-fulfilled ("ATS" — Amazon's
+// own carrier code), so the seller downloads Amazon's original label
+// instead of Shiproxx's generated one. Every other Shiprocket courier is
+// unaffected and keeps using the generated label as before.
+const fetchShiprocketLabelUrl = async (shipment_id) => {
+  try {
+    const token = await getAuthToken();
+    if (!token) return null;
+    const response = await axios.get(`${BASE_URL}/courier/generate/label`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { shipment_id },
+      timeout: 15000,
+    });
+    return response.data?.label_url || null;
+  } catch (error) {
+    console.error("Shiprocket ATS label fetch failed:", error.response?.data || error.message);
+    return null;
+  }
+};
+
 const createShiprocketShipment = async ({
   id,
   provider,
@@ -301,6 +322,11 @@ const createShiprocketShipment = async ({
         };
       }
 
+      let atsLabelUrl = null;
+      if (/ats/i.test(courierServiceName || "")) {
+        atsLabelUrl = await fetchShiprocketLabelUrl(shipment_id);
+      }
+
       // Update Order & Wallet
       await Promise.all([
         Order.findByIdAndUpdate(
@@ -318,6 +344,7 @@ const createShiprocketShipment = async ({
               zone: zone.zone,
               estimatedDeliveryDate: estimateDate,
               priceBreakup,
+              ...(atsLabelUrl ? { label: atsLabelUrl } : {}),
             },
             $push: {
               tracking: {

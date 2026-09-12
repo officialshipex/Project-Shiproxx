@@ -8,7 +8,7 @@ const WalletTransaction = require("../../../models/WalletTransaction.model");
 const { getZone } = require("../../../Rate/zoneManagementController");
 const { assignPickupManifest } = require("../../../Orders/scheduledPickup.controller");
 const { getAuthToken } = require("../Authorize/shiprocket.controller");
-const { addPickupLocation, requestShipmentPickup } = require("./couriers.controller");
+const { addPickupLocation, requestShipmentPickup, generateLabel } = require("./couriers.controller");
 const axios = require("axios");
 
 const BASE_URL = `${process.env.SHIPROCKET_URL}/v1/external`;
@@ -151,13 +151,26 @@ const createShipmentFunctionShipRocket = async (
 
     const awb_number = awbResult.awb_code;
     const courier_name = awbResult.courier_name || null;
+    const bookedServiceName = serviceDetails.name || serviceDetails.courierProviderServiceName;
+
+    // Amazon-fulfilled services booked through Shiprocket are named with
+    // "ATS" (Amazon's own carrier code) by convention — fetch Shiprocket's
+    // real label for those so the seller downloads Amazon's original label
+    // instead of Shiproxx's generated one. Every other Shiprocket courier is
+    // unaffected.
+    let atsLabelUrl = null;
+    if (/ats/i.test(bookedServiceName || "")) {
+      atsLabelUrl = await generateLabel(shipment_id);
+    }
+
     currentOrder.status = "Booked";
     currentOrder.awb_number = awb_number;
     currentOrder.shipment_id = String(shipment_id);
     currentOrder.provider = courier_name || "Shiprocket";
     currentOrder.partner = "Shiprocket";
     currentOrder.totalFreightCharges = charges;
-    currentOrder.courierServiceName = serviceDetails.name || serviceDetails.courierProviderServiceName;
+    currentOrder.courierServiceName = bookedServiceName;
+    if (atsLabelUrl) currentOrder.label = atsLabelUrl;
     currentOrder.zone = zone.zone;
     currentOrder.estimatedDeliveryDate = estimatedDeliveryDate || null;
     currentOrder.priceBreakup = priceBreakup;

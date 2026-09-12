@@ -4,7 +4,7 @@ const Wallet = require("../../../models/wallet");
 const WalletTransaction = require("../../../models/WalletTransaction.model");
 const CourierService = require("../../../models/CourierService.Schema");
 const { getZone } = require("../../../Rate/zoneManagementController");
-const { bookJiffyShipment, extractJiffyErrorMessage } = require("./couriers.controller");
+const { bookJiffyShipment, extractJiffyErrorMessage, fetchJiffyLabelUrl } = require("./couriers.controller");
 const { assignPickupManifest } = require("../../../Orders/scheduledPickup.controller");
 
 const createOrderJiffy = async (
@@ -78,6 +78,15 @@ const createOrderJiffy = async (
     const finalCharges = parseFloat(charges) || 0;
     const providerWord = (shipmentData.courier_name || serviceDetails.name).split(" ")[0];
 
+    // Amazon-fulfilled services booked through Jiffy are named with "ATS"
+    // (Amazon's own carrier code) by convention — fetch Jiffy's real label
+    // for those so the seller downloads Amazon's original label instead of
+    // Shiproxx's generated one. Every other Jiffy courier is unaffected.
+    let atsLabelUrl = null;
+    if (/ats/i.test(serviceDetails?.name || "")) {
+      atsLabelUrl = await fetchJiffyLabelUrl(awb);
+    }
+
     currentOrder.status = "Booked";
     currentOrder.awb_number = awb;
     currentOrder.shipment_id = String(shipmentData.id || "");
@@ -86,6 +95,7 @@ const createOrderJiffy = async (
     currentOrder.shipmentCreatedAt = new Date();
     currentOrder.totalFreightCharges = finalCharges;
     currentOrder.courierServiceName = serviceDetails.name;
+    if (atsLabelUrl) currentOrder.label = atsLabelUrl;
     currentOrder.zone = zone.zone;
     currentOrder.priceBreakup = priceBreakup;
     currentOrder.tracking.push({

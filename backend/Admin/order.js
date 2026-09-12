@@ -44,7 +44,16 @@ const filterOrdersForEmployee = async (req, res) => {
       const start = new Date(startDate);
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
-      filter.createdAt = { $gte: start, $lte: end };
+      // "New" orders haven't been booked yet (shipmentCreatedAt is unset),
+      // so they must stay filtered on createdAt. Every other tab represents
+      // already-booked shipments, where the date filter should apply to
+      // "Booked On" (shipmentCreatedAt) instead.
+      const statusList = status
+        ? (Array.isArray(status) ? status : status.split(",").map((s) => s.trim()))
+        : [];
+      const isNewStatus = statusList.length === 0 || statusList.includes("new");
+      const dateField = isNewStatus ? "createdAt" : "shipmentCreatedAt";
+      filter[dateField] = { $gte: start, $lte: end };
     }
 
     if (paymentType) filter["paymentDetails.method"] = paymentType;

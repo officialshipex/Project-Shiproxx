@@ -32,6 +32,109 @@ const verifyShopifyHmac = (req, storeClientSecret) => {
   }
 };
 
+// The "Store URL" field is free text, and sellers frequently paste what
+// their browser shows them — Shopify's newer admin UI lives at
+// admin.shopify.com/store/<handle>, not <handle>.myshopify.com — or just
+// the bare handle with no domain at all. admin.shopify.com is the
+// interactive merchant UI and sits behind a Cloudflare bot/JS challenge for
+// anything that isn't a real browser session, so pointing server-to-server
+// calls (OAuth token exchange, webhook registration) at it returns an HTML
+// "Verifying your connection..." page instead of JSON — that's the "Failed
+// to generate Shopify access token" error with HTML in it. Always resolve
+// to the canonical <handle>.myshopify.com API host before using a Shopify
+// storeURL for anything.
+const normalizeShopifyStoreURL = (rawURL) => {
+  let cleaned = String(rawURL || "")
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/+$/, "");
+
+  // e.g. "admin.shopify.com/store/kwvcb0-hh" or
+  // "admin.shopify.com/store/kwvcb0-hh/settings/whatever"
+  const adminMatch = cleaned.match(/^admin\.shopify\.com\/store\/([^/]+)/i);
+  if (adminMatch) {
+    return `${adminMatch[1]}.myshopify.com`.toLowerCase();
+  }
+
+  // Drop any trailing path, keep just the host
+  cleaned = cleaned.split("/")[0];
+
+  // Bare shop handle with no dots, e.g. "kwvcb0-hh"
+  if (cleaned && !cleaned.includes(".")) {
+    return `${cleaned}.myshopify.com`.toLowerCase();
+  }
+
+  return cleaned.toLowerCase();
+};
+
+// Shopify's Client Credentials grant (POST /admin/oauth/access_token with
+// the store's Client ID + Client Secret) is how a Custom App gets its
+// access token — and that token is short-lived (observed expires_in
+// ~86399s, i.e. under 24h), not a one-time/permanent credential. There's no
+// separate "refresh token" step; getting a new one is the exact same call.
+const generateShopifyAccessToken = async (storeURL, storeClientId, storeClientSecret) => {
+  const response = await axios.post(
+    `https://${storeURL}/admin/oauth/access_token`,
+    {
+      grant_type: "client_credentials",
+      client_id: storeClientId,
+      client_secret: storeClientSecret,
+    },
+    { headers: { "Content-Type": "application/json" } }
+  );
+  const { access_token, expires_in } = response.data || {};
+  if (!access_token) throw new Error("Shopify did not return an access_token");
+  return {
+    accessToken: access_token,
+    // Shave a safety buffer off Shopify's own expiry — see
+    // SHOPIFY_TOKEN_REFRESH_BUFFER_MS below for why.
+    expiresAt: new Date(Date.now() + (expires_in || 86399) * 1000),
+  };
+};
+
+const SHOPIFY_TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000; // refresh 5 min before actual expiry
+
+// Returns a valid Shopify access token for this specific store, refreshing
+// it first if it's missing or within SHOPIFY_TOKEN_REFRESH_BUFFER_MS of
+// expiring. Every Shopify API call site should call this immediately
+// before making its request rather than reading store.storeAccessToken
+// directly — that's what keeps this self-healing instead of requiring a
+// seller to notice and re-paste a token roughly once a day. Operates only
+// on the single `store` document passed in (keyed by its own _id), so
+// having multiple Shopify channels connected refreshes each independently
+// with no cross-contamination.
+const getValidShopifyAccessToken = async (store) => {
+  const hasValidToken =
+    store.storeAccessToken &&
+    store.storeAccessTokenExpiresAt &&
+    new Date(store.storeAccessTokenExpiresAt).getTime() - Date.now() > SHOPIFY_TOKEN_REFRESH_BUFFER_MS;
+
+  if (hasValidToken) return store.storeAccessToken;
+
+  if (!store.storeClientId || !store.storeClientSecret) {
+    throw new Error(`Store ${store.storeURL} has no Client ID/Secret on file — cannot refresh its Shopify access token.`);
+  }
+
+  console.log(`🔄 Refreshing Shopify access token for store ${store.storeURL}...`);
+  const { accessToken, expiresAt } = await generateShopifyAccessToken(
+    store.storeURL,
+    store.storeClientId,
+    store.storeClientSecret
+  );
+
+  await AllChannel.findByIdAndUpdate(store._id, {
+    $set: { storeAccessToken: accessToken, storeAccessTokenExpiresAt: expiresAt },
+  });
+  console.log(`✅ Shopify access token refreshed for store ${store.storeURL}, expires at ${expiresAt.toISOString()}`);
+
+  // Keep the in-memory doc consistent in case the caller keeps using
+  // `store` afterward instead of re-fetching it.
+  store.storeAccessToken = accessToken;
+  store.storeAccessTokenExpiresAt = expiresAt;
+
+  return accessToken;
+};
+
 const createWebhook = async (storeURL, storeAccessToken) => {
   const webhookURL = "https://api.shiproxx.com/v1/channel/webhook/orders";
   const webhookTopic = "orders/create";
@@ -157,7 +260,7 @@ const fetchExistingOrders = async (req, res) => {
     }
     const pickupAddressData = primaryPickup?.pickupAddress || DUMMY_PICKUP_ADDRESS;
 
-    const accessToken = channel.storeAccessToken;
+    const accessToken = await getValidShopifyAccessToken(channel);
     const storeURL = channel.storeURL;
 
     let allOrders = [];
@@ -368,7 +471,6 @@ const webhookhandler = async (req, res) => {
     const shopifyOrder = req.body;
     const compositeOrderId = `${storeURL}-${shopifyOrder.id}`;
     const lineItems = shopifyOrder.line_items || [];
-    const firstLineItemId = lineItems[0]?.id;
 
     // Check for existing order using compositeOrderId
     const existingOrder = await Order.findOne({ compositeOrderId });
@@ -392,11 +494,12 @@ const webhookhandler = async (req, res) => {
       totalWidth = 10,
       totalHeight = 10;
 
+    const shopifyAccessTokenForProducts = lineItems.length > 0 ? await getValidShopifyAccessToken(user) : null;
     for (const item of lineItems) {
       const productInfo = await getProductDetails(
         item.product_id,
         storeURL,
-        user.storeAccessToken
+        shopifyAccessTokenForProducts
       );
 
       totalWeight += productInfo.weight;
@@ -415,7 +518,7 @@ const webhookhandler = async (req, res) => {
       userId: user.userId,
       orderId: internalOrderId,
       compositeOrderId, // Ensure uniqueness
-      channelId: firstLineItemId,
+      channelId: shopifyOrder.id,
       channel: "Shopify",
       storeUrl: storeURL,
       pickupAddress: {
@@ -504,7 +607,7 @@ const storeAllChannelDetails = async (req, res) => {
     // x-shopify-shop-domain header on every webhook call. Without this, a
     // stray trailing slash or copy-pasted "https://" silently breaks
     // inbound order sync forever even though the store connects fine.
-    const storeURL = (rawStoreURL || "")
+    let storeURL = (rawStoreURL || "")
       .trim()
       .replace(/^https?:\/\//i, "")
       .replace(/\/+$/, "")
@@ -527,6 +630,51 @@ const storeAllChannelDetails = async (req, res) => {
       return res.status(400).json({ message: "Store URL already exists" });
     }
 
+    // ✅ Generate the Shopify access token ourselves from the Client
+    // ID/Secret the seller provides — a Custom App's token is a Client
+    // Credentials grant we can request directly, so there's no reason to
+    // ask the seller to separately generate and paste one in (and it's
+    // short-lived anyway, see getValidShopifyAccessToken).
+    let shopifyAccessToken;
+    let shopifyAccessTokenExpiresAt;
+    if (channel === "Shopify") {
+      // Sellers mix up which field holds the actual shop handle — some paste
+      // it into Store Name and leave an unrelated/stale value in Store URL
+      // (or a browser-copied admin.shopify.com/store/<handle> link). Resolve
+      // both fields to canonical myshopify domains and try Store URL first,
+      // falling back to Store Name before giving up, so a mislabeled field
+      // doesn't block the connection.
+      const primaryDomain = normalizeShopifyStoreURL(storeURL);
+      const candidateDomains = [primaryDomain];
+      const storeNameDomain = normalizeShopifyStoreURL(storeName);
+      if (storeNameDomain && storeNameDomain !== primaryDomain) {
+        candidateDomains.push(storeNameDomain);
+      }
+
+      let tokenErr;
+      for (const domain of candidateDomains) {
+        try {
+          const tokenResult = await generateShopifyAccessToken(domain, storeClientId, storeClientSecret);
+          shopifyAccessToken = tokenResult.accessToken;
+          shopifyAccessTokenExpiresAt = tokenResult.expiresAt;
+          storeURL = domain;
+          tokenErr = null;
+          break;
+        } catch (err) {
+          tokenErr = err;
+        }
+      }
+
+      if (tokenErr) {
+        console.error("❌ Failed to generate Shopify access token:", tokenErr.response?.data || tokenErr.message);
+        return res.status(400).json({
+          success: false,
+          message: "Failed to authenticate with Shopify using the provided Store URL, Client ID, and Client Secret. Please verify these are correct.",
+          error: tokenErr.response?.data || tokenErr.message,
+        });
+      }
+    }
+
     // ✅ Register Webhook
     // Webhook registration must fully succeed before we save the channel —
     // saving a channel with no webhookId leaves it looking "connected" while
@@ -534,13 +682,13 @@ const storeAllChannelDetails = async (req, res) => {
     let webHook;
     let webhookId;
     if (channel === "Shopify") {
-      webHook = await createWebhook(storeURL, storeAccessToken);
+      webHook = await createWebhook(storeURL, shopifyAccessToken);
       console.log("✅ Webhook response:", webHook);
       if (webHook?.error) {
         console.error("❌ Shopify webhook registration failed:", webHook.error);
         return res.status(400).json({
           success: false,
-          message: "Failed to register the Shopify webhook. Please check your Store URL, Client ID, Client Secret, and Access Token.",
+          message: "Failed to register the Shopify webhook. Please check your Store URL, Client ID, and Client Secret.",
           error: webHook.error,
         });
       }
@@ -577,7 +725,11 @@ const storeAllChannelDetails = async (req, res) => {
       storeURL,
       storeClientId,
       storeClientSecret,
-      storeAccessToken,
+      // WooCommerce still uses whatever the seller pasted in (its Consumer
+      // Key/Secret double as the credential directly, no token-exchange
+      // step); Shopify always uses the token we just generated ourselves.
+      storeAccessToken: channel === "Shopify" ? shopifyAccessToken : storeAccessToken,
+      storeAccessTokenExpiresAt: channel === "Shopify" ? shopifyAccessTokenExpiresAt : undefined,
       orderSyncFrequency,
       paymentStatus: {
         COD: paymentStatusCOD || "",
@@ -609,11 +761,6 @@ const storeAllChannelDetails = async (req, res) => {
 };
 
 
-// Statuses that create the FIRST Shopify fulfillment for an order (mirrors
-// the manual fulfillOrder flow below — COD/payment gate, location lookup,
-// tracking_info on creation).
-const SHOPIFY_CREATE_FULFILLMENT_STATUSES = ["Booked", "Ready To Ship", "Pickup Completed"];
-
 // Shopify fulfillment events only accept this fixed vocabulary — there's no
 // native "RTO" concept, so RTO/undelivered/lost map to "failure" with the
 // real Shiproxx status preserved in the order's tracking history (not lost,
@@ -644,7 +791,8 @@ const markShopifyOrderAsShipped = async (
   orderId,
   trackingNumber,
   courierName,
-  shiproxxStatus
+  shiproxxStatus,
+  notifyCustomer = true
 ) => {
   try {
     const store = await AllChannel.findOne({
@@ -670,7 +818,7 @@ const markShopifyOrderAsShipped = async (
       return;
     }
 
-    const accessToken = store.storeAccessToken;
+    const accessToken = await getValidShopifyAccessToken(store);
     const baseUrl = `https://${store.storeURL}/admin/api/2024-04`;
     const authHeaders = { headers: { "X-Shopify-Access-Token": accessToken, "Content-Type": "application/json" } };
 
@@ -687,8 +835,18 @@ const markShopifyOrderAsShipped = async (
 
     // --- First shipment scan: create the fulfillment ---
     if (!existingFulfillment) {
-      if (!SHOPIFY_CREATE_FULFILLMENT_STATUSES.includes(shiproxxStatus)) {
-        console.log(`ℹ️ No Shopify fulfillment exists yet for order ${shopifyOrderId} and status "${shiproxxStatus}" doesn't create one — skipping.`);
+      // Anything before booking, or a cancelled order, has nothing to
+      // fulfill. Every other status — including a status that's already
+      // progressed well past "Booked" (e.g. a backfill call for an order
+      // that's already Delivered, or a courier whose very first webhook
+      // update skips straight to a later stage) — should still get a
+      // fulfillment created now rather than being silently skipped, since
+      // relying on a status landing exactly on "Booked"/"Ready To
+      // Ship"/"Pickup Completed" made this permanently miss orders whose
+      // first-ever update arrived at any other stage.
+      const NON_FULFILLABLE_STATUSES = ["new", "processing", "Cancelled"];
+      if (NON_FULFILLABLE_STATUSES.includes(shiproxxStatus)) {
+        console.log(`ℹ️ Shiproxx status "${shiproxxStatus}" doesn't warrant creating a Shopify fulfillment yet — skipping.`);
         return;
       }
       if (shopifyOrder.fulfillment_status === "fulfilled") return; // already fulfilled elsewhere
@@ -699,38 +857,69 @@ const markShopifyOrderAsShipped = async (
         return;
       }
 
-      let locationId;
+      // Shopify deprecated POST /orders/{id}/fulfillments.json (it now
+      // returns 406 under current API versions) in favor of the
+      // FulfillmentOrder-based flow: look up the order's open fulfillment
+      // order(s), then create the fulfillment against that, with no
+      // location_id needed — the fulfillment order already carries it.
+      let fulfillmentOrderId;
       try {
-        const locRes = await axios.get(`${baseUrl}/locations.json`, authHeaders);
-        locationId = locRes.data.locations?.[0]?.id;
+        const foRes = await axios.get(`${baseUrl}/orders/${shopifyOrderId}/fulfillment_orders.json`, authHeaders);
+        const fulfillmentOrders = foRes.data?.fulfillment_orders || [];
+        const openFulfillmentOrder = fulfillmentOrders.find((fo) => fo.status === "open") || fulfillmentOrders[0];
+        fulfillmentOrderId = openFulfillmentOrder?.id;
       } catch (err) {
-        console.error(`❌ Error fetching Shopify locations for ${shopifyOrderId}:`, err.response?.data || err.message);
+        console.error(`❌ Error fetching fulfillment orders for ${shopifyOrderId}:`, err.response?.data || err.message);
         return;
       }
-      if (!locationId) {
-        console.error(`❌ No Shopify location found for store ${storeUrl}.`);
+      if (!fulfillmentOrderId) {
+        console.error(`❌ No fulfillment order found for Shopify order ${shopifyOrderId}.`);
         return;
       }
 
+      let newFulfillmentId;
       try {
-        await axios.post(
-          `${baseUrl}/orders/${shopifyOrderId}/fulfillments.json`,
+        const fulfillRes = await axios.post(
+          `${baseUrl}/fulfillments.json`,
           {
             fulfillment: {
-              notify_customer: true,
-              location_id: locationId,
+              notify_customer: notifyCustomer,
               tracking_info: {
                 number: trackingNumber,
                 company: courierName,
                 url: `https://www.shiproxx.com/track/${trackingNumber}`,
               },
+              line_items_by_fulfillment_order: [
+                { fulfillment_order_id: fulfillmentOrderId },
+              ],
             },
           },
           authHeaders
         );
+        newFulfillmentId = fulfillRes.data?.fulfillment?.id;
         console.log(`✅ Shopify order ${shopifyOrderId} fulfilled (${shiproxxStatus}).`);
       } catch (err) {
         console.error(`❌ Error creating fulfillment for Shopify order ${shopifyOrderId}:`, err.response?.data || err.message);
+        return;
+      }
+
+      // If the order has already progressed past "just booked" (e.g. this
+      // IS the backfill call for an already-Delivered order), immediately
+      // post the matching fulfillment event too — otherwise Shopify stays
+      // parked at the initial "fulfilled" state forever, since there's no
+      // future status change left to trigger the update.
+      const initialEventStatus = shiproxxToShopifyFulfillmentEvent(shiproxxStatus);
+      if (newFulfillmentId && initialEventStatus) {
+        try {
+          await axios.post(
+            `${baseUrl}/fulfillments/${newFulfillmentId}/events.json`,
+            { event: { status: initialEventStatus } },
+            authHeaders
+          );
+          console.log(`✅ Shopify fulfillment ${newFulfillmentId} event posted: ${shiproxxStatus} → ${initialEventStatus}`);
+        } catch (err) {
+          console.error(`❌ Error posting initial fulfillment event for Shopify order ${shopifyOrderId}:`, err.response?.data || err.message);
+        }
       }
       return;
     }
@@ -796,7 +985,13 @@ const fulfillOrder = async (req, res) => {
     }
 
     const shopifyStore = channel.storeURL;
-    const accessToken = channel.storeAccessToken;
+    let accessToken;
+    try {
+      accessToken = await getValidShopifyAccessToken(channel);
+    } catch (tokenErr) {
+      console.error("Error obtaining Shopify access token:", tokenErr.response?.data || tokenErr.message);
+      return res.status(500).json({ message: "Failed to authenticate with Shopify" });
+    }
 
     // Fetch order details
     let orderDetails;
@@ -836,42 +1031,47 @@ const fulfillOrder = async (req, res) => {
     }
 
     // Fetch store locations
-    let locationId;
+    // Shopify deprecated POST /orders/{id}/fulfillments.json (it now
+    // returns 406 under current API versions) in favor of the
+    // FulfillmentOrder-based flow — see markShopifyOrderAsShipped above for
+    // the same fix applied to the automatic push-back path.
+    let fulfillmentOrderId;
     try {
-      const shopData = await axios.get(
-        `https://${shopifyStore}/admin/api/2024-04/locations.json`,
-        {
-          headers: { "X-Shopify-Access-Token": accessToken },
-        }
+      const foRes = await axios.get(
+        `https://${shopifyStore}/admin/api/2024-04/orders/${id}/fulfillment_orders.json`,
+        { headers: { "X-Shopify-Access-Token": accessToken } }
       );
-      locationId = shopData.data.locations?.[0]?.id;
-      console.log("location", locationId);
+      const fulfillmentOrders = foRes.data?.fulfillment_orders || [];
+      const openFulfillmentOrder = fulfillmentOrders.find((fo) => fo.status === "open") || fulfillmentOrders[0];
+      fulfillmentOrderId = openFulfillmentOrder?.id;
     } catch (error) {
-      console.error("Error fetching locations:", error.response?.data || error.message);
+      console.error("Error fetching fulfillment orders:", error.response?.data || error.message);
       return res
         .status(500)
-        .json({ message: "Error fetching locations from Shopify" });
+        .json({ message: "Error fetching fulfillment orders from Shopify" });
     }
 
-    if (!locationId) {
+    if (!fulfillmentOrderId) {
       return res
         .status(400)
-        .json({ message: "No location ID found for the store" });
+        .json({ message: "No fulfillment order found for this Shopify order" });
     }
 
     // Fulfill the order
     try {
       const fulfillmentResponse = await axios.post(
-        `https://${shopifyStore}/admin/api/2024-04/orders/${id}/fulfillments.json`,
+        `https://${shopifyStore}/admin/api/2024-04/fulfillments.json`,
         {
           fulfillment: {
             notify_customer: true, // Notify customer via email
-            location_id: locationId,
             tracking_info: {
               number: awb_number,
               company: provider,
               url: `https://www.shiproxx.com/track/${awb_number}`, // Adjust based on courier tracking link
             },
+            line_items_by_fulfillment_order: [
+              { fulfillment_order_id: fulfillmentOrderId },
+            ],
           },
         },
         {
@@ -946,21 +1146,22 @@ const updateChannel = async (req, res) => {
     updatedData.syncFromDate = new Date(req.body.syncDate);
   }
 
-  // Same normalization as storeAllChannelDetails — an edited storeURL must
-  // stay in the bare canonical domain form or inbound webhook lookups break.
-  if (typeof updatedData.storeURL === "string") {
-    updatedData.storeURL = updatedData.storeURL
-      .trim()
-      .replace(/^https?:\/\//i, "")
-      .replace(/\/+$/, "")
-      .toLowerCase();
-  }
-
   try {
     // Check if the channel exists
     const existingChannel = await AllChannel.findById(id);
     if (!existingChannel) {
       return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // Same normalization as storeAllChannelDetails — an edited storeURL must
+    // stay in the bare canonical domain form or inbound webhook lookups
+    // break. For Shopify, also resolve admin.shopify.com links / bare
+    // handles to the canonical <handle>.myshopify.com API host.
+    if (typeof updatedData.storeURL === "string") {
+      const channelType = updatedData.channel || existingChannel.channel;
+      updatedData.storeURL = channelType === "Shopify"
+        ? normalizeShopifyStoreURL(updatedData.storeURL)
+        : updatedData.storeURL.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "").toLowerCase();
     }
 
     // Update the channel details
@@ -979,22 +1180,37 @@ const updateChannel = async (req, res) => {
     let webhookError = null;
 
     if (updatedChannel.channel === "Shopify") {
-      const webHook = await createWebhook(updatedChannel.storeURL, updatedChannel.storeAccessToken);
-      if (webHook?.error) {
+      let freshToken;
+      try {
+        // Reuses the still-valid stored token, or regenerates it from
+        // whatever Client ID/Secret now sit on the document (e.g. the
+        // seller just corrected them) — the seller never needs to supply
+        // an access token here either.
+        freshToken = await getValidShopifyAccessToken(updatedChannel);
+      } catch (tokenErr) {
         webhookStatus = "failed";
-        webhookError = webHook.error;
-        console.error(`❌ Shopify webhook (re-)registration failed for channel ${id}:`, webHook.error);
-      } else if (webHook?.webhook?.id) {
-        updatedChannel = await AllChannel.findByIdAndUpdate(
-          id,
-          { $set: { webhookId: webHook.webhook.id } },
-          { new: true }
-        );
-        webhookStatus = "ok";
-      } else {
-        webhookStatus = "failed";
-        webhookError = "Shopify returned no webhook id.";
-        console.error(`❌ Shopify webhook call for channel ${id} returned no id:`, webHook);
+        webhookError = tokenErr.response?.data || tokenErr.message;
+        console.error(`❌ Failed to obtain Shopify access token for channel ${id}:`, webhookError);
+      }
+
+      if (freshToken) {
+        const webHook = await createWebhook(updatedChannel.storeURL, freshToken);
+        if (webHook?.error) {
+          webhookStatus = "failed";
+          webhookError = webHook.error;
+          console.error(`❌ Shopify webhook (re-)registration failed for channel ${id}:`, webHook.error);
+        } else if (webHook?.webhook?.id) {
+          updatedChannel = await AllChannel.findByIdAndUpdate(
+            id,
+            { $set: { webhookId: webHook.webhook.id } },
+            { new: true }
+          );
+          webhookStatus = "ok";
+        } else {
+          webhookStatus = "failed";
+          webhookError = "Shopify returned no webhook id.";
+          console.error(`❌ Shopify webhook call for channel ${id} returned no id:`, webHook);
+        }
       }
     } else if (updatedChannel.channel === "WooCommerce") {
       try {

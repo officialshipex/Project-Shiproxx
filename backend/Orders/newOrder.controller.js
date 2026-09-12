@@ -441,7 +441,16 @@ const getOrders = async (req, res) => {
       const start = new Date(startDate);
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
-      andConditions.push({ createdAt: { $gte: start, $lte: end } });
+      // "New" orders haven't been booked yet (shipmentCreatedAt is unset),
+      // so they must stay filtered on createdAt. Every other tab represents
+      // already-booked shipments, where the client wants the date filter to
+      // apply to "Booked On" (shipmentCreatedAt) instead.
+      const statusList = status
+        ? (Array.isArray(status) ? status : status.split(",").map((s) => s.trim()))
+        : [];
+      const isNewStatus = statusList.length === 0 || statusList.includes("new");
+      const dateField = isNewStatus ? "createdAt" : "shipmentCreatedAt";
+      andConditions.push({ [dateField]: { $gte: start, $lte: end } });
     }
     const filter = { $and: andConditions };
     if (pickupContactName && pickupContactName.length > 0) {
@@ -789,7 +798,15 @@ const getOrdersByNdrStatus = async (req, res) => {
       const start = new Date(req.query.startDate);
       const end = new Date(req.query.endDate);
       end.setHours(23, 59, 59, 999);
-      andConditions.push({ createdAt: { $gte: start, $lte: end } });
+      // This endpoint is shared by two different callers: every NDR tab
+      // (which always sends a real ndrStatus in `status`, e.g.
+      // "Undelivered") and the B2C "All" order tab (which sends no status at
+      // all). Only the "All" order tab is in scope for the "Booked On" date
+      // rule here — NDR's own date semantics (NDR event date) are handled
+      // separately in Admin/order.js and are left untouched.
+      const isAllOrdersTabCall = !status || status === "All";
+      const dateField = isAllOrdersTabCall ? "shipmentCreatedAt" : "createdAt";
+      andConditions.push({ [dateField]: { $gte: start, $lte: end } });
     }
 
 

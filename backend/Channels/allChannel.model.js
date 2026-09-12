@@ -29,6 +29,13 @@ const AllChannel = new mongoose.Schema({
     type: String,
     // required:true
   },
+  // Shopify's Client Credentials grant issues a short-lived token (observed
+  // ~24h) rather than a permanent one — this tracks when the currently
+  // stored storeAccessToken expires so it can be refreshed proactively
+  // instead of silently going stale. Not used by WooCommerce.
+  storeAccessTokenExpiresAt: {
+    type: Date,
+  },
   orderSyncFrequency: {
     type: String,
     enum: ["daily", "weekly", "monthly"],

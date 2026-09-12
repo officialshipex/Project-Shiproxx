@@ -5,8 +5,12 @@ const misReportSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      // Not required — an "All Users" report has no single target user.
       index: true
+    },
+    isAllUsers: {
+      type: Boolean,
+      default: false
     },
     reportType: {
       type: String,

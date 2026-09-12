@@ -30,8 +30,11 @@ exports.generateMisReport = async (req, res) => {
     const { reportType, dateFilterType, fromDate, toDate, email, userSearch } = req.body;
     const isAdminOrEmployee = req.user?.isAdmin || req.user?.adminTab || req.employee;
 
+    // Only an admin/employee can request the "All Users" combined report.
+    const isAllUsers = isAdminOrEmployee && userSearch === "ALL";
+
     let targetUserId = req.user?._id;
-    if (isAdminOrEmployee && userSearch) {
+    if (isAdminOrEmployee && userSearch && !isAllUsers) {
       if (mongoose.Types.ObjectId.isValid(userSearch)) {
         targetUserId = new mongoose.Types.ObjectId(userSearch);
       } else {
@@ -50,7 +53,8 @@ exports.generateMisReport = async (req, res) => {
     }
 
     const reportEntry = new MisReport({
-      userId: targetUserId,
+      userId: isAllUsers ? undefined : targetUserId,
+      isAllUsers,
       reportType,
       dateFilterType,
       fromDate: new Date(fromDate),
@@ -80,7 +84,10 @@ exports.generateMisReport = async (req, res) => {
         const end = new Date(toDate);
         end.setHours(23, 59, 59, 999);
 
-        const orderQuery = { userId: targetUserId };
+        // Omit the userId key entirely for "All Users" — assigning it
+        // undefined/null would still match orders with no userId at all
+        // rather than matching every user.
+        const orderQuery = isAllUsers ? {} : { userId: targetUserId };
 
         if (reportType === "Delivered") {
           orderQuery.status = "Delivered";
@@ -117,6 +124,7 @@ exports.generateMisReport = async (req, res) => {
 
         worksheet.columns = [
           { header: "User ID", key: "userId", width: 15 },
+          { header: "Email", key: "email", width: 25 },
           { header: "Order ID", key: "orderId", width: 15 },
           { header: "Booked At", key: "bookedAt", width: 20 },
           { header: "Picked At", key: "pickedAt", width: 20 },
@@ -172,10 +180,12 @@ exports.generateMisReport = async (req, res) => {
         });
         headerRow.commit();
 
-        const usersList = await User.find({}, { userId: 1 }).lean();
+        const usersList = await User.find({}, { userId: 1, email: 1 }).lean();
         const userMap = {};
+        const emailMap = {};
         usersList.forEach(u => {
           userMap[u._id.toString()] = u.userId || "N/A";
+          emailMap[u._id.toString()] = u.email || "N/A";
         });
 
         // tracking is needed now for Delivered At / RTO Initiated At / RTO Delivered At
@@ -191,9 +201,30 @@ exports.generateMisReport = async (req, res) => {
           // from tracking history. "RTO In-transit" is included for RTO
           // Initiated because some couriers (e.g. Amazon) never emit a bare
           // "RTO" status and jump straight to "RTO In-transit".
-          const deliveredAt = findTrackingDate(order.tracking, ["Delivered"]);
+          let deliveredAt = findTrackingDate(order.tracking, ["Delivered"]);
           const rtoInitiatedAt = findTrackingDate(order.tracking, ["RTO", "RTO In-transit"]);
           const rtoDeliveredAt = findTrackingDate(order.tracking, ["RTO Delivered"]);
+
+          // Some couriers push a raw tracking status that doesn't exactly
+          // match the literal "Delivered" (case/wording differs per
+          // provider's webhook payload) even though order.status was
+          // correctly normalized to "Delivered" elsewhere. Rather than show
+          // a blank cell for an order that's unambiguously delivered, fall
+          // back to the latest tracking entry's timestamp.
+          if (!deliveredAt && order.status === "Delivered" && Array.isArray(order.tracking) && order.tracking.length > 0) {
+            const latest = order.tracking.reduce((a, b) =>
+              new Date(a.StatusDateTime || 0) > new Date(b.StatusDateTime || 0) ? a : b
+            );
+            deliveredAt = latest?.StatusDateTime || null;
+          }
+
+          // invoiceDate (the exact pickup date) is only set by courier
+          // webhooks reaching an "In-transit"-equivalent status — if that
+          // webhook was missed/unmatched, invoiceDate stays null even for a
+          // shipment that has clearly moved (e.g. already Delivered/RTO).
+          // Fall back to the model's separate estimated-pickup-date field
+          // rather than showing a blank cell.
+          const pickupDateValue = order.invoiceDate || order.pickupDate || null;
 
           const productDetailsStr = order.productDetails && order.productDetails.length > 0
             ? order.productDetails.map(p => `${p.name || "N/A"} (SKU: ${p.sku || "N/A"}, Qty: ${p.quantity || 0}, Price: ${p.unitPrice || 0})`).join(" | ")
@@ -214,20 +245,21 @@ exports.generateMisReport = async (req, res) => {
 
           worksheet.addRow({
             userId: userMap[order.userId?.toString()] || "N/A",
+            email: emailMap[order.userId?.toString()] || "N/A",
             orderId: order.orderId,
             bookedAt: fmtDate(order.shipmentCreatedAt),
-            pickedAt: fmtDate(order.invoiceDate), // invoiceDate = actual pickup date (see models/newOrder.model.js); pickupDate field is only an estimate
+            pickedAt: fmtDate(pickupDateValue), // invoiceDate = actual pickup date (see models/newOrder.model.js), falling back to the estimated pickupDate field if invoiceDate was never set
             deliveredAt: fmtDate(deliveredAt),
             awb_number: order.awb_number || "N/A",
             provider: order.provider || "N/A",
             courierServiceName: order.courierServiceName || "N/A",
             paymentMethod: order.paymentDetails?.method || "N/A",
             amount: order.paymentDetails?.amount || 0,
-            collectedAmount: order.paymentDetails?.method === "Prepaid" ? (order.paymentDetails?.amount || 0) : 0,
+            collectedAmount: order.paymentDetails?.method === "COD" ? (order.paymentDetails?.amount || 0) : 0,
             status: order.status,
             orderType: order.orderType || "B2C",
             createdAt: order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "N/A",
-            pickupDate: order.invoiceDate ? new Date(order.invoiceDate).toLocaleDateString() : "N/A",
+            pickupDate: fmtDate(pickupDateValue),
             deadWeight: order.packageDetails?.deadWeight || 0,
             volumetricDims: volumetricDimsStr,
             applicableWeight: order.packageDetails?.applicableWeight || 0,
@@ -261,7 +293,7 @@ exports.generateMisReport = async (req, res) => {
         await workbook.commit();
 
         const buffer = fs.readFileSync(localFilePath);
-        const s3Key = `reports/${targetUserId}/MIS_Report_${reportEntry._id}.xlsx`;
+        const s3Key = `reports/${isAllUsers ? "ALL" : targetUserId}/MIS_Report_${reportEntry._id}.xlsx`;
 
         await s3.send(
           new PutObjectCommand({
@@ -342,7 +374,9 @@ exports.listMisReports = async (req, res) => {
     const query = {};
 
     if (isAdminOrEmployee) {
-      if (userSearch) {
+      if (userSearch === "ALL") {
+        query.isAllUsers = true;
+      } else if (userSearch) {
         if (mongoose.Types.ObjectId.isValid(userSearch)) {
           query.userId = new mongoose.Types.ObjectId(userSearch);
         } else {
@@ -382,6 +416,7 @@ exports.listMisReports = async (req, res) => {
           status: 1,
           downloadUrl: 1,
           createdAt: 1,
+          isAllUsers: 1,
           user: {
             _id: "$user._id",
             userId: "$user.userId",
