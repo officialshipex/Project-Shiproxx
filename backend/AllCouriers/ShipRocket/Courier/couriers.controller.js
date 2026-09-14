@@ -173,6 +173,7 @@ const getTrackingByAWB = async (awb_code) => {
     });
 
     const trackingData = response.data?.tracking_data;
+    // console.log("tracking",trackingData)
     if (!trackingData) return { success: false, data: [] };
 
     const shipment = trackingData.shipment_track?.[0] || {};
@@ -193,6 +194,7 @@ const getTrackingByAWB = async (awb_code) => {
     return { success: false, data: [] };
   }
 };
+// getTrackingByAWB("SF3698223623HIR")
 
 const cancelOrder = async (awb_number) => {
   try {

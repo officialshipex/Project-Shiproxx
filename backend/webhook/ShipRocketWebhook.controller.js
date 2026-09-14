@@ -132,6 +132,7 @@ const ShipRocketWebhook = async (req, res) => {
       case 62: // Ready To Pack
       case 63: // Packed
       case 67: // FC MANIFEST GENERATED
+      case 20: // pickup exception
         order.status = "Ready To Ship";
         break;
 
