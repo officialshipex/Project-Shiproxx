@@ -276,8 +276,12 @@ const orderRegistrationOneStep = async (req, res) => {
     });
 
     // ✅ Continue in background safely
-    await Order.updateOne(
-      { _id: currentOrder._id },
+    // findByIdAndUpdate (not updateOne) — the order model's post-hook that
+    // pushes the booking/status back to Shopify only fires on "save" and
+    // "findOneAndUpdate" queries, not on updateOne. Using updateOne here
+    // meant every SmartShip booking silently never synced to Shopify at all.
+    await Order.findByIdAndUpdate(
+      currentOrder._id,
       {
         $set: {
           status: "Booked",
