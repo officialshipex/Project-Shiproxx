@@ -42,6 +42,14 @@ const orderSchema = new mongoose.Schema(
     channelId: {
       type: Number,
     },
+    // Shopify's own human-readable order name (e.g. "#VN55038") — what the
+    // seller actually sees in their Shopify admin order list. channelId is
+    // Shopify's internal numeric id (e.g. 7248471523607), only meaningful
+    // for API calls; showing that instead of this to the seller is why they
+    // couldn't match an order in our panel to the one in Shopify.
+    channelOrderName: {
+      type: String,
+    },
     channel: {
       type: String,
     },

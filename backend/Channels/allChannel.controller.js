@@ -311,6 +311,7 @@ const fetchExistingOrders = async (req, res) => {
         userId: channel.userId,
         orderId: internalOrderId,
         channelId: order.id,
+        channelOrderName: order.name || (order.order_number ? `#${order.order_number}` : undefined),
         compositeOrderId,
         channel: "Shopify",
         storeUrl: storeURL,
@@ -468,6 +469,7 @@ const webhookhandler = async (req, res) => {
       orderId: internalOrderId,
       compositeOrderId, // Ensure uniqueness
       channelId: shopifyOrder.id,
+      channelOrderName: shopifyOrder.name || (shopifyOrder.order_number ? `#${shopifyOrder.order_number}` : undefined),
       channel: "Shopify",
       storeUrl: storeURL,
       pickupAddress: {
