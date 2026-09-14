@@ -189,32 +189,17 @@ const createWebhook = async (storeURL, storeAccessToken) => {
   }
 };
 
-const getProductDetails = async (productId, storeURL, accessToken) => {
-  try {
-    const response = await axios.get(
-      `https://${storeURL}/admin/api/2024-01/products/${productId}.json`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": accessToken,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    // console.log("Product Response:", response.data);
-
-    const product = response.data.product;
-
-    // Extract weight from the first variant (assuming single variant per product)
-    const weight = product.variants?.[0]?.weight || 0.5; // Shopify didn't provide a weight — use a sane default, not 0
-
-    // console.log("variants", product.variants);
-
-    return { length: 10, width: 10, height: 10, weight };
-  } catch (error) {
-    console.error("Error fetching product details:", error.response?.data || error.message);
-    return { length: 10, width: 10, height: 10, weight: 0.5 }; // Couldn't reach Shopify for this product — same default as above
-  }
+// Shopify's `order.total_weight` is the sum of every line item's weight
+// (already multiplied by quantity) in grams, regardless of the shop's
+// configured weight unit — unlike `variants[0].weight`, which is in
+// whatever unit that variant's `weight_unit` says (g/kg/oz/lb) and was
+// previously being stored as-is into a field couriers treat as kilograms,
+// turning a 500g item into a "500kg" shipment. Converting from grams here
+// sidesteps unit ambiguity entirely and needs no extra Shopify API calls.
+const getOrderWeightKg = (shopifyOrder) => {
+  const totalGrams = Number(shopifyOrder.total_weight);
+  if (!totalGrams || totalGrams <= 0) return 0.5; // Shopify gave us nothing usable — sane default, not 0
+  return totalGrams / 1000;
 };
 
 // Used whenever a synced order is missing data we'd otherwise require (no
@@ -312,32 +297,12 @@ const fetchExistingOrders = async (req, res) => {
         unitPrice: item.price,
       }));
 
-      // Default package dimensions
-      let totalWeight = 0;
-      let totalLength = 10,
+      // Default package dimensions — Shopify doesn't expose package
+      // dimensions on products/orders, so these stay fixed placeholders.
+      const totalWeight = getOrderWeightKg(order);
+      const totalLength = 10,
         totalWidth = 10,
         totalHeight = 10;
-
-      for (const item of orderLineItems) {
-        try {
-          const productInfo = await getProductDetails(
-            item.product_id,
-            storeURL,
-            accessToken
-          );
-
-          totalWeight += productInfo.weight || 0.5;
-          totalLength = Math.max(totalLength, productInfo.length || 0);
-          totalWidth = Math.max(totalWidth, productInfo.width || 0);
-          totalHeight = Math.max(totalHeight, productInfo.height || 0);
-        } catch (err) {
-          console.warn(
-            `Failed to fetch details for product ${item.product_id}`
-          );
-          totalWeight += 0.5; // couldn't determine this product's weight — use the same default as elsewhere
-        }
-      }
-      if (orderLineItems.length === 0) totalWeight = 0.5;
 
       // Generate a unique internal orderId (do not use Shopify's order_number to avoid duplicates)
       const internalOrderId = await generateUniqueOrderIds(1);
@@ -488,28 +453,12 @@ const webhookhandler = async (req, res) => {
       unitPrice: item.price,
     }));
 
-    // Fetch package weight & dimensions
-    let totalWeight = 0;
-    let totalLength = 10,
+    // Package weight & dimensions — Shopify doesn't expose package
+    // dimensions on products/orders, so these stay fixed placeholders.
+    const totalWeight = getOrderWeightKg(shopifyOrder);
+    const totalLength = 10,
       totalWidth = 10,
       totalHeight = 10;
-
-    const shopifyAccessTokenForProducts = lineItems.length > 0 ? await getValidShopifyAccessToken(user) : null;
-    for (const item of lineItems) {
-      const productInfo = await getProductDetails(
-        item.product_id,
-        storeURL,
-        shopifyAccessTokenForProducts
-      );
-
-      totalWeight += productInfo.weight;
-      totalLength = Math.max(totalLength, productInfo.length);
-      totalWidth = Math.max(totalWidth, productInfo.width);
-      totalHeight = Math.max(totalHeight, productInfo.height);
-    }
-    // No line items at all (shouldn't normally happen) — still create the
-    // order rather than leave it at 0 weight, which courier APIs would reject.
-    if (lineItems.length === 0) totalWeight = 0.5;
 
     // Generate a unique internal orderId (do not use Shopify's order_number to avoid duplicates)
     const internalOrderId = await generateUniqueOrderIds(1);
