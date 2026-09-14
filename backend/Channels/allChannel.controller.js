@@ -710,6 +710,15 @@ const storeAllChannelDetails = async (req, res) => {
 };
 
 
+// Shopify's payment_gateway_names holds human-readable gateway labels (e.g.
+// "Cash on Delivery (COD)", "UPI", "Manual") — never the snake_case
+// "cash_on_delivery" this used to look for, so it never matched a real COD
+// gateway. That silently misclassified genuine COD orders (whose
+// financial_status legitimately stays "pending" until delivery) as unpaid
+// prepaid orders and skipped fulfilling them.
+const isShopifyCodOrder = (paymentGatewayNames) =>
+  (paymentGatewayNames || []).some((name) => /cash.?on.?delivery|\bcod\b/i.test(name));
+
 // Shopify fulfillment events only accept this fixed vocabulary — there's no
 // native "RTO" concept, so RTO/undelivered/lost map to "failure" with the
 // real Shiproxx status preserved in the order's tracking history (not lost,
@@ -726,6 +735,32 @@ const shiproxxToShopifyFulfillmentEvent = (shiproxxStatus) => {
     "RTO Delivered": "failure",
   };
   return map[shiproxxStatus] || null;
+};
+
+// Bulk-booking a batch of orders fires one of these push-backs per order
+// nearly simultaneously (fire-and-forget, no queueing), which easily blows
+// through Shopify's Admin API rate limit (429) — and until now, a single
+// throttled request meant that order's fulfillment was silently dropped
+// forever, with no retry. Retries a handful of times on 429/5xx/network
+// errors, honoring Shopify's own Retry-After header when present.
+const SHOPIFY_RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const shopifySleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const shopifyRequestWithRetry = async (requestFn, attempts = 4) => {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await requestFn();
+    } catch (err) {
+      const status = err.response?.status;
+      const isLastAttempt = attempt === attempts - 1;
+      if (!SHOPIFY_RETRYABLE_STATUS.has(status) && status !== undefined) throw err; // non-retryable (4xx validation etc.)
+      if (isLastAttempt) throw err;
+      const retryAfterSec = Number(err.response?.headers?.["retry-after"]);
+      const delayMs = Number.isFinite(retryAfterSec) && retryAfterSec > 0
+        ? retryAfterSec * 1000
+        : 500 * 2 ** attempt; // 500ms, 1s, 2s fallback backoff
+      await shopifySleep(delayMs);
+    }
+  }
 };
 
 // Auto-triggered Shopify status/tracking push-back — the Shopify analogue of
@@ -773,14 +808,27 @@ const markShopifyOrderAsShipped = async (
 
     let shopifyOrder;
     try {
-      const response = await axios.get(`${baseUrl}/orders/${shopifyOrderId}.json`, authHeaders);
+      const response = await shopifyRequestWithRetry(() =>
+        axios.get(`${baseUrl}/orders/${shopifyOrderId}.json`, authHeaders)
+      );
       shopifyOrder = response.data.order;
     } catch (err) {
       console.error(`❌ Error fetching Shopify order ${shopifyOrderId}:`, err.response?.data || err.message);
       return;
     }
 
-    const existingFulfillment = shopifyOrder.fulfillments?.[0];
+    // Shopify never removes a cancelled fulfillment from this array — it
+    // just sits there with status "cancelled" once the original courier
+    // attempt is cancelled (e.g. re-booking with a different courier after
+    // a failed pickup). Treating that stale entry as "a fulfillment already
+    // exists" meant a re-booked shipment's new AWB never got pushed at all:
+    // every later status change just tried (and failed) to post an event to
+    // the dead cancelled fulfillment, leaving the order permanently
+    // unfulfilled on Shopify. Only a live (non-cancelled) fulfillment counts
+    // as "existing" here.
+    const existingFulfillment = (shopifyOrder.fulfillments || []).find(
+      (f) => f.status !== "cancelled"
+    );
 
     // --- First shipment scan: create the fulfillment ---
     if (!existingFulfillment) {
@@ -800,7 +848,7 @@ const markShopifyOrderAsShipped = async (
       }
       if (shopifyOrder.fulfillment_status === "fulfilled") return; // already fulfilled elsewhere
 
-      const isCOD = shopifyOrder.payment_gateway_names?.includes("cash_on_delivery");
+      const isCOD = isShopifyCodOrder(shopifyOrder.payment_gateway_names);
       if (!isCOD && shopifyOrder.financial_status === "pending") {
         console.log(`ℹ️ Shopify order ${shopifyOrderId} not fulfilled — payment still pending.`);
         return;
@@ -813,7 +861,9 @@ const markShopifyOrderAsShipped = async (
       // location_id needed — the fulfillment order already carries it.
       let fulfillmentOrderId;
       try {
-        const foRes = await axios.get(`${baseUrl}/orders/${shopifyOrderId}/fulfillment_orders.json`, authHeaders);
+        const foRes = await shopifyRequestWithRetry(() =>
+          axios.get(`${baseUrl}/orders/${shopifyOrderId}/fulfillment_orders.json`, authHeaders)
+        );
         const fulfillmentOrders = foRes.data?.fulfillment_orders || [];
         const openFulfillmentOrder = fulfillmentOrders.find((fo) => fo.status === "open") || fulfillmentOrders[0];
         fulfillmentOrderId = openFulfillmentOrder?.id;
@@ -828,22 +878,24 @@ const markShopifyOrderAsShipped = async (
 
       let newFulfillmentId;
       try {
-        const fulfillRes = await axios.post(
-          `${baseUrl}/fulfillments.json`,
-          {
-            fulfillment: {
-              notify_customer: notifyCustomer,
-              tracking_info: {
-                number: trackingNumber,
-                company: courierName,
-                url: `https://www.shiproxx.com/track/${trackingNumber}`,
+        const fulfillRes = await shopifyRequestWithRetry(() =>
+          axios.post(
+            `${baseUrl}/fulfillments.json`,
+            {
+              fulfillment: {
+                notify_customer: notifyCustomer,
+                tracking_info: {
+                  number: trackingNumber,
+                  company: courierName,
+                  url: `https://www.shiproxx.com/track/${trackingNumber}`,
+                },
+                line_items_by_fulfillment_order: [
+                  { fulfillment_order_id: fulfillmentOrderId },
+                ],
               },
-              line_items_by_fulfillment_order: [
-                { fulfillment_order_id: fulfillmentOrderId },
-              ],
             },
-          },
-          authHeaders
+            authHeaders
+          )
         );
         newFulfillmentId = fulfillRes.data?.fulfillment?.id;
         console.log(`✅ Shopify order ${shopifyOrderId} fulfilled (${shiproxxStatus}).`);
@@ -860,10 +912,12 @@ const markShopifyOrderAsShipped = async (
       const initialEventStatus = shiproxxToShopifyFulfillmentEvent(shiproxxStatus);
       if (newFulfillmentId && initialEventStatus) {
         try {
-          await axios.post(
-            `${baseUrl}/fulfillments/${newFulfillmentId}/events.json`,
-            { event: { status: initialEventStatus } },
-            authHeaders
+          await shopifyRequestWithRetry(() =>
+            axios.post(
+              `${baseUrl}/fulfillments/${newFulfillmentId}/events.json`,
+              { event: { status: initialEventStatus } },
+              authHeaders
+            )
           );
           console.log(`✅ Shopify fulfillment ${newFulfillmentId} event posted: ${shiproxxStatus} → ${initialEventStatus}`);
         } catch (err) {
@@ -876,7 +930,9 @@ const markShopifyOrderAsShipped = async (
     // --- Fulfillment already exists: cancel or post a status event ---
     if (shiproxxStatus === "Cancelled") {
       try {
-        await axios.post(`${baseUrl}/fulfillments/${existingFulfillment.id}/cancel.json`, {}, authHeaders);
+        await shopifyRequestWithRetry(() =>
+          axios.post(`${baseUrl}/fulfillments/${existingFulfillment.id}/cancel.json`, {}, authHeaders)
+        );
         console.log(`✅ Shopify fulfillment ${existingFulfillment.id} cancelled.`);
       } catch (err) {
         console.error(`❌ Error cancelling Shopify fulfillment ${existingFulfillment.id}:`, err.response?.data || err.message);
@@ -891,10 +947,12 @@ const markShopifyOrderAsShipped = async (
     }
 
     try {
-      await axios.post(
-        `${baseUrl}/fulfillments/${existingFulfillment.id}/events.json`,
-        { event: { status: eventStatus } },
-        authHeaders
+      await shopifyRequestWithRetry(() =>
+        axios.post(
+          `${baseUrl}/fulfillments/${existingFulfillment.id}/events.json`,
+          { event: { status: eventStatus } },
+          authHeaders
+        )
       );
       console.log(`✅ Shopify fulfillment ${existingFulfillment.id} event posted: ${shiproxxStatus} → ${eventStatus}`);
     } catch (err) {
@@ -968,8 +1026,7 @@ const fulfillOrder = async (req, res) => {
     }
 
     // Check if the order is a COD order
-    const isCOD =
-      orderDetails.payment_gateway_names.includes("cash_on_delivery");
+    const isCOD = isShopifyCodOrder(orderDetails.payment_gateway_names);
 
     // If the order is not COD and payment is still pending, do not fulfill
     if (!isCOD && orderDetails.financial_status === "pending") {
