@@ -283,8 +283,9 @@ const createShiprocketShipment = async ({
       // Step 🔟 Assign AWB
       let awb_number = "PENDING";
       let courier_name = null;
+      let courierService = null;
       try {
-        const courierService = await require("../../models/CourierService.Schema").findOne({
+        courierService = await require("../../models/CourierService.Schema").findOne({
           name: courierServiceName,
           provider: "Shiprocket",
         });
@@ -336,7 +337,15 @@ const createShiprocketShipment = async ({
               status: "Booked",
               awb_number: awb_number,
               shipment_id: String(shipment_id),
-              provider: courier_name || "Shiprocket",
+              // Prefer our own curated courier name over Shiprocket's AWB
+              // response — Shiprocket's own `courier_name` is its internal
+              // display label bundling courier + service tier + weight slab
+              // (e.g. "Delhivery DS 500gm", "Shadowfax DS 500"), not a clean
+              // courier name. Storing that raw string as `provider` fragments
+              // dashboards/reports that group by provider into dozens of
+              // "couriers" that are really just Shiprocket's own rate-plan
+              // labels for the same handful of real couriers.
+              provider: courierService?.courier || courier_name || "Shiprocket",
               partner: "Shiprocket",
               totalFreightCharges: balanceToBeDeducted,
               courierServiceName,

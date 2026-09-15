@@ -153,6 +153,24 @@ const createShipmentFunctionShipRocket = async (
     const courier_name = awbResult.courier_name || null;
     const bookedServiceName = serviceDetails.name || serviceDetails.courierProviderServiceName;
 
+    // Prefer our own curated courier name over Shiprocket's AWB response —
+    // Shiprocket's own `courier_name` is its internal display label
+    // bundling courier + service tier + weight slab (e.g. "Delhivery DS
+    // 500gm"), not a clean courier name. Storing that raw string as
+    // `provider` fragments dashboards/reports that group by provider into
+    // dozens of "couriers" that are really just Shiprocket's own rate-plan
+    // labels for the same handful of real couriers.
+    let curatedCourier = null;
+    try {
+      const courierService = await require("../../../models/CourierService.Schema").findOne({
+        name: bookedServiceName,
+        provider: "Shiprocket",
+      });
+      curatedCourier = courierService?.courier || null;
+    } catch (err) {
+      console.error("Shiprocket CourierService lookup error:", err.message);
+    }
+
     // Amazon-fulfilled services booked through Shiprocket are named with
     // "ATS" (Amazon's own carrier code) by convention — fetch Shiprocket's
     // real label for those so the seller downloads Amazon's original label
@@ -166,7 +184,7 @@ const createShipmentFunctionShipRocket = async (
     currentOrder.status = "Booked";
     currentOrder.awb_number = awb_number;
     currentOrder.shipment_id = String(shipment_id);
-    currentOrder.provider = courier_name || "Shiprocket";
+    currentOrder.provider = curatedCourier || courier_name || "Shiprocket";
     currentOrder.partner = "Shiprocket";
     currentOrder.totalFreightCharges = charges;
     currentOrder.courierServiceName = bookedServiceName;
