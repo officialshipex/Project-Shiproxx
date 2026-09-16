@@ -153,7 +153,16 @@ const checkServiceabilityShipRocket = async (payload) => {
 
     const available = response.data?.data?.available_courier_companies || [];
     // console.log(available, "response.data")
-    const matched = available.filter((item) => item.courier_name === shiprocketService.courier && item.blocked === 0);
+    // Match on courier_company_id, not courier_name — Shiprocket's own
+    // courier_name is its internal display label bundling courier + service
+    // tier + weight slab (e.g. "Delhivery DS 500gm"), which no longer equals
+    // our cleaned-up `courier` field (now just "Delhivery"), and was always
+    // liable to drift if Shiprocket changed their wording anyway. The
+    // numeric company id is what actually identifies the courier and is the
+    // same id we already store as courier_id for the AWB-assignment call.
+    const matched = available.filter(
+      (item) => String(item.courier_company_id) === String(shiprocketService.courier_id) && item.blocked === 0
+    );
     // console.log(matched, "matched")
     return { success: matched.length > 0 };
   } catch (error) {
