@@ -1700,6 +1700,112 @@ const submitNdrToJiffy = async ({
   }
 };
 
+const submitNdrToShipMaxx = async ({
+  awb_number,
+  action,
+  remarks,
+}) => {
+  try {
+    const orderInDb = await Order.findOne({ awb_number });
+    if (!orderInDb) {
+      return { success: false, error: "Order not found in DB" };
+    }
+
+    const { getShipMaxxToken, SHIPMAXX_BASE_URL } = require("../AllCouriers/ShipMaxx/Authorize/shipmaxx.controller");
+    const token = await getShipMaxxToken();
+    if (!token) {
+      return { success: false, error: "ShipMaxx token not generated" };
+    }
+
+    // ShipMaxx has no by-awb lookup on GET /ndr — fetch the list and resolve
+    // the ndr_id for this AWB client-side (same idea as BoxdLogistics's
+    // "resolve id from list, then act" NDR flow above).
+    const listResponse = await axios.get(`${SHIPMAXX_BASE_URL}/ndr`, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 10000,
+    });
+
+    const shipments = listResponse.data?.shipments || [];
+    const ndrRecord = shipments.find((s) => s.awb === awb_number);
+
+    if (!ndrRecord || !ndrRecord.id) {
+      console.warn("ShipMaxx NDR: No NDR ID found for AWB:", awb_number);
+      const entry = {
+        action: String(action).toUpperCase() === "RTO" ? "RTO" : "RE-ATTEMPT",
+        actionBy: "Shiproxx",
+        remark: remarks || "NDR Action Requested",
+        source: "Shiproxx",
+        date: new Date(),
+      };
+      pushNdrActionToHistory(orderInDb, entry);
+      orderInDb.ndrStatus = "Action_Requested";
+      orderInDb.reattempt = false;
+      await orderInDb.save();
+      return { success: true, message: "NDR action logged internally (no NDR ID from ShipMaxx)" };
+    }
+
+    const actionUpper = String(action).toUpperCase();
+    const shipmaxxAction = actionUpper === "RTO" ? "rto" : "reattempt";
+
+    const payload = {
+      action: shipmaxxAction,
+      notes: remarks || "Customer requested reattempt",
+    };
+
+    console.log("ShipMaxx NDR Payload:", JSON.stringify(payload, null, 2));
+
+    const response = await axios.post(
+      `${SHIPMAXX_BASE_URL}/ndr/${ndrRecord.id}/action`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 10000,
+      }
+    );
+
+    console.log("ShipMaxx NDR Response:", response.data);
+
+    if (response.data && response.data.status === "success") {
+      const entry = {
+        action: actionUpper === "RTO" ? "RTO" : "RE-ATTEMPT",
+        actionBy: "Shiproxx",
+        remark: remarks || "NDR Action Requested",
+        source: "Shiproxx",
+        date: new Date(),
+      };
+
+      pushNdrActionToHistory(orderInDb, entry);
+
+      orderInDb.ndrStatus = actionUpper === "RTO" ? "RTO" : "Action_Requested";
+      orderInDb.status = "Action_Requested";
+      orderInDb.reattempt = false;
+      await orderInDb.save();
+
+      return {
+        success: true,
+        message: "ShipMaxx NDR processed successfully",
+        data: response.data,
+      };
+    } else {
+      return {
+        success: false,
+        error: response.data?.message || response.data?.detail || "ShipMaxx NDR submission failed",
+        details: response.data,
+      };
+    }
+  } catch (error) {
+    console.error("ShipMaxx NDR Error:", error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.detail || error.response?.data?.message || "Error processing ShipMaxx NDR",
+      details: error.response?.data || error.message,
+    };
+  }
+};
+
 module.exports = {
   getOrderDetails,
   callShiprocketNdrApi,
@@ -1711,6 +1817,7 @@ module.exports = {
   callSmartshipNdrApi,
   submitNdrToZipypost,
   submitNdrToJiffy,
+  submitNdrToShipMaxx,
   submitNdrToShreeMaruti,
   submitNdrToEkart,
   submitNdrToBoxdLogistics,

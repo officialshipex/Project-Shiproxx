@@ -46,6 +46,9 @@ const {
   cancelOrderJiffy,
 } = require("../../AllCouriers/Jiffy/Courier/couriers.controller");
 const {
+  cancelOrderShipMaxx,
+} = require("../../AllCouriers/ShipMaxx/Courier/couriers.controller");
+const {
   removeFromPickupManifest,
 } = require("../../Orders/scheduledPickup.controller");
 
@@ -119,6 +122,8 @@ const cancelOrdersAtBooked = async (req, res) => {
       provider = "ShipexIndia";
     } else if (currentOrder.partner === "Jiffy") {
       provider = "Jiffy";
+    } else if (currentOrder.partner === "ShipMaxx") {
+      provider = "ShipMaxx";
     } else {
       provider = currentOrder.provider;
     }
@@ -166,6 +171,9 @@ const cancelOrdersAtBooked = async (req, res) => {
         break;
       case "Jiffy":
         result = await cancelOrderJiffy(currentOrder.awb_number);
+        break;
+      case "ShipMaxx":
+        result = await cancelOrderShipMaxx(currentOrder.awb_number);
         break;
       default:
         return res.status(400).json({

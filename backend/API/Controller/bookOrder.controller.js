@@ -23,6 +23,7 @@ const createShadowfaxShipment = require("../Courier/shadowfaxShipmentCreation.co
 const createLosung360Shipment = require("../Courier/losung360ShipmentCreation.controller");
 const createShipexIndiaShipment = require("../Courier/shipexIndiaShipmentCreation.controller");
 const createJiffyShipment = require("../Courier/jiffyShipmentCreation.controller");
+const createShipMaxxShipment = require("../Courier/shipmaxxShipmentCreation.controller");
 const { getProviderMap } = require("../../utils/providerIdRegistry");
 
 
@@ -414,6 +415,22 @@ const bookOrder = async (req, res) => {
           finalCharges,
           courierServiceName,
           courier: courierService?.courier,
+          priceBreakup,
+          userId: userId,
+          walletId: user.Wallet,
+          walletBalance: wallet.balance,
+          walletHoldAmount: wallet.holdAmount || 0,
+          walletCreditLimit: wallet.creditLimit || 0,
+        });
+        break;
+
+      case "ShipMaxx":
+        shipmentResult = await createShipMaxxShipment({
+          id: order._id,
+          provider,
+          finalCharges,
+          courierServiceName,
+          carrierVariantId: courierService?.courier,
           priceBreakup,
           userId: userId,
           walletId: user.Wallet,

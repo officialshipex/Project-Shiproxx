@@ -100,6 +100,15 @@ const calculateRate = async (req, res) => {
       jiffyServices.map(s => [s.name.toLowerCase().trim(), s.courier])
     );
 
+    // Same lookup for ShipMaxx's `carrier_id`.
+    const {
+      checkServiceabilityShipMaxx,
+    } = require("../AllCouriers/ShipMaxx/Courier/couriers.controller");
+    const shipmaxxServices = await CourierService.find({ provider: "ShipMaxx" }).lean();
+    const shipmaxxServiceMap = new Map(
+      shipmaxxServices.map(s => [s.name.toLowerCase().trim(), s.courier])
+    );
+
     for (let rc of rateCards) {
       // Use flag from object if present, otherwise fallback to lookup map (for legacy/sync cases)
       const isFlatRate = rc.isFlatRate === true || flatRateMap.get(rc._id?.toString()) === true;
@@ -111,9 +120,37 @@ const calculateRate = async (req, res) => {
       if (!activeCouriersLower.includes(provider.toLowerCase())) continue;
       if (rc.status !== "Active") continue;
 
-      if (!["Delhivery", "Shree Maruti", "Dtdc", "Smartship", "Amazon Shipping", "EcomExpress", "Zipypost", "Ekart", "BoxdLogistics", "Proship", "Shiprocket", "ShipexIndia", "Jiffy"].includes(provider)) continue;
+      if (!["Delhivery", "Shree Maruti", "Dtdc", "Smartship", "Amazon Shipping", "EcomExpress", "Zipypost", "Ekart", "BoxdLogistics", "Proship", "Shiprocket", "ShipexIndia", "Jiffy", "ShipMaxx"].includes(provider)) continue;
 
-      if (provider === "Jiffy") {
+      if (provider === "ShipMaxx") {
+        if (!serviceabilityCache[provider]) {
+          const payload = {
+            pickupPincode: pickUpPincode,
+            deliveryPincode,
+            weight: applicableWeight,
+            paymentMode: paymentType === "COD" ? "cod" : "prepaid",
+            shipmentValue: declaredValue,
+          };
+          serviceabilityCache[provider] = await checkServiceabilityShipMaxx(payload);
+        }
+        const shipmaxxResult = serviceabilityCache[provider];
+        if (!shipmaxxResult || shipmaxxResult.success === false) continue;
+
+        // Match on ShipMaxx's own `carrier_id` (same value stored in
+        // CourierService.courier and sent as carrier_variant_id when booking).
+        let isServiceable = false;
+        const targetId = shipmaxxServiceMap.get(rc.courierServiceName.toLowerCase().trim());
+        if (targetId && Array.isArray(shipmaxxResult.data)) {
+          const matchedCourier = shipmaxxResult.data.find(
+            (item) => String(item.carrier_id) === String(targetId)
+          );
+          if (matchedCourier && matchedCourier.is_serviceable) {
+            isServiceable = true;
+          }
+        }
+        if (!isServiceable) continue;
+        serviceable = { success: true };
+      } else if (provider === "Jiffy") {
         if (!serviceabilityCache[provider]) {
           const payload = {
             pickupPincode: pickUpPincode,

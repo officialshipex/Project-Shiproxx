@@ -44,6 +44,9 @@ const {
 const {
   checkServiceabilityJiffy,
 } = require("../../AllCouriers/Jiffy/Courier/couriers.controller.js");
+const {
+  checkServiceabilityShipMaxx,
+} = require("../../AllCouriers/ShipMaxx/Courier/couriers.controller.js");
 const { getReverseProviderMap } = require("../../utils/providerIdRegistry");
 const CourierService = require("../../models/CourierService.Schema");
 
@@ -140,12 +143,16 @@ const pincodeServiceability = async (req, res) => {
 
     // ✅ courierId map + Jiffy courier_code lookup (both DB-driven — see
     // utils/providerIdRegistry.js and the Jiffy-specific note below)
-    const [courierIds, jiffyServices] = await Promise.all([
+    const [courierIds, jiffyServices, shipmaxxServices] = await Promise.all([
       getReverseProviderMap(),
       CourierService.find({ provider: "Jiffy" }).lean(),
+      CourierService.find({ provider: "ShipMaxx" }).lean(),
     ]);
     const jiffyServiceMap = new Map(
       jiffyServices.map((s) => [s.name.toLowerCase().trim(), s.courier])
+    );
+    const shipmaxxServiceMap = new Map(
+      shipmaxxServices.map((s) => [s.name.toLowerCase().trim(), s.courier])
     );
 
     // ✅ Step 4: Courier serviceability checks
@@ -285,6 +292,17 @@ const pincodeServiceability = async (req, res) => {
             height,
           }),
       },
+      {
+        name: "ShipMaxx",
+        check: async () =>
+          checkServiceabilityShipMaxx({
+            pickupPincode: pickUpPincode,
+            deliveryPincode,
+            weight: applicableWeight,
+            paymentMode: paymentType === "COD" ? "cod" : "prepaid",
+            shipmentValue: declaredValue,
+          }),
+      },
     ].filter((p) =>
       activeCourierNames.some(
         (name) => name.toLowerCase() === p.name.toLowerCase()
@@ -381,6 +399,22 @@ const pincodeServiceability = async (req, res) => {
           );
           const paymentKey = paymentType === "COD" ? "cod" : "prepaid";
           if (matchedCourier && matchedCourier.is_active && matchedCourier.services?.[paymentKey]) {
+            isCourierServiceable = true;
+          }
+        }
+        isServiceable = isCourierServiceable;
+      }
+
+      if (provider.toLowerCase() === "shipmaxx" && isServiceable) {
+        // Match on ShipMaxx's own `carrier_id` (same value stored in
+        // CourierService.courier and sent as carrier_variant_id when booking).
+        let isCourierServiceable = false;
+        const targetId = shipmaxxServiceMap.get(rc.courierServiceName.toLowerCase().trim());
+        if (targetId && Array.isArray(serviceable.data)) {
+          const matchedCourier = serviceable.data.find(
+            (item) => String(item.carrier_id) === String(targetId)
+          );
+          if (matchedCourier && matchedCourier.is_serviceable) {
             isCourierServiceable = true;
           }
         }

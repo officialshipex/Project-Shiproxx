@@ -864,6 +864,22 @@ const uploadRatecard = async (req, res) => {
         zoneE: toFixedNum(getRowVal(H_ZONEE)),
       };
 
+      // The "weight" column is documented/expected in kg (see the demo
+      // template's example rows, e.g. "0.5") and gets multiplied by 1000 here
+      // to store grams — but service names conventionally embed the weight
+      // in grams (e.g. "XB premium 500" = 500g), which invites typing "500"
+      // directly instead of "0.5". That mistake silently produces a
+      // 500,000g (500kg) slab instead of 500g. No real parcel courier slab
+      // is anywhere near that large, so reject implausible results outright
+      // rather than silently corrupting the rate card.
+      const MAX_PLAUSIBLE_WEIGHT_GRAMS = 50000; // 50kg — generous upper bound for a per-slab weight bracket
+      if (weightObj.weight > MAX_PLAUSIBLE_WEIGHT_GRAMS) {
+        errors.push(
+          `Row ${rowNum}: weight "${getRowVal(H_WEIGHT) || getRowVal("Weight Rate")}" resolves to ${weightObj.weight}g, which is implausible for a courier weight slab. ` +
+          `The "weight" column must be in kg (e.g. enter 0.5 for a 500g slab, not 500).`
+        );
+      }
+
       const typeTextRaw = getRowVal(H_TYPE) || getRowVal("Type");
       const typeText = normalize(typeTextRaw);
       if (typeText === "basic") {

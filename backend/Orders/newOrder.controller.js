@@ -72,6 +72,7 @@ const { cancelShadowfaxOrder } = require("../AllCouriers/Shadowfax/Courier/couri
 const { cancelLosung360Order } = require("../AllCouriers/Losung360/Courier/couriers.controller");
 const { cancelShipexIndiaOrder } = require("../AllCouriers/ShipxIndia/Courier/couriers.controller");
 const { cancelOrderJiffy } = require("../AllCouriers/Jiffy/Courier/couriers.controller");
+const { cancelOrderShipMaxx } = require("../AllCouriers/ShipMaxx/Courier/couriers.controller");
 const WeightDiscrepancy = require("../WeightDispreancy/weightDispreancy.model");
 // Create a shipment
 const newOrder = async (req, res) => {
@@ -1759,6 +1760,18 @@ const cancelOrdersAtBooked = async (req, res) => {
           orderId: currentOrder._id,
         });
       }
+    } else if (currentOrder.partner === "ShipMaxx") {
+      // Same reasoning as Jiffy above — ShipMaxx also carries whatever
+      // underlying carrier it auto-selected (Delhivery, Bluedart, Xpressbees,
+      // Ekart) in `provider`.
+      const result = await cancelOrderShipMaxx(currentOrder.awb_number);
+      if (result.error || result.success === false) {
+        return res.status(400).json({
+          error: result.error || result.message || "Failed to cancel shipment with ShipMaxx",
+          details: result,
+          orderId: currentOrder._id,
+        });
+      }
     } else if (currentOrder.partner === "ShipexIndia" || currentOrder.provider === "ShipexIndia") {
       const result = await cancelShipexIndiaOrder(currentOrder.awb_number);
       if (result.error || result.success === false) {
@@ -2214,6 +2227,9 @@ const bulkCancelOrder = async (req, res) => {
               // which would otherwise false-match one of those branches and
               // call the wrong courier's API.
               cancelResponse = await cancelOrderJiffy(currentOrder.awb_number);
+            } else if (partner === "ShipMaxx") {
+              // Same reasoning as Jiffy above.
+              cancelResponse = await cancelOrderShipMaxx(currentOrder.awb_number);
             } else if (partner === "ShipexIndia" || provider === "ShipexIndia") {
               cancelResponse = await cancelShipexIndiaOrder(currentOrder.awb_number);
             } else if (provider === "Shiprocket" || partner === "Shiprocket") {

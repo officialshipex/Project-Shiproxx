@@ -53,6 +53,9 @@ const {
 const {
   checkServiceabilityJiffy,
 } = require("../AllCouriers/Jiffy/Courier/couriers.controller");
+const {
+  checkServiceabilityShipMaxx,
+} = require("../AllCouriers/ShipMaxx/Courier/couriers.controller");
 
 const checkServiceabilityAll = async (service, id, pincode) => {
   try {
@@ -414,6 +417,29 @@ const checkServiceabilityAll = async (service, id, pincode) => {
         );
         const paymentKey = paymentMethod === "COD" ? "cod" : "prepaid";
         if (matchedCourier && matchedCourier.is_active && matchedCourier.services?.[paymentKey]) {
+          return { ...res, success: true };
+        }
+      }
+      return false;
+    }
+    if (service.provider.toLowerCase() === "shipmaxx") {
+      const payload = {
+        pickupPincode: pickupPincode,
+        deliveryPincode: deliveryPincode,
+        weight: currentOrder.packageDetails?.applicableWeight || 0.5,
+        paymentMode: paymentMethod === "COD" ? "cod" : "prepaid",
+        shipmentValue: paymentMethod === "COD" ? (currentOrder.paymentDetails?.amount || 0) : 0,
+      };
+      const res = await checkServiceabilityShipMaxx(payload);
+      if (res && res.success && Array.isArray(res.data) && service.courier) {
+        // Match on ShipMaxx's own `carrier_id` (service.courier here is
+        // CourierService.courier, the same id sent as carrier_variant_id
+        // when booking) — not the display name.
+        const targetId = String(service.courier);
+        const matchedCourier = res.data.find(
+          (item) => String(item.carrier_id) === targetId
+        );
+        if (matchedCourier && matchedCourier.is_serviceable) {
           return { ...res, success: true };
         }
       }

@@ -46,6 +46,7 @@ const { createOrderShadowfax } = require("../AllCouriers/Shadowfax/Courier/bulkS
 const { createOrderLosung360 } = require("../AllCouriers/Losung360/Courier/bulkShipment.controller");
 const { createShipmentFunctionShipexIndia } = require("../AllCouriers/ShipxIndia/Courier/bulkShipment.controller");
 const { createOrderJiffy } = require("../AllCouriers/Jiffy/Courier/bulkShipment.controller");
+const { createOrderShipMaxx } = require("../AllCouriers/ShipMaxx/Courier/bulkShipment.controller");
 
 
 const updatePickup = async (req, res) => {
@@ -262,6 +263,17 @@ const callProviderWithRetry = async (
           );
           break;
 
+        case "ShipMaxx":
+          result = await createOrderShipMaxx(
+            serviceDetails,
+            order._id,
+            wh,
+            walletId,
+            charges,
+            priceBreakup
+          );
+          break;
+
 
         default:
           console.error(
@@ -429,6 +441,15 @@ const createBulkOrder = async (req, res) => {
       // console.log("courierServices",courierServices)
 
       // 5) Determine eligible couriers (weight slab logic)
+      // Keep every service whose base weight slab can fit the package — do
+      // NOT narrow this further to only the single smallest slab. Doing so
+      // used to discard every other priority-ranked service configured at a
+      // different (larger) weight bracket before the fallback loop below
+      // ever ran, so a lower-priority fallback service was silently dropped
+      // from candidacy whenever it happened to use a bigger weight slab than
+      // the top priority — the priority sort a few lines down (which for
+      // "cheapest" already orders smaller/cheaper slabs first) is what
+      // should decide try-order, not this filter.
       let eligibleCouriers = (plans.rateCard || [])
         .filter((rc) => rc.status === "Active")
         .filter((rc) => {
@@ -437,17 +458,6 @@ const createBulkOrder = async (req, res) => {
         });
 
         // console.log("eligibleCouriers",eligibleCouriers)
-
-      if (eligibleCouriers.length > 0) {
-        const minSlab = Math.min(
-          ...eligibleCouriers.map(
-            (rc) => rc.weightPriceBasic?.[0]?.weight / 1000 || 0
-          )
-        );
-        eligibleCouriers = eligibleCouriers.filter(
-          (rc) => (rc.weightPriceBasic?.[0]?.weight / 1000 || 0) === minSlab
-        );
-      }
 
       if (eligibleCouriers.length === 0) {
         // mark failure in DB and return

@@ -47,6 +47,9 @@ const {
 const {
   checkServiceabilityJiffy,
 } = require("../../AllCouriers/Jiffy/Courier/couriers.controller.js");
+const {
+  checkServiceabilityShipMaxx,
+} = require("../../AllCouriers/ShipMaxx/Courier/couriers.controller.js");
 const { getReverseProviderMap } = require("../../utils/providerIdRegistry");
 
 // Input Validation Schema
@@ -138,6 +141,13 @@ const availableCourierService = async (req, res) => {
     const jiffyServices = await CourierService.find({ provider: "Jiffy" }).lean();
     const jiffyServiceMap = new Map(
       jiffyServices.map((s) => [s.name.toLowerCase().trim(), s.courier])
+    );
+
+    // Same lookup for ShipMaxx's `carrier_id` (numeric, matches serviceability
+    // response's per-carrier `carrier_id`).
+    const shipmaxxServices = await CourierService.find({ provider: "ShipMaxx" }).lean();
+    const shipmaxxServiceMap = new Map(
+      shipmaxxServices.map((s) => [s.name.toLowerCase().trim(), s.courier])
     );
 
     const providers = [
@@ -298,6 +308,17 @@ const availableCourierService = async (req, res) => {
             height: order.packageDetails?.volumetricWeight?.height || 10,
           }),
       },
+      {
+        name: "ShipMaxx",
+        check: async () =>
+          checkServiceabilityShipMaxx({
+            pickupPincode: pickUpPincode,
+            deliveryPincode,
+            weight: applicableWeight,
+            paymentMode: paymentType === "COD" ? "cod" : "prepaid",
+            shipmentValue: declaredValue,
+          }),
+      },
     ];
 
     const uniqueChecks = [];
@@ -407,6 +428,25 @@ const availableCourierService = async (req, res) => {
           );
           const paymentKey = paymentType === "COD" ? "cod" : "prepaid";
           if (matchedCourier && matchedCourier.is_active && matchedCourier.services?.[paymentKey]) {
+            isCourierServiceable = true;
+          }
+        }
+        isServiceable = isCourierServiceable;
+      }
+
+      if (provider.toLowerCase() === "shipmaxx" && isServiceable) {
+        // Match on ShipMaxx's own `carrier_id` (numeric, e.g. 2) — the same
+        // value stored in CourierService.courier and sent as
+        // carrier_variant_id when booking — not the display name, which
+        // bundles courier + weight tier and won't reliably equal what the
+        // admin typed as the service name.
+        let isCourierServiceable = false;
+        const targetId = shipmaxxServiceMap.get(rc.courierServiceName.toLowerCase().trim());
+        if (targetId && Array.isArray(serviceable.data)) {
+          const matchedCourier = serviceable.data.find(
+            (item) => String(item.carrier_id) === String(targetId)
+          );
+          if (matchedCourier && matchedCourier.is_serviceable) {
             isCourierServiceable = true;
           }
         }

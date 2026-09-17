@@ -850,8 +850,21 @@ const markShopifyOrderAsShipped = async (
       }
       if (shopifyOrder.fulfillment_status === "fulfilled") return; // already fulfilled elsewhere
 
+      // A prepaid order whose Shopify financial_status is still "pending"
+      // shouldn't get fulfilled at the moment it's JUST been booked — give
+      // Shopify's own payment webhook a chance to catch up first. But this
+      // must NOT apply once the shipment has already progressed past that
+      // point (In-transit, Out for Delivery, Delivered, ...): since no
+      // fulfillment exists yet (`!existingFulfillment`, the branch we're in),
+      // every later status change re-enters this exact same check and would
+      // otherwise re-skip forever — permanently blocking the fulfillment for
+      // an order that has demonstrably already shipped in the real world,
+      // regardless of what Shopify's financial_status says. Confirmed via a
+      // live audit against real orders (#VN54768: In-transit in Shiproxx,
+      // fulfillment_status stuck null on Shopify because of exactly this).
       const isCOD = isShopifyCodOrder(shopifyOrder.payment_gateway_names);
-      if (!isCOD && shopifyOrder.financial_status === "pending") {
+      const hasAdvancedPastBooking = !!shiproxxToShopifyFulfillmentEvent(shiproxxStatus);
+      if (!isCOD && !hasAdvancedPastBooking && shopifyOrder.financial_status === "pending") {
         console.log(`ℹ️ Shopify order ${shopifyOrderId} not fulfilled — payment still pending.`);
         return;
       }

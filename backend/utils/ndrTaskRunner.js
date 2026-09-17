@@ -14,6 +14,7 @@ const {
   submitNdrToProship,
   submitNdrToShipexIndia,
   submitNdrToJiffy,
+  submitNdrToShipMaxx,
 } = require("../services/ndrService");
 
 
@@ -60,6 +61,77 @@ const runNdrTask = async (orderId, actionDetails) => {
       apiResponse = await callShiprocketNdrApi(order);
     } else if (finalPlatform === "nimbust") {
       apiResponse = await callNimbustNdrApi(order);
+
+      // Aggregator (`partner`) checks must run before any generic
+      // `provider === "X"` branch below — an aggregator-routed order's
+      // `provider` holds whatever underlying carrier the aggregator assigned
+      // (e.g. "Delhivery", "Ekart"), which would otherwise false-match one of
+      // those native-carrier branches and call the wrong courier's NDR API.
+      // ShipMaxx in particular documents Delhivery and Ekart as supported
+      // underlying carriers, so this collision is not just theoretical.
+    } else if (finalPartner === "ZipyPost") {
+      const customAction =
+        action === "RE-ATTEMPT"
+          ? "Re-Attempt"
+          : action === "CHANGE CONTACT"
+            ? "Change Contact"
+            : action === "CHANGE ADDRESS"
+              ? "Change Address"
+              : action;
+      apiResponse = await submitNdrToZipypost(finalAwb, {
+        action: customAction,
+        seller_remark: finalRemarks,
+        contact_number: phone,
+        customer_name,
+        address1,
+        address2,
+        provider: finalProvider,
+      });
+    } else if (finalPartner === "BoxdLogistics") {
+      apiResponse = await submitNdrToBoxdLogistics({
+        awb_number: finalAwb,
+        action,
+        remarks: finalRemarks,
+        action_date: null,
+        updated_address_line1: address1,
+        updated_address_line2: address2,
+        updated_city: city || null,
+        updated_state: state || null,
+        updated_pincode: pincode || null,
+        updated_mobile: phone,
+      });
+    } else if (finalPartner === "Proship") {
+      apiResponse = await submitNdrToProship({
+        awb_number: finalAwb,
+        action,
+        remarks: finalRemarks,
+        customer_name,
+        new_address: address1,
+        new_address2: address2,
+        new_phone: phone,
+        new_pincode: pincode,
+        scheduled_delivery_date: finalDate,
+      });
+    } else if (finalPartner === "ShipexIndia" || finalProvider === "ShipexIndia") {
+      apiResponse = await submitNdrToShipexIndia({
+        awb_number: finalAwb,
+        action,
+        comments: finalRemarks,
+        scheduled_delivery_date: finalDate,
+        phone,
+      });
+    } else if (finalPartner === "Jiffy") {
+      apiResponse = await submitNdrToJiffy({
+        awb_number: finalAwb,
+        action,
+        remarks: finalRemarks,
+      });
+    } else if (finalPartner === "ShipMaxx") {
+      apiResponse = await submitNdrToShipMaxx({
+        awb_number: finalAwb,
+        action,
+        remarks: finalRemarks,
+      });
     } else if (finalProvider === "EcomExpress") {
       apiResponse = await callEcomExpressNdrApi(
         finalAwb,
@@ -118,63 +190,6 @@ const runNdrTask = async (orderId, actionDetails) => {
         new_phone: phone,
         new_pincode: pincode,
         scheduled_delivery_date: finalDate,
-      });
-    } else if (finalPartner === "ZipyPost") {
-      const customAction =
-        action === "RE-ATTEMPT"
-          ? "Re-Attempt"
-          : action === "CHANGE CONTACT"
-            ? "Change Contact"
-            : action === "CHANGE ADDRESS"
-              ? "Change Address"
-              : action;
-      apiResponse = await submitNdrToZipypost(finalAwb, {
-        action: customAction,
-        seller_remark: finalRemarks,
-        contact_number: phone,
-        customer_name,
-        address1,
-        address2,
-        provider: finalProvider,
-      });
-    } else if (finalPartner === "BoxdLogistics") {
-      apiResponse = await submitNdrToBoxdLogistics({
-        awb_number: finalAwb,
-        action,
-        remarks: finalRemarks,
-        action_date: null,
-        updated_address_line1: address1,
-        updated_address_line2: address2,
-        updated_city: city || null,
-        updated_state: state || null,
-        updated_pincode: pincode || null,
-        updated_mobile: phone,
-      });
-    } else if (finalPartner === "Proship") {
-      apiResponse = await submitNdrToProship({
-        awb_number: finalAwb,
-        action,
-        remarks: finalRemarks,
-        customer_name,
-        new_address: address1,
-        new_address2: address2,
-        new_phone: phone,
-        new_pincode: pincode,
-        scheduled_delivery_date: finalDate,
-      });
-    } else if (finalPartner === "ShipexIndia" || finalProvider === "ShipexIndia") {
-      apiResponse = await submitNdrToShipexIndia({
-        awb_number: finalAwb,
-        action,
-        comments: finalRemarks,
-        scheduled_delivery_date: finalDate,
-        phone,
-      });
-    } else if (finalPartner === "Jiffy") {
-      apiResponse = await submitNdrToJiffy({
-        awb_number: finalAwb,
-        action,
-        remarks: finalRemarks,
       });
     } else {
 

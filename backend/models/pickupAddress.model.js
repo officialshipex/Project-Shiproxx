@@ -33,6 +33,10 @@ const pickupAddress = new mongoose.Schema({
     type: String,
     default: ""
   },
+  shipmaxxWarehouseId: {
+    type: String,
+    default: ""
+  },
   delhiveryWarehouseName: {
     type: String,
     default: ""

@@ -55,6 +55,9 @@ const {
 const {
   trackOrderJiffy,
 } = require("../AllCouriers/Jiffy/Courier/couriers.controller");
+const {
+  trackOrderShipMaxx,
+} = require("../AllCouriers/ShipMaxx/Courier/couriers.controller");
 const Bottleneck = require("bottleneck");
 const {
   sendWhatsAppMessage,
@@ -103,6 +106,7 @@ const trackSingleOrder = async (order) => {
       Ekart: trackEkartShipment,
       Losung360: trackLosung360Order,
       Jiffy: trackOrderJiffy,
+      ShipMaxx: trackOrderShipMaxx,
     };
 
     // if (!trackingFunctions[provider]) {
@@ -124,6 +128,8 @@ const trackSingleOrder = async (order) => {
       result = await trackingFunctions["Shadowfax"](awb_number);
     } else if (partner && partner === "Jiffy") {
       result = await trackingFunctions["Jiffy"](awb_number);
+    } else if (partner && partner === "ShipMaxx") {
+      result = await trackingFunctions["ShipMaxx"](awb_number);
     } else if (provider && provider === "Shadowfax") {
       result = await trackingFunctions["Shadowfax"](awb_number);
     } else if (provider && trackingFunctions[provider]) {
@@ -142,7 +148,7 @@ const trackSingleOrder = async (order) => {
     // Normalize only the latest one
     const normalizedData = mapTrackingResponse(
       [result.data],
-      (partner === "ZipyPost" || partner === "BoxdLogistics" || partner === "Proship" || partner === "Shiprocket" || partner === "Ekart" || partner === "Losung360" || partner === "Jiffy") ? partner : provider,
+      (partner === "ZipyPost" || partner === "BoxdLogistics" || partner === "Proship" || partner === "Shiprocket" || partner === "Ekart" || partner === "Losung360" || partner === "Jiffy" || partner === "ShipMaxx") ? partner : provider,
     );
     // console.log("normalized", normalizedData);
 
@@ -1398,6 +1404,101 @@ const trackSingleOrder = async (order) => {
       }
     }
 
+    // ── ShipMaxx Status Handling ─────────────────────────────────────────────
+    // ShipMaxx history items: { status, timestamp, location }. The docs give
+    // only free-text examples ("Picked Up", "In-Transit", "Shipment
+    // Cancelled") rather than a fixed enum, so match on keywords/substrings
+    // (same approach used for ShipexIndia elsewhere in this file) instead of
+    // an exact-value table.
+    if (partner === "ShipMaxx") {
+      const statusCode = (normalizedData.Instructions || "").toLowerCase();
+      const isRto = statusCode.includes("rto");
+
+      if (statusCode.includes("cancel")) {
+        order.status = "Cancelled";
+        order.ndrStatus = "Cancelled";
+        balanceTobeAdded =
+          order.totalFreightCharges === "N/A"
+            ? 0
+            : parseFloat(order.totalFreightCharges);
+        shouldUpdateWallet = true;
+      } else if (isRto && statusCode.includes("delivered")) {
+        order.status = "RTO Delivered";
+        order.ndrStatus = "RTO Delivered";
+        order.reattempt = false;
+      } else if (isRto) {
+        order.status = "RTO In-transit";
+        order.ndrStatus = "RTO In-transit";
+        order.reattempt = false;
+      } else if (statusCode.includes("lost") || statusCode.includes("damaged")) {
+        order.status = "Lost";
+        order.reattempt = false;
+      } else if (statusCode.includes("delivered")) {
+        order.status = "Delivered";
+        order.reattempt = false;
+        if (
+          order.ndrStatus === "Undelivered" ||
+          order.ndrStatus === "Out for Delivery" ||
+          order.ndrStatus === "Action_Requested"
+        ) {
+          order.ndrStatus = "Delivered";
+        }
+      } else if (statusCode.includes("out for delivery")) {
+        order.status = "Out for Delivery";
+        order.ndrStatus = "Out for Delivery";
+        order.reattempt = false;
+      } else if (
+        statusCode.includes("undelivered") ||
+        statusCode.includes("ndr") ||
+        statusCode.includes("failed") ||
+        statusCode.includes("attempt")
+      ) {
+        if (order.ndrStatus !== "Action_Requested") {
+          order.status = "Undelivered";
+          order.ndrStatus = "Undelivered";
+          order.ndrReason = {
+            date: normalizedData.StatusDateTime,
+            reason: normalizedData.Instructions,
+          };
+
+          const lastNdr = order.ndrHistory[order.ndrHistory.length - 1];
+          const lastAction = lastNdr?.actions?.[lastNdr.actions.length - 1];
+          const lastEntryDate = lastAction?.date
+            ? new Date(lastAction.date).getTime()
+            : null;
+          const currentStatusDate = new Date(normalizedData.StatusDateTime).getTime();
+
+          if (order.ndrHistory.length === 0 || lastEntryDate < currentStatusDate) {
+            const attemptCount = order.ndrHistory?.length + 1 || 0;
+            order.reattempt = true;
+            const newHistoryEntry = {
+              actions: [
+                {
+                  action: `NDR ${attemptCount} Raised`,
+                  actionBy: order.courierServiceName,
+                  remark: normalizedData.Instructions || "Delivery Exception",
+                  source: order.provider,
+                  date: normalizedData.StatusDateTime,
+                },
+              ],
+            };
+            order.ndrHistory.push(newHistoryEntry);
+          }
+        }
+        if (order.ndrHistory.length >= 4) {
+          order.reattempt = false;
+        }
+      } else if (statusCode.includes("transit")) {
+        order.status = "In-transit";
+        order.ndrStatus = "In-transit";
+        if (!order.invoiceDate) {
+          order.invoiceDate = normalizedData.StatusDateTime;
+        }
+        order.reattempt = false;
+      } else if (statusCode.includes("pick") || statusCode.includes("ready")) {
+        order.status = "Ready To Ship";
+      }
+    }
 
     if (partner === "Proship") {
       console.log("pro tracking", normalizedData);
@@ -1891,7 +1992,7 @@ const trackSingleOrder = async (order) => {
       }
     }
 
-    const scansArray = (partner === "Losung360" || provider === "Losung360")
+    const scansArray = (partner === "Losung360" || provider === "Losung360" || partner === "ShipMaxx")
       ? (result.data?.history || [])
       : (Array.isArray(result.data) ? result.data : []);
 
@@ -1899,7 +2000,7 @@ const trackSingleOrder = async (order) => {
       // If API returned a full list of tracking events
       const newTrackingArray = scansArray.map((item) => {
         const mapped =
-          partner === "ZipyPost" || partner === "BoxdLogistics" || partner === "Proship" || partner === "Shiprocket" || partner === "Ekart" || partner === "Losung360" || partner === "Jiffy"
+          partner === "ZipyPost" || partner === "BoxdLogistics" || partner === "Proship" || partner === "Shiprocket" || partner === "Ekart" || partner === "Losung360" || partner === "Jiffy" || partner === "ShipMaxx"
             ? mapTrackingResponse([item], partner)
             : mapTrackingResponse([item], provider, result?.remark);
 
@@ -2063,14 +2164,15 @@ const trackOrders = async (includeWebhooks = false) => {
     ];
 
     // Aggregators with NO inbound webhook at all (Jiffy confirmed — no
-    // webhook/JiffyWebhook.controller.js exists, purely poll-based) must
-    // always stay poll-eligible regardless of `provider`. For these orders
-    // `provider` holds whatever underlying carrier the aggregator assigned
-    // (e.g. "Delhivery", "Ekart") — not a native direct integration — so it
-    // can collide with webhookNames and get wrongly excluded below, even
-    // though Shiproxx never receives a direct webhook from that carrier for
-    // an aggregator-routed shipment.
-    const pollOnlyPartners = ["Jiffy"];
+    // webhook/JiffyWebhook.controller.js exists, purely poll-based; ShipMaxx
+    // has no webhook module documented either) must always stay poll-eligible
+    // regardless of `provider`. For these orders `provider` holds whatever
+    // underlying carrier the aggregator assigned (e.g. "Delhivery", "Ekart")
+    // — not a native direct integration — so it can collide with
+    // webhookNames and get wrongly excluded below, even though Shiproxx
+    // never receives a direct webhook from that carrier for an
+    // aggregator-routed shipment.
+    const pollOnlyPartners = ["Jiffy", "ShipMaxx"];
     const notWebhookSourced = {
       $or: [
         { provider: { $nin: webhookNames }, partner: { $nin: webhookNames } },
@@ -2373,6 +2475,33 @@ const mapTrackingResponse = (data, provider, remark) => {
       StatusLocation: latestScan?.location || "Unknown",
       StatusDateTime: formatJiffyDateTime(latestScan?.timestamp),
       Instructions: latestScan?.status || "N/A", // used for status-matching logic
+    };
+  }
+
+  if (provider === "ShipMaxx") {
+    // Real API response: { awb, current_status, history: [{ status, timestamp, location }] }
+    // history is already chronological ascending (confirmed from the docs'
+    // sample response), unlike Jiffy which needed reversal upstream.
+    // timestamp is a naive IST string like '2024-01-15T10:30:00' (no
+    // timezone suffix) — append a bare "Z" (not a real "+05:30" offset) to
+    // match this codebase's raw-UTC-getter display convention, same as the
+    // Jiffy case above.
+    const rawData = data[0] || {};
+
+    const formatShipMaxxDateTime = (rawDate) => {
+      if (!rawDate) return null;
+      if (rawDate.includes("Z") || rawDate.includes("+")) return rawDate;
+      return rawDate.replace(" ", "T") + "Z";
+    };
+
+    const history = Array.isArray(rawData.history) ? rawData.history : [];
+    const latestScan = history.length > 0 ? history[history.length - 1] : rawData;
+
+    return {
+      Status: latestScan?.status || rawData.current_status || "N/A",
+      StatusLocation: latestScan?.location || "Unknown",
+      StatusDateTime: formatShipMaxxDateTime(latestScan?.timestamp),
+      Instructions: latestScan?.status || rawData.current_status || "N/A", // used for status-matching logic
     };
   }
 
