@@ -44,6 +44,29 @@ const normalizeRateCard = (data) => {
 const saveRate = async (req, res) => {
   try {
     const normalizedData = normalizeRateCard(req.body);
+
+    // Validate courierServiceName against the real CourierService catalog
+    // and snap it to the canonical stored name, the same way uploadRatecard
+    // does — this form previously did no such check at all, so a typo or
+    // casing slip (e.g. "DELJF 500" instead of "DelJF 500") saved silently
+    // and only broke later at booking time via a case-sensitive lookup
+    // elsewhere. CourierService.name is globally unique, so no provider
+    // cross-check is needed to disambiguate. This must run BEFORE
+    // destructuring courierServiceName below, so every later reference
+    // (existing-record lookups included) sees the canonical value.
+    if (normalizedData.courierServiceName) {
+      const escaped = normalizedData.courierServiceName.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const matchedService = await CourierService.findOne({
+        name: { $regex: `^${escaped}$`, $options: "i" },
+      });
+      if (!matchedService) {
+        return res.status(400).json({
+          message: `Courier service '${normalizedData.courierServiceName}' does not match any configured courier service.`,
+        });
+      }
+      normalizedData.courierServiceName = matchedService.name;
+    }
+
     const {
       plan,
       courierProviderName,
@@ -846,7 +869,15 @@ const uploadRatecard = async (req, res) => {
         grouped[key] = {
           plan: planVal,
           courierProviderName: providerName,
-          courierServiceName: serviceVal,
+          // Save the canonical name from the matched CourierService record,
+          // not the raw typed-in cell value (serviceVal) — the lookup above
+          // is case/whitespace-insensitive, so a sloppily-typed variant like
+          // "DELJF 500" passes validation against the real "DelJF 500" but
+          // previously got saved verbatim, silently drifting the rate card's
+          // name out of sync with the actual courier config it's supposed to
+          // reference. That mismatch then broke booking lookups downstream
+          // (case-sensitive exact-match queries elsewhere never found it).
+          courierServiceName: matchedService.name,
           weightPriceBasic: [],
           weightPriceAdditional: [],
           codCharge: toFixedNum(getRowVal(H_COD_CHARGE)),

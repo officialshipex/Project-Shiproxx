@@ -58,10 +58,20 @@ const createOrderJiffy = async (
 
     // The bulk-ship caller only passes {provider, name} in serviceDetails (no
     // courier code) — look up the manually-configured Jiffy courier_code
-    // ourselves rather than always falling back to auto-assign.
+    // ourselves rather than always falling back to auto-assign. `name` here
+    // comes from the rate card (Plan.rateCard.courierServiceName), a
+    // separately-maintained field that can drift out of case-sync with
+    // CourierService.name (e.g. rate card "DELJF 500" vs the real service
+    // "DelJF 500") — match case-insensitively so a casing mismatch doesn't
+    // silently drop the courier_code and leave Jiffy's own auto-allocation
+    // (which has no rule configured for every possible route) to reject the
+    // booking with an opaque "No allocation rule matched" error.
     let courierCode = serviceDetails?.courier;
     if (!courierCode) {
-      const serviceDoc = await CourierService.findOne({ name: serviceDetails.name, provider: "Jiffy" }).select("courier");
+      const serviceDoc = await CourierService.findOne({
+        name: { $regex: `^${serviceDetails.name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+        provider: "Jiffy",
+      }).select("courier");
       courierCode = serviceDoc?.courier;
     }
 
