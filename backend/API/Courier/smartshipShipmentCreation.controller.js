@@ -230,7 +230,14 @@ const createSmartshipShipment = async ({
       if (!result?.awb_number) throw new Error("AWB not received from Smartship");
 
       // 7️⃣ Update order and wallet in transaction
-      await Order.updateOne(
+      // findOneAndUpdate, not updateOne — the schema's post("findOneAndUpdate")
+      // hook is what fires the automatic Shopify fulfillment push-back (and
+      // the general status-change notification/RTO/NDR triggers) on a
+      // successful booking; plain updateOne has no such hook and was
+      // silently skipping all of that for every Smartship order booked via
+      // single "Ship Now" (bulk-ship's separate Smartship implementation
+      // already used .save() and was unaffected).
+      await Order.findOneAndUpdate(
         { _id: currentOrder._id },
         {
           $set: {
