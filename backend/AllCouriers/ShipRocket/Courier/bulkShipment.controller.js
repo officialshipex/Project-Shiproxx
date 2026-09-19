@@ -10,6 +10,7 @@ const { assignPickupManifest } = require("../../../Orders/scheduledPickup.contro
 const { getAuthToken } = require("../Authorize/shiprocket.controller");
 const { addPickupLocation, requestShipmentPickup, generateLabel } = require("./couriers.controller");
 const { findShiprocketService } = require("../../../utils/shiprocketServiceLookup");
+const { fitShiprocketAddress } = require("../../../utils/shiprocketAddress");
 const axios = require("axios");
 
 const BASE_URL = `${process.env.SHIPROCKET_URL}/v1/external`;
@@ -40,6 +41,9 @@ const splitName = (fullName) => {
 };
 
 // ─── Internal: Assign AWB ─────────────────────────────────────────────────────
+// Resolves to { data } on success or { error } with Shiprocket's own reason
+// (e.g. the courier does not serve that pincode pair) — a bare "Failed to
+// assign AWB" leaves the seller and support with nothing to act on.
 const assignAWB = async (token, shipment_id, courier_id) => {
   try {
     const response = await axios.post(
@@ -50,11 +54,28 @@ const assignAWB = async (token, shipment_id, courier_id) => {
         timeout: 15000,
       }
     );
-    return response.data?.response?.data || null;
+    const data = response.data?.response?.data || null;
+    if (data?.awb_code) return { data };
+
+    console.error("ShipRocket assignAWB (bulk) returned no AWB:", response.data);
+    return { error: describeAwbFailure(response.data) };
   } catch (error) {
     console.error("ShipRocket assignAWB (bulk) Error:", error.response?.data || error.message);
-    return null;
+    return { error: error.response?.data ? describeAwbFailure(error.response.data) : error.message };
   }
+};
+
+// Shiprocket reports an assignment refusal as HTTP 200 with the reason in
+// response.data.awb_assign_error, or as an error body with a top-level
+// message. Fall back to the raw body so the reason is never lost.
+const describeAwbFailure = (body) => {
+  if (!body) return "no response from Shiprocket";
+  const reason =
+    body.response?.data?.awb_assign_error ||
+    body.message ||
+    body.response?.data?.message ||
+    JSON.stringify(body);
+  return String(reason).slice(0, 300);
 };
 
 // ─── Bulk Booking ─────────────────────────────────────────────────────────────
@@ -131,13 +152,17 @@ const createShipmentFunctionShipRocket = async (
       selling_price: parseFloat(p.unitPrice) || 0,
     }));
 
+    // Shiprocket rejects the order if address_1 + address_2 exceed 190 chars.
+    const billingAddress = fitShiprocketAddress(currentOrder.pickupAddress.address, currentOrder.pickupAddress);
+    const shippingAddress = fitShiprocketAddress(currentOrder.receiverAddress.address, currentOrder.receiverAddress);
+
     const shipmentPayload = {
       order_id: String(currentOrder.orderId),
       order_date: getCurrentDateTime(),
       pickup_location: pickupLocationName,
       billing_customer_name: senderName.first,
       billing_last_name: senderName.last,
-      billing_address: currentOrder.pickupAddress.address,
+      billing_address: billingAddress,
       billing_city: currentOrder.pickupAddress.city,
       billing_pincode: String(currentOrder.pickupAddress.pinCode),
       billing_state: currentOrder.pickupAddress.state,
@@ -147,7 +172,7 @@ const createShipmentFunctionShipRocket = async (
       shipping_is_billing: false,
       shipping_customer_name: receiverName.first,
       shipping_last_name: receiverName.last,
-      shipping_address: currentOrder.receiverAddress.address,
+      shipping_address: shippingAddress,
       shipping_city: currentOrder.receiverAddress.city,
       shipping_pincode: String(currentOrder.receiverAddress.pinCode),
       shipping_state: currentOrder.receiverAddress.state,
@@ -171,10 +196,10 @@ const createShipmentFunctionShipRocket = async (
     if (!orderResponse.data?.shipment_id) return { status: 400, error: orderResponse.data?.message || "Order creation failed" };
     const { shipment_id } = orderResponse.data;
     const awbResult = await assignAWB(token, shipment_id, courier_id);
-    if (!awbResult?.awb_code) return { status: 400, error: "Failed to assign AWB" };
+    if (!awbResult.data?.awb_code) return { status: 400, error: `Failed to assign AWB — ${awbResult.error}` };
 
-    const awb_number = awbResult.awb_code;
-    const courier_name = awbResult.courier_name || null;
+    const awb_number = awbResult.data.awb_code;
+    const courier_name = awbResult.data.courier_name || null;
 
     // Prefer our own curated courier name over Shiprocket's AWB response —
     // Shiprocket's own `courier_name` is its internal display label

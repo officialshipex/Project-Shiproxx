@@ -9,6 +9,7 @@ const estimatedDeliveryDate = require("../../models/EDDMap.model");
 const { assignPickupManifest } = require("../../Orders/scheduledPickup.controller");
 const { getAuthToken } = require("../../AllCouriers/ShipRocket/Authorize/shiprocket.controller");
 const { findShiprocketService } = require("../../utils/shiprocketServiceLookup");
+const { fitShiprocketAddress } = require("../../utils/shiprocketAddress");
 
 const BASE_URL = `${process.env.SHIPROCKET_URL}/v1/external`;
 const SHIPROCKET_EMAIL = process.env.SHIPR_GMAIL;
@@ -244,13 +245,17 @@ const createShiprocketShipment = async ({
       const receiverName = splitName(currentOrder.receiverAddress.contactName);
       const isCOD = currentOrder.paymentDetails.method === "COD";
 
+      // Shiprocket rejects the order if address_1 + address_2 exceed 190 chars.
+      const billingAddress = fitShiprocketAddress(ensureAddress(currentOrder.pickupAddress.address), currentOrder.pickupAddress);
+      const shippingAddress = fitShiprocketAddress(ensureAddress(currentOrder.receiverAddress.address), currentOrder.receiverAddress);
+
       const shiprocketPayload = {
         order_id: String(currentOrder.orderId),
         order_date: getCurrentDateTime(),
         pickup_location: pickupLocationName,
         billing_customer_name: senderName.first,
         billing_last_name: senderName.last,
-        billing_address: ensureAddress(currentOrder.pickupAddress.address),
+        billing_address: billingAddress,
         billing_city: currentOrder.pickupAddress.city,
         billing_pincode: String(currentOrder.pickupAddress.pinCode),
         billing_state: currentOrder.pickupAddress.state,
@@ -260,7 +265,7 @@ const createShiprocketShipment = async ({
         shipping_is_billing: false,
         shipping_customer_name: receiverName.first,
         shipping_last_name: receiverName.last,
-        shipping_address: ensureAddress(currentOrder.receiverAddress.address),
+        shipping_address: shippingAddress,
         shipping_city: currentOrder.receiverAddress.city,
         shipping_pincode: String(currentOrder.receiverAddress.pinCode),
         shipping_state: currentOrder.receiverAddress.state,
@@ -300,6 +305,13 @@ const createShiprocketShipment = async ({
       // Step 🔟 Assign AWB
       let awb_number = "PENDING";
       let courier_name = null;
+      // Shiprocket's own reason for refusing (e.g. courier does not serve this
+      // pincode pair) — reported to the caller instead of a bare "failed".
+      let awbFailureReason = null;
+      const describeAwbFailure = (body) =>
+        String(
+          body?.response?.data?.awb_assign_error || body?.message || body?.response?.data?.message || (body ? JSON.stringify(body) : "no response from Shiprocket")
+        ).slice(0, 300);
       try {
         const awbResponse = await axios.post(
           `${BASE_URL}/courier/assign/awb`,
@@ -309,8 +321,10 @@ const createShiprocketShipment = async ({
         console.log("awb response", awbResponse.data)
         awb_number = awbResponse.data?.response?.data?.awb_code || "PENDING";
         courier_name = awbResponse.data?.response?.data?.courier_name || null;
+        if (awb_number === "PENDING") awbFailureReason = describeAwbFailure(awbResponse.data);
       } catch (awbErr) {
         console.error("Shiprocket AWB Assignment Error:", awbErr.response?.data || awbErr.message);
+        awbFailureReason = awbErr.response?.data ? describeAwbFailure(awbErr.response.data) : awbErr.message;
       }
 
       if (awb_number === "PENDING") {
@@ -318,7 +332,7 @@ const createShiprocketShipment = async ({
         session.endSession();
         return {
           success: false,
-          message: "Failed to assign AWB. Shiprocket order created but AWB assignment is pending/failed."
+          message: `Failed to assign AWB. Shiprocket order created but AWB assignment failed${awbFailureReason ? ` — ${awbFailureReason}` : ""}.`
         };
       }
 
