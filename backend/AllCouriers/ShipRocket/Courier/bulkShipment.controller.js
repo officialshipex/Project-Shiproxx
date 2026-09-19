@@ -9,6 +9,7 @@ const { getZone } = require("../../../Rate/zoneManagementController");
 const { assignPickupManifest } = require("../../../Orders/scheduledPickup.controller");
 const { getAuthToken } = require("../Authorize/shiprocket.controller");
 const { addPickupLocation, requestShipmentPickup, generateLabel } = require("./couriers.controller");
+const { findShiprocketService } = require("../../../utils/shiprocketServiceLookup");
 const axios = require("axios");
 
 const BASE_URL = `${process.env.SHIPROCKET_URL}/v1/external`;
@@ -83,6 +84,30 @@ const createShipmentFunctionShipRocket = async (
     const token = await getAuthToken();
     if (!token) return { status: 500, error: "ShipRocket authentication failed" };
 
+    // Resolve the Shiprocket courier_id for the service being booked from
+    // CourierService. The bulk callers only pass {provider, name} — this
+    // function used to read a `provider_courier_id` off serviceDetails that
+    // nothing ever supplies for Shiprocket, so assignAWB always went out with
+    // courier_id undefined (dropped from the JSON body entirely) and
+    // Shiprocket auto-assigned whichever courier it liked per the account's
+    // own priority — e.g. a "DELSRF 500" (Delhivery) booking coming back with
+    // a Xpressbees or Shadowfax AWB, while we still recorded "Delhivery" and
+    // billed the Delhivery rate. Match the name ignoring case/extra spaces
+    // (rate-card names drift from CourierService.name) and refuse to book at
+    // all if no courier_id is configured, rather than silently letting
+    // Shiprocket pick a different courier than the one being charged for.
+    const bookedServiceName = serviceDetails.name || serviceDetails.courierProviderServiceName;
+    const serviceDoc = await findShiprocketService(bookedServiceName);
+    // Sent as the stored string, exactly like the single-order path — that
+    // form is the one proven to be honored by Shiprocket.
+    const courier_id = serviceDoc?.courier_id ? String(serviceDoc.courier_id).trim() : null;
+    if (!courier_id) {
+      return {
+        status: 400,
+        error: `No Shiprocket courier ID is configured for service "${bookedServiceName}" — not booking, because Shiprocket would auto-assign an arbitrary courier instead of the one being charged for.`,
+      };
+    }
+
     const pickupLocationName = wh?.warehouseName || currentOrder.pickupAddress.contactName;
     await addPickupLocation({
       warehouseName: pickupLocationName,
@@ -98,7 +123,6 @@ const createShipmentFunctionShipRocket = async (
     const senderName = splitName(currentOrder.pickupAddress.contactName);
     const receiverName = splitName(currentOrder.receiverAddress.contactName);
     const isCOD = currentOrder.paymentDetails.method === "COD";
-    const provider_courier_id = serviceDetails.provider_courier_id;
 
     const order_items = currentOrder.productDetails.map((p) => ({
       name: p.name || "Product",
@@ -146,12 +170,11 @@ const createShipmentFunctionShipRocket = async (
 
     if (!orderResponse.data?.shipment_id) return { status: 400, error: orderResponse.data?.message || "Order creation failed" };
     const { shipment_id } = orderResponse.data;
-    const awbResult = await assignAWB(token, shipment_id, provider_courier_id);
+    const awbResult = await assignAWB(token, shipment_id, courier_id);
     if (!awbResult?.awb_code) return { status: 400, error: "Failed to assign AWB" };
 
     const awb_number = awbResult.awb_code;
     const courier_name = awbResult.courier_name || null;
-    const bookedServiceName = serviceDetails.name || serviceDetails.courierProviderServiceName;
 
     // Prefer our own curated courier name over Shiprocket's AWB response —
     // Shiprocket's own `courier_name` is its internal display label
@@ -160,16 +183,7 @@ const createShipmentFunctionShipRocket = async (
     // `provider` fragments dashboards/reports that group by provider into
     // dozens of "couriers" that are really just Shiprocket's own rate-plan
     // labels for the same handful of real couriers.
-    let curatedCourier = null;
-    try {
-      const courierService = await require("../../../models/CourierService.Schema").findOne({
-        name: bookedServiceName,
-        provider: "Shiprocket",
-      });
-      curatedCourier = courierService?.courier || null;
-    } catch (err) {
-      console.error("Shiprocket CourierService lookup error:", err.message);
-    }
+    const curatedCourier = serviceDoc?.courier || null;
 
     // Amazon-fulfilled services booked through Shiprocket are named with
     // "ATS" (Amazon's own carrier code) by convention — fetch Shiprocket's
@@ -187,7 +201,7 @@ const createShipmentFunctionShipRocket = async (
     currentOrder.provider = curatedCourier || courier_name || "Shiprocket";
     currentOrder.partner = "Shiprocket";
     currentOrder.totalFreightCharges = charges;
-    currentOrder.courierServiceName = bookedServiceName;
+    currentOrder.courierServiceName = serviceDoc.name;
     if (atsLabelUrl) currentOrder.label = atsLabelUrl;
     currentOrder.zone = zone.zone;
     currentOrder.estimatedDeliveryDate = estimatedDeliveryDate || null;

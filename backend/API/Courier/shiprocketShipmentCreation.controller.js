@@ -8,6 +8,7 @@ const { getZone } = require("../../Rate/zoneManagementController");
 const estimatedDeliveryDate = require("../../models/EDDMap.model");
 const { assignPickupManifest } = require("../../Orders/scheduledPickup.controller");
 const { getAuthToken } = require("../../AllCouriers/ShipRocket/Authorize/shiprocket.controller");
+const { findShiprocketService } = require("../../utils/shiprocketServiceLookup");
 
 const BASE_URL = `${process.env.SHIPROCKET_URL}/v1/external`;
 const SHIPROCKET_EMAIL = process.env.SHIPR_GMAIL;
@@ -150,6 +151,22 @@ const createShiprocketShipment = async ({
         return { success: false, message: "ShipRocket authentication failed" };
       }
 
+      // Resolve the courier_id for the requested service BEFORE creating
+      // anything on Shiprocket. Names come from rate cards / the UI and drift
+      // from CourierService.name in case and spacing, so match ignoring both.
+      // This path used to fall back to a courier-less "auto-assign" call when
+      // the lookup missed, letting Shiprocket pick an arbitrary courier while
+      // we still recorded and billed the requested one — refuse instead.
+      const courierService = await findShiprocketService(courierServiceName);
+      if (!courierService?.courier_id) {
+        await session.abortTransaction();
+        session.endSession();
+        return {
+          success: false,
+          message: `No Shiprocket courier ID is configured for service "${courierServiceName}" — not booking, because Shiprocket would auto-assign an arbitrary courier instead of the one being charged for.`,
+        };
+      }
+
       // Step 7️⃣ Add/Verify Pickup Location in Shiprocket
       let pickupLocationName = currentOrder.pickupAddress.contactName;
       try {
@@ -283,33 +300,15 @@ const createShiprocketShipment = async ({
       // Step 🔟 Assign AWB
       let awb_number = "PENDING";
       let courier_name = null;
-      let courierService = null;
       try {
-        courierService = await require("../../models/CourierService.Schema").findOne({
-          name: courierServiceName,
-          provider: "Shiprocket",
-        });
-
-        if (courierService?.courier_id) {
-          const awbResponse = await axios.post(
-            `${BASE_URL}/courier/assign/awb`,
-            { shipment_id, courier_id: courierService.courier_id },
-            { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 }
-          );
-          console.log("awb response", awbResponse.data)
-          awb_number = awbResponse.data?.response?.data?.awb_code || "PENDING";
-          courier_name = awbResponse.data?.response?.data?.courier_name || null;
-        } else {
-          // Fallback: auto-assign if no ID is found (optional, or could error)
-          const awbResponse = await axios.post(
-            `${BASE_URL}/courier/assign/awb`,
-            { shipment_id },
-            { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 }
-          );
-          console.log("awb response (auto-assign)", awbResponse.data)
-          awb_number = awbResponse.data?.response?.data?.awb_code || "PENDING";
-          courier_name = awbResponse.data?.response?.data?.courier_name || null;
-        }
+        const awbResponse = await axios.post(
+          `${BASE_URL}/courier/assign/awb`,
+          { shipment_id, courier_id: courierService.courier_id },
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 }
+        );
+        console.log("awb response", awbResponse.data)
+        awb_number = awbResponse.data?.response?.data?.awb_code || "PENDING";
+        courier_name = awbResponse.data?.response?.data?.courier_name || null;
       } catch (awbErr) {
         console.error("Shiprocket AWB Assignment Error:", awbErr.response?.data || awbErr.message);
       }
@@ -348,7 +347,7 @@ const createShiprocketShipment = async ({
               provider: courierService?.courier || courier_name || "Shiprocket",
               partner: "Shiprocket",
               totalFreightCharges: balanceToBeDeducted,
-              courierServiceName,
+              courierServiceName: courierService.name,
               shipmentCreatedAt: new Date(),
               zone: zone.zone,
               estimatedDeliveryDate: estimateDate,
