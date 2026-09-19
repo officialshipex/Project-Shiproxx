@@ -82,13 +82,37 @@ const ShipRocketWebhook = async (req, res) => {
 
     // Shiprocket sends individual shipment event
     const awb = body.awb;
-    const statusId = parseInt(body.current_status_id || body.status_id);
+    // current_status_id is not reliable as the driver of order.status — seen
+    // live sending current_status_id=20 ("Pickup Exception") on a payload
+    // whose shipment_status_id=18 ("In Transit") and whose own latest scan
+    // carries sr-status=18/"IN TRANSIT", after 9 real scan events already
+    // past pickup. Prefer the most recent scan's own sr-status (the
+    // finest-grained, most current signal), then shipment_status_id, and
+    // only fall back to current_status_id/status_id if neither is present.
+    const lastScan = Array.isArray(body.scans) && body.scans.length > 0 ? body.scans[body.scans.length - 1] : null;
+    const scanStatusId = lastScan && lastScan["sr-status"] !== "NA" ? parseInt(lastScan["sr-status"]) : NaN;
+    const statusId = !isNaN(scanStatusId)
+      ? scanStatusId
+      : (parseInt(body.shipment_status_id) || parseInt(body.current_status_id || body.status_id));
     const statusText = body.current_status || body.status || "Unknown";
     const location = body.location || (body.scans && body.scans.length > 0 ? body.scans[body.scans.length - 1].location : "Unknown");
     
-    // Parse date using moment to handle Shiprocket's format
+    // Parse date using moment to handle Shiprocket's format. Shiprocket's
+    // timestamps are naive IST strings (no timezone marker) — every other
+    // tracking-timeline component in this codebase (Jiffy, BoxdLogistics,
+    // ShipMaxx, Losung360, ShreeMaruti, ...) stores these by keeping the raw
+    // digits as-is and appending a bare "Z", because the frontend reads
+    // StatusDateTime back via getUTCHours()/getUTCDate() with NO timezone
+    // conversion — it just displays whatever digits are in the UTC
+    // representation. Plain moment(...) (no .utc()) parses in the server's
+    // configured local timezone instead, and this server's local tz is IST
+    // (UTC+5:30) — so a naive "10:37:33" got interpreted as 10:37:33 IST and
+    // correctly-but-wrongly converted to a *real* UTC instant of 05:07:33Z,
+    // which then displayed as 5:07 AM instead of the intended 10:37 AM.
+    // moment.utc(...) parses the same digits without any shift, matching the
+    // convention every other courier here already follows.
     const rawTimestamp = body.current_timestamp || (body.scans && body.scans.length > 0 ? body.scans[body.scans.length - 1].date : null);
-    const timestamp = rawTimestamp ? moment(rawTimestamp, ["DD-MM-YYYY HH:mm:ss", "YYYY-MM-DD HH:mm:ss", "DD MM YYYY HH:mm:ss"]).toDate() : new Date();
+    const timestamp = rawTimestamp ? moment.utc(rawTimestamp, ["DD-MM-YYYY HH:mm:ss", "YYYY-MM-DD HH:mm:ss", "DD MM YYYY HH:mm:ss"]).toDate() : new Date();
     
     // Extract remark/activity
     const remark = body.activity || (body.scans && body.scans.length > 0 ? body.scans[body.scans.length - 1].activity : statusText);
@@ -132,7 +156,6 @@ const ShipRocketWebhook = async (req, res) => {
       case 62: // Ready To Pack
       case 63: // Packed
       case 67: // FC MANIFEST GENERATED
-      case 20: // pickup exception
         order.status = "Ready To Ship";
         break;
 

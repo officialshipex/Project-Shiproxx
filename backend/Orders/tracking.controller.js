@@ -145,9 +145,15 @@ const trackSingleOrder = async (order) => {
       ? result.data[result.data.length - 1] // last (most recent)
       : result.data;
 
-    // Normalize only the latest one
+    // Normalize only the latest one. Must pass [latestTrackingEvent] (a
+    // single scan object), NOT [result.data] (the whole array) — wrapping
+    // the array again made data[0] resolve to the array itself instead of a
+    // scan object in every mapTrackingResponse case, so every field
+    // (current_status, shipment_status, location, ...) silently came back
+    // undefined for every Shiprocket order, permanently, regardless of how
+    // much real tracking activity existed.
     const normalizedData = mapTrackingResponse(
-      [result.data],
+      [latestTrackingEvent],
       (partner === "ZipyPost" || partner === "BoxdLogistics" || partner === "Proship" || partner === "Shiprocket" || partner === "Ekart" || partner === "Losung360" || partner === "Jiffy" || partner === "ShipMaxx") ? partner : provider,
     );
     // console.log("normalized", normalizedData);
@@ -1845,6 +1851,100 @@ const trackSingleOrder = async (order) => {
       } else if (statusCode === 13) {
         order.status = "Lost";
         order.reattempt = false;
+      } else {
+        // Shiprocket's numeric shipment_status is sometimes not populated
+        // even though real scan activity exists — confirmed live against a
+        // Shadowfax-fulfilled order with a full, current
+        // shipment_track_activities history whose shipment_status was still
+        // null. Without this fallback the order stays frozen at whatever
+        // status it last had, forever, despite genuine tracking progress.
+        // Fall back to matching the raw activity text Shiprocket passes
+        // straight through from the underlying courier (current_status /
+        // instructions) — this text varies by carrier, so only match
+        // unambiguous keywords and otherwise assume forward progress.
+        const text = `${(normalizedData.Status || "").toLowerCase()} ${(normalizedData.Instructions || "").toLowerCase()}`;
+
+        // A cancelled/exception/held *pickup* attempt (e.g. "PICKUP
+        // CANCELLED BY CALL", "PICKUP WRONGLY REGISTERED BY SHIPPER",
+        // "Item On Hold" — all seen live) means the courier didn't collect
+        // the package and it needs rescheduling — it does NOT mean the
+        // order itself was cancelled. Naively matching "cancel" below would
+        // wrongly mark these as order-cancelled and trigger a real wallet
+        // refund for a shipment that's still active. Leave status/ndrStatus
+        // untouched for these — ambiguous pickup-stage noise is safer to
+        // ignore than to misclassify.
+        const isPickupException =
+          text.includes("pickup") &&
+          (text.includes("cancel") || text.includes("exception") || text.includes("wrongly") || text.includes("on hold") || text.includes("reschedul") || text.includes("not ready"));
+
+        if (isPickupException) {
+          // no-op — deliberately leave order.status/ndrStatus as-is
+        } else if (text.includes("delivered") && !text.includes("out for delivery") && !text.includes("rto") && !text.includes("undeliver")) {
+          order.status = "Delivered";
+          order.reattempt = false;
+          if (order.ndrHistory.length > 0) order.ndrStatus = "Delivered";
+        } else if (text.includes("out for delivery") || text.includes("ofd")) {
+          order.status = "Out for Delivery";
+          order.ndrStatus = "Out for Delivery";
+          order.reattempt = false;
+        } else if (text.includes("rto delivered")) {
+          order.status = "RTO Delivered";
+          order.ndrStatus = "RTO Delivered";
+          order.reattempt = false;
+        } else if (text.includes("rto")) {
+          order.status = "RTO In-transit";
+          order.ndrStatus = "RTO In-transit";
+          order.reattempt = false;
+        } else if (text.includes("cancel")) {
+          order.status = "Cancelled";
+          order.ndrStatus = "Cancelled";
+          order.reattempt = false;
+          balanceTobeAdded =
+            order.totalFreightCharges === "N/A" ? 0 : parseFloat(order.totalFreightCharges);
+          shouldUpdateWallet = true;
+        } else if (
+          (text.includes("undeliver") || text.includes("ndr") || text.includes("failed delivery") || text.includes("refused") || text.includes("not available") || text.includes("delivery attempt")) &&
+          order.ndrStatus !== "Action_Requested"
+        ) {
+          order.status = "Undelivered";
+          order.ndrStatus = "Undelivered";
+          order.ndrReason = {
+            date: normalizedData.StatusDateTime,
+            reason: normalizedData.Instructions || "Delivery attempt failed",
+          };
+
+          const lastNdr = order.ndrHistory[order.ndrHistory.length - 1];
+          const lastAction = lastNdr?.actions?.[lastNdr.actions.length - 1];
+          const lastEntryDate = lastAction?.date
+            ? new Date(lastAction.date).getTime()
+            : null;
+          const currentStatusDate = new Date(normalizedData.StatusDateTime).getTime();
+
+          if (order.ndrHistory.length === 0 || !lastEntryDate || currentStatusDate > lastEntryDate) {
+            const attemptCount = order.ndrHistory.length + 1;
+            order.reattempt = true;
+            order.ndrHistory.push({
+              actions: [{
+                action: `NDR ${attemptCount} Raised`,
+                actionBy: order.courierServiceName || "Shiprocket",
+                remark: normalizedData.Instructions || "Delivery Failed",
+                source: "Shiprocket",
+                date: normalizedData.StatusDateTime,
+              }],
+            });
+          }
+
+          if (order.ndrHistory.length >= 4) order.reattempt = false;
+        } else if (["Ready To Ship", "Booked", "new"].includes(order.status)) {
+          // No terminal-state keyword matched, but the order has moved past
+          // booking with genuine new scan activity (pickup, hub scan,
+          // bagging, inter-hub transit, etc.) — treat it as in-transit
+          // rather than leaving it frozen at an early stage indefinitely.
+          order.status = "In-transit";
+          order.ndrStatus = "In-transit";
+          order.reattempt = false;
+          if (!order.invoiceDate) order.invoiceDate = normalizedData.StatusDateTime;
+        }
       }
     }
 
@@ -2605,7 +2705,7 @@ const mapTrackingResponse = (data, provider, remark) => {
     Shiprocket: {
       Status: data[0]?.current_status || null,
       StatusLocation: data[0]?.location || "Unknown",
-      StatusDateTime: data[0]?.timestamp ? new Date(data[0].timestamp) : null,
+      StatusDateTime: data[0]?.timestamp ? formatShiprocketDateTime(data[0].timestamp) : null,
       Instructions: data[0]?.instructions || null,
       shipment_status: data[0]?.shipment_status || null,
     },
@@ -2669,6 +2769,22 @@ const formatAmazonDate = (isoDateStr) => {
     // console.warn("Invalid Amazon date:", isoDateStr);
     return null;
   }
+};
+
+// Shiprocket's polled tracking timestamps (e.g. "2026-09-19 05:55:33") are
+// naive IST strings with no timezone marker, same as the webhook payloads
+// (see the matching fix/comment in webhook/ShipRocketWebhook.controller.js).
+// Passing them straight to `new Date(...)` lets the JS engine interpret them
+// in the server's local timezone (IST here) and convert to a *real* UTC
+// instant, shifting the stored value back by 5:30 — which then displays
+// wrong once the frontend reads it back via raw getUTCHours() with no
+// conversion. Keep the digits as-is by appending a bare "Z" instead, matching
+// every other courier in this codebase.
+const formatShiprocketDateTime = (rawDate) => {
+  if (!rawDate) return null;
+  if (typeof rawDate !== "string") return new Date(rawDate);
+  if (rawDate.includes("Z") || rawDate.includes("+")) return new Date(rawDate);
+  return new Date(rawDate.replace(" ", "T") + "Z");
 };
 
 const formatSmartShipDateTime = (dateTimeStr) => {
