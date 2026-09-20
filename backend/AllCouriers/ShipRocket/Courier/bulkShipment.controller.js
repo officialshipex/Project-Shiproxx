@@ -11,6 +11,7 @@ const { getAuthToken } = require("../Authorize/shiprocket.controller");
 const { addPickupLocation, requestShipmentPickup, generateLabel } = require("./couriers.controller");
 const { findShiprocketService } = require("../../../utils/shiprocketServiceLookup");
 const { fitShiprocketAddress } = require("../../../utils/shiprocketAddress");
+const { ensurePickupLocation, invalidatePickupLocations, isPickupLocationError } = require("../../../utils/shiprocketPickupCache");
 const axios = require("axios");
 
 const BASE_URL = `${process.env.SHIPROCKET_URL}/v1/external`;
@@ -130,16 +131,21 @@ const createShipmentFunctionShipRocket = async (
     }
 
     const pickupLocationName = wh?.warehouseName || currentOrder.pickupAddress.contactName;
-    await addPickupLocation({
-      warehouseName: pickupLocationName,
-      contactName: currentOrder.pickupAddress.contactName,
-      email: currentOrder.pickupAddress.email || SHIPROCKET_EMAIL,
-      phoneNumber: currentOrder.pickupAddress.phoneNumber,
-      address: currentOrder.pickupAddress.address,
-      city: currentOrder.pickupAddress.city,
-      state: currentOrder.pickupAddress.state,
-      pinCode: currentOrder.pickupAddress.pinCode,
-    });
+    // Used to re-register this same pickup address for every order in the job
+    // (Shiprocket answers "already exists" each time). Only register it when
+    // Shiprocket does not already have a location by this name.
+    await ensurePickupLocation(token, pickupLocationName, () =>
+      addPickupLocation({
+        warehouseName: pickupLocationName,
+        contactName: currentOrder.pickupAddress.contactName,
+        email: currentOrder.pickupAddress.email || SHIPROCKET_EMAIL,
+        phoneNumber: currentOrder.pickupAddress.phoneNumber,
+        address: currentOrder.pickupAddress.address,
+        city: currentOrder.pickupAddress.city,
+        state: currentOrder.pickupAddress.state,
+        pinCode: currentOrder.pickupAddress.pinCode,
+      })
+    );
 
     const senderName = splitName(currentOrder.pickupAddress.contactName);
     const receiverName = splitName(currentOrder.receiverAddress.contactName);
@@ -272,6 +278,9 @@ const createShipmentFunctionShipRocket = async (
   } catch (error) {
     const errData = error.response?.data;
     console.error("ShipRocket Bulk Shipment Error:", errData || error.message);
+    // If Shiprocket rejected the order over its pickup location, our remembered
+    // location list is out of date — forget it so the next order re-checks.
+    if (isPickupLocationError(errData, error.message)) invalidatePickupLocations();
 
     // Shiprocket's top-level `message` (e.g. "Oops! Invalid Data.") is too
     // generic for a seller to act on — the actually useful detail is in

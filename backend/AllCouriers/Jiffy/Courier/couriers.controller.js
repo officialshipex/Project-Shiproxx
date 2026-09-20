@@ -7,6 +7,9 @@ const WalletTransaction = require("../../../models/WalletTransaction.model");
 const { getZone } = require("../../../Rate/zoneManagementController");
 const { assignPickupManifest } = require("../../../Orders/scheduledPickup.controller");
 const { getJiffyToken, JIFFY_BASE_URL } = require("../Authorize/jiffy.controller");
+const { createTtlMemo } = require("../../../utils/ttlMemo");
+
+const jiffyServiceabilityMemo = createTtlMemo(60 * 1000);
 
 // Jiffy error responses use { error: { message, details? } } — pull that out
 // rather than the generic axios/error.message fallback.
@@ -38,29 +41,39 @@ const checkServiceabilityJiffy = async ({
     const token = await getJiffyToken();
     if (!token) return { success: false, message: "Jiffy authentication failed" };
 
-    const response = await axios.post(
-      `${JIFFY_BASE_URL}/couriers/serviceability/`,
-      {
-        source: parseInt(pickupPincode),
-        destination: deliveryPincode ? parseInt(deliveryPincode) : undefined,
-        rto: rtoPincode ? parseInt(rtoPincode) : parseInt(pickupPincode),
-        weight: Number(weight),
-        length: Math.round(length || 10),
-        width: Math.round(breadth || 10),
-        height: Math.round(height || 10),
-        payment_method: paymentMode === "cod" ? "cod" : "prepaid",
-        collectable_amount: collectableAmount || 0,
+    const requestBody = {
+      source: parseInt(pickupPincode),
+      destination: deliveryPincode ? parseInt(deliveryPincode) : undefined,
+      rto: rtoPincode ? parseInt(rtoPincode) : parseInt(pickupPincode),
+      weight: Number(weight),
+      length: Math.round(length || 10),
+      width: Math.round(breadth || 10),
+      height: Math.round(height || 10),
+      payment_method: paymentMode === "cod" ? "cod" : "prepaid",
+      collectable_amount: collectableAmount || 0,
+    };
+
+    // Jiffy lists every courier in one response, and the "Ship Now" page asks
+    // once per Jiffy service — so share one request among identical callers.
+    // Only a successful answer is kept; a "not serviceable" reply is re-asked.
+    const body = await jiffyServiceabilityMemo(
+      JSON.stringify(requestBody),
+      async () => {
+        const response = await axios.post(`${JIFFY_BASE_URL}/couriers/serviceability/`, requestBody, {
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          timeout: 8000,
+        });
+        return response.data;
       },
-      {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        timeout: 8000,
-      }
+      (data) => Boolean(data && data.success)
     );
-// console.log("jiffy", response.data)
-    if (response.data && response.data.success) {
-      return { success: true, data: response.data.data || [] };
+// console.log("jiffy", body)
+    if (body && body.success) {
+      // Fresh array per caller so nobody can alter another caller's copy
+      // (anything that is not an array is passed through exactly as before).
+      return { success: true, data: Array.isArray(body.data) ? [...body.data] : body.data || [] };
     }
-    return { success: false, message: response.data?.error?.message || "Not serviceable", data: [] };
+    return { success: false, message: body?.error?.message || "Not serviceable", data: [] };
   } catch (error) {
     console.error("Jiffy Serviceability Error:", error.response?.data || error.message);
     return { success: false, error: extractJiffyErrorMessage(error, "Serviceability check failed"), data: [] };

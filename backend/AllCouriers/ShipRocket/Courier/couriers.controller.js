@@ -13,6 +13,7 @@ const { getZone } = require("../../../Rate/zoneManagementController");
 const { assignPickupManifest } = require("../../../Orders/scheduledPickup.controller");
 const createShiprocketShipment = require("../../../API/Courier/shiprocketShipmentCreation.controller");
 const axios = require("axios");
+const { createTtlMemo } = require("../../../utils/ttlMemo");
 
 const BASE_URL = `${process.env.SHIPROCKET_URL}/v1/external`;
 
@@ -130,28 +131,46 @@ const requestShipmentPickup = async (shipment_id) => {
   }
 };
 
+// Shiprocket's answer depends only on route / COD / weight — never on which of
+// our services is asking — and it lists every courier at once. The "Ship Now"
+// page checks each enabled service separately, so one page open used to send
+// the identical request 15 times. Share one request among callers for a short
+// while instead; each caller still filters for its own courier below.
+const serviceabilityMemo = createTtlMemo(60 * 1000);
+
 const checkServiceabilityShipRocket = async (payload) => {
   try {
+    const { serviceName, origin, destination, payment_type, weight } = payload;
+    const shiprocketService = await CourierService.findOne({ name: serviceName, provider: "Shiprocket" })
+    if (!shiprocketService) return { success: false }
+
     const token = await getAuthToken();
     if (!token) return { success: false };
-    const shiprocketService = await CourierService.findOne({ name: payload.serviceName, provider: "Shiprocket" })
-    if (!shiprocketService) return { success: false }
     // console.log("payload", payload)
-    const { serviceName, origin, destination, payment_type, weight } = payload;
     const cod = payment_type === true ? 1 : 0;
+    const params = {
+      pickup_postcode: origin,
+      delivery_postcode: destination,
+      cod,
+      weight: weight || "0.5"
+    };
 
-    const response = await axios.get(`${BASE_URL}/courier/serviceability/`, {
-      headers: { Authorization: `Bearer ${token}` },
-      params: {
-        pickup_postcode: origin,
-        delivery_postcode: destination,
-        cod,
-        weight: weight || "0.5"
+    const available = await serviceabilityMemo(
+      `${params.pickup_postcode}|${params.delivery_postcode}|${params.cod}|${params.weight}`,
+      async () => {
+        const response = await axios.get(`${BASE_URL}/courier/serviceability/`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params,
+          timeout: 10000,
+        });
+        // Only the two fields the match below needs — keeps the shared entry tiny.
+        return (response.data?.data?.available_courier_companies || []).map((item) => ({
+          courier_company_id: item.courier_company_id,
+          blocked: item.blocked,
+        }));
       },
-      timeout: 10000,
-    });
-
-    const available = response.data?.data?.available_courier_companies || [];
+      (list) => list.length > 0
+    );
     // console.log(available, "response.data")
     // Match on courier_company_id, not courier_name — Shiprocket's own
     // courier_name is its internal display label bundling courier + service

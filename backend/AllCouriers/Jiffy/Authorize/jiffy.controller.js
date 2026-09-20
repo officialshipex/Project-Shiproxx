@@ -57,10 +57,12 @@ const getJiffyToken = async () => {
   }
 
   try {
+    // A timeout so a hung login fails fast ("authentication failed") instead
+    // of stalling every Jiffy booking behind it — no request here had one.
     const response = await axios.post(
       `${JIFFY_BASE_URL}/users/login`,
       { email, password },
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" }, timeout: 10000 }
     );
 
     if (response.data && response.data.success && response.data.data?.token) {
