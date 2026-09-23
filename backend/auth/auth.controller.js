@@ -102,6 +102,10 @@ const register = async (req, res) => {
       password: hashedPassword,
       userId,
       referralCode: uniqueReferralCode, // new field
+      // Email OTP verification is currently unusable (no Zepto email sending
+      // configured) — mark verified at signup rather than leave the user
+      // permanently stuck unverified with no way to receive the OTP.
+      isEmailVerified: true,
     });
 
     // ✅ Referral Handling
@@ -287,6 +291,10 @@ const googleLogin = async (req, res) => {
         monthlyOrders: profile.monthlyOrders || 0,
         googleOAuthID: profile.id,
         isVerified: profile.email_verified,
+        // Same reasoning as the password-signup path in register() above —
+        // email OTP verification is currently unusable, so mark verified at
+        // signup. (Separate from `isVerified` above, which is KYC status.)
+        isEmailVerified: true,
         provider: "Google",
       });
 

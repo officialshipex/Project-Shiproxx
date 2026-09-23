@@ -1781,10 +1781,25 @@ const trackSingleOrder = async (order) => {
       // 10=RTO Initiated, 11=RTO In Transit, 12=RTO Delivered, 13=Lost
       const statusCode = normalizedData.shipment_status;
 
+      // Shiprocket's coarse `shipment_status` field can say "Picked Up"/"In
+      // Transit" (4/5) while the actual latest scan is a failed/rescheduled
+      // *pickup* attempt — confirmed live on 50 orders that were manually
+      // corrected from "In-transit" back to "Ready To Ship" on 2026-09-21,
+      // then reverted right back to "In-transit" by the very next tracking
+      // poll, every one of them with "PickupRescheduled" as the actual
+      // latest scan. Computed up front (previously only checked inside the
+      // text-fallback branch below, i.e. only when `statusCode` was
+      // unmatched/null) so it also guards the numeric branch, not just the
+      // fallback.
+      const pickupExceptionText = `${(normalizedData.Status || "").toLowerCase()} ${(normalizedData.Instructions || "").toLowerCase()}`;
+      const isPickupException =
+        pickupExceptionText.includes("pickup") &&
+        (pickupExceptionText.includes("cancel") || pickupExceptionText.includes("exception") || pickupExceptionText.includes("wrongly") || pickupExceptionText.includes("on hold") || pickupExceptionText.includes("reschedul") || pickupExceptionText.includes("not ready"));
+
       if ([1, 2, 3].includes(statusCode)) {
         order.status = "Ready To Ship";
         order.ndrStatus = "Ready To Ship";
-      } else if (statusCode === 4 || statusCode === 5) {
+      } else if ((statusCode === 4 || statusCode === 5) && !isPickupException) {
         order.status = "In-transit";
         order.ndrStatus = "In-transit";
         order.reattempt = false;
@@ -1862,20 +1877,18 @@ const trackSingleOrder = async (order) => {
         // straight through from the underlying courier (current_status /
         // instructions) — this text varies by carrier, so only match
         // unambiguous keywords and otherwise assume forward progress.
-        const text = `${(normalizedData.Status || "").toLowerCase()} ${(normalizedData.Instructions || "").toLowerCase()}`;
-
-        // A cancelled/exception/held *pickup* attempt (e.g. "PICKUP
-        // CANCELLED BY CALL", "PICKUP WRONGLY REGISTERED BY SHIPPER",
-        // "Item On Hold" — all seen live) means the courier didn't collect
-        // the package and it needs rescheduling — it does NOT mean the
-        // order itself was cancelled. Naively matching "cancel" below would
-        // wrongly mark these as order-cancelled and trigger a real wallet
-        // refund for a shipment that's still active. Leave status/ndrStatus
-        // untouched for these — ambiguous pickup-stage noise is safer to
-        // ignore than to misclassify.
-        const isPickupException =
-          text.includes("pickup") &&
-          (text.includes("cancel") || text.includes("exception") || text.includes("wrongly") || text.includes("on hold") || text.includes("reschedul") || text.includes("not ready"));
+        // `pickupExceptionText`/`isPickupException` are computed once, above
+        // the whole if/else-if chain (see the comment there) — reused here
+        // rather than recomputed. A cancelled/exception/held *pickup*
+        // attempt (e.g. "PICKUP CANCELLED BY CALL", "PICKUP WRONGLY
+        // REGISTERED BY SHIPPER", "Item On Hold" — all seen live) means the
+        // courier didn't collect the package and it needs rescheduling — it
+        // does NOT mean the order itself was cancelled. Naively matching
+        // "cancel" below would wrongly mark these as order-cancelled and
+        // trigger a real wallet refund for a shipment that's still active.
+        // Leave status/ndrStatus untouched for these — ambiguous
+        // pickup-stage noise is safer to ignore than to misclassify.
+        const text = pickupExceptionText;
 
         if (isPickupException) {
           // no-op — deliberately leave order.status/ndrStatus as-is

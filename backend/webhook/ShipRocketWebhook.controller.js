@@ -149,6 +149,21 @@ const ShipRocketWebhook = async (req, res) => {
       return res.status(200).json({ success: true, message: "Duplicate" });
     }
 
+    // Shiprocket's resolved statusId can say "In Transit" (6/18/etc) while
+    // this same event's own text is a failed/rescheduled *pickup* attempt —
+    // confirmed live: 50 orders manually corrected from "In-transit" back to
+    // "Ready To Ship" all reverted straight back to "In-transit" on the next
+    // tracking update, every one of them actually sitting at
+    // "PickupRescheduled". tracking.controller.js's polling path already
+    // guards against this (see the matching comment there); the webhook path
+    // had no such guard, so a stale/mismatched sr-status could push an order
+    // to "In-transit" going purely on this ID with no cross-check against
+    // the very text carried in the same payload.
+    const pickupExceptionText = `${statusText.toLowerCase()} ${(remark || "").toLowerCase()}`;
+    const isPickupException =
+      pickupExceptionText.includes("pickup") &&
+      (pickupExceptionText.includes("cancel") || pickupExceptionText.includes("exception") || pickupExceptionText.includes("wrongly") || pickupExceptionText.includes("on hold") || pickupExceptionText.includes("reschedul") || pickupExceptionText.includes("not ready"));
+
     /* ================================================================
        STATUS MAPPING
     ================================================================ */
@@ -186,6 +201,7 @@ const ShipRocketWebhook = async (req, res) => {
       case 57: // Custom Cleared Overseas
       case 68: // PROCESSED AT WAREHOUSE
       case 71: // HANDOVER EXCEPTION
+        if (isPickupException) break; // see isPickupException comment above — leave status as-is
         order.status = "In-transit";
         order.ndrStatus = "In-transit";
         order.reattempt = false;

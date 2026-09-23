@@ -129,9 +129,12 @@ const usersSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Defaults to true because email OTP verification is currently unusable
+    // (no Zepto email sending configured) — every new signup would otherwise
+    // be stuck permanently unverified with no way to receive the OTP.
     isEmailVerified: {
       type: Boolean,
-      default: false,
+      default: true,
     },
   },
   { timestamps: true }
