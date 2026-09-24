@@ -222,7 +222,7 @@ const getTrackingByAWB = async (awb_code) => {
     return { success: false, data: [] };
   }
 };
-// getTrackingByAWB("SF3698223623HIR")
+// getTrackingByAWB("SF3491311122KAD")
 
 const cancelOrder = async (awb_number) => {
   try {
