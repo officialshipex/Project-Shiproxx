@@ -6,6 +6,7 @@ const {getAuthToken,saveNimbusPost,isEnabeled,disable,enable}=require("../../bac
 const nimbuspostCourierController=require("../AllCouriers/NimbusPost/Couriers/couriers.controller");
 const nimbuspostShipmentController=require("../AllCouriers/NimbusPost/Shipments/shipments.controller");
 const nimbuspostNDRController=require("../AllCouriers/NimbusPost/NDR/ndr.controller");
+const { sanitizeJsonResponses } = require("../utils/sanitizeResponseMiddleware");
 
 
 router.get('/saveNew',saveNimbusPost);
@@ -23,7 +24,7 @@ router.post("/addService",nimbuspostCourierController.addService);
 router.post("/getServiceablePincodes",nimbuspostCourierController.getServiceablePincodes);
 // router.post("/getServiceablePincodesData",nimbuspostCourierController.getServiceablePincodesData);
 
-router.post("/createShipment",nimbuspostShipmentController.createShipment);
+router.post("/createShipment", sanitizeJsonResponses, nimbuspostShipmentController.createShipment);
 // router.post("/trackShipment",nimbuspostShipmentController.trackShipment);
 router.post("/trackShipmentInBulk",nimbuspostShipmentController.trackShipmentsInBulk);
 router.post("/manifest",nimbuspostShipmentController.manifest);

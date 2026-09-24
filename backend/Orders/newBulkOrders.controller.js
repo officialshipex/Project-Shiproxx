@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { sanitizeClientMessage } = require("../utils/sanitizeClientMessage");
 const Services = require("../models/CourierService.Schema");
 const Courier = require("../models/AllCourierSchema");
 const Order = require("../models/newOrder.model");
@@ -582,14 +583,19 @@ const createBulkOrder = async (req, res) => {
               orderId,
             };
           }
-          courierErrors.push(`${courier.courierServiceName}: ${result?.error || "failed"}`);
+          // Sanitized here — this is the one place every courier's bulk
+          // failure text (Shiprocket, Jiffy, ShipMaxx, ...) converges before
+          // becoming order.failureReason / BulkShipJob.results[].failureReason,
+          // both shown directly to the seller. Scrubbing here covers every
+          // courier without needing to touch each one's own bulk-ship file.
+          courierErrors.push(`${courier.courierServiceName}: ${sanitizeClientMessage(result?.error) || "failed"}`);
         } catch (err) {
           // try next courier
           console.warn(
             `Courier ${courier.courierServiceName} failed for order ${orderId}:`,
             err.message
           );
-          courierErrors.push(`${courier.courierServiceName}: ${err.message}`);
+          courierErrors.push(`${courier.courierServiceName}: ${sanitizeClientMessage(err.message)}`);
           continue;
         }
       }
@@ -602,14 +608,15 @@ const createBulkOrder = async (req, res) => {
       return { success: false, reason: "all_couriers_failed", orderId, detail: failureDetail };
     } catch (err) {
       // unexpected error - mark order as new & return failure
+      const clientMessage = sanitizeClientMessage(err.message);
       try {
         await Order.findByIdAndUpdate(orderId, {
-          $set: { status: "new", failureReason: err.message },
+          $set: { status: "new", failureReason: clientMessage },
         });
       } catch (e) {
         console.error("Failed to set order failureReason:", e.message);
       }
-      return { success: false, reason: err.message || "error", orderId };
+      return { success: false, reason: clientMessage || "error", orderId };
     }
   } // end processSingleOrder
 

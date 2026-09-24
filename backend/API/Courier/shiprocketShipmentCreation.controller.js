@@ -1,5 +1,6 @@
 const axios = require("axios");
 const Order = require("../../models/newOrder.model");
+const { sanitizeClientMessage } = require("../../utils/sanitizeClientMessage");
 const User = require("../../models/User.model");
 const Wallet = require("../../models/wallet");
 const WalletTransaction = require("../../models/WalletTransaction.model");
@@ -62,7 +63,7 @@ const revertOrderToNew = async (id) => {
 // this pincode pair) — reported to the caller instead of a bare "failed".
 const describeAwbFailure = (body) =>
   String(
-    body?.response?.data?.awb_assign_error || body?.message || body?.response?.data?.message || (body ? JSON.stringify(body) : "no response from Shiprocket")
+    body?.response?.data?.awb_assign_error || body?.message || body?.response?.data?.message || (body ? JSON.stringify(body) : "no response from the courier")
   ).slice(0, 300);
 
 // Fetches Shiprocket's own generated label PDF for a shipment. Only called
@@ -121,9 +122,16 @@ const createShiprocketShipment = async ({
   }
 
   // From here on, every way out except success hands the order back as "new".
+  // Single choke point for every early-failure return below — scrubs any
+  // aggregator-name mention from whatever message/error text the caller
+  // built, so individual call sites don't each need to remember to.
   const fail = async (result) => {
     await revertOrderToNew(id);
-    return result;
+    return {
+      ...result,
+      ...(result.message !== undefined ? { message: sanitizeClientMessage(result.message) } : {}),
+      ...(result.error !== undefined ? { error: sanitizeClientMessage(result.error) } : {}),
+    };
   };
 
   // Set once Shiprocket has issued an AWB, so a failure to save it is reported
@@ -169,7 +177,7 @@ const createShiprocketShipment = async ({
     // Step 6️⃣ Authenticate with Shiprocket
     const token = await getAuthToken();
     if (!token) {
-      return await fail({ success: false, message: "ShipRocket authentication failed" });
+      return await fail({ success: false, message: "Courier authentication failed" });
     }
 
     // Resolve the courier_id for the requested service BEFORE creating
@@ -182,7 +190,7 @@ const createShiprocketShipment = async ({
     if (!courierService?.courier_id) {
       return await fail({
         success: false,
-        message: `No Shiprocket courier ID is configured for service "${courierServiceName}" — not booking, because Shiprocket would auto-assign an arbitrary courier instead of the one being charged for.`,
+        message: `The selected courier isn't fully configured for service "${courierServiceName}" — booking was stopped rather than let the courier auto-assign a different one than what's being charged for.`,
       });
     }
 
@@ -235,7 +243,7 @@ const createShiprocketShipment = async ({
       console.error("Shiprocket Pickup Location Sync Error:", e.response?.data || e.message);
       // If adding fails for validation (like address length), we must stop and inform the user
       if (e.response?.status !== 422) {
-        let errMsg = "Shiprocket Pickup Location Error";
+        let errMsg = "Pickup Location Error";
         if (e.response?.data?.message) {
           try {
             const parsed = JSON.parse(e.response.data.message);
@@ -306,7 +314,7 @@ const createShiprocketShipment = async ({
     console.log("response data", orderResponse.data, orderResponse.data.data)
 
     if (!orderResponse.data?.shipment_id) {
-      return await fail({ success: false, message: orderResponse.data?.message || "Shiprocket order creation failed" });
+      return await fail({ success: false, message: orderResponse.data?.message || "Order creation failed" });
     }
 
     const { shipment_id } = orderResponse.data;
@@ -333,7 +341,7 @@ const createShiprocketShipment = async ({
     if (awb_number === "PENDING") {
       return await fail({
         success: false,
-        message: `Failed to assign AWB. Shiprocket order created but AWB assignment failed${awbFailureReason ? ` — ${awbFailureReason}` : ""}.`
+        message: `Failed to assign AWB. The order was created with the courier but AWB assignment failed${awbFailureReason ? ` — ${awbFailureReason}` : ""}.`
       });
     }
 
@@ -504,10 +512,14 @@ const createShiprocketShipment = async ({
       if (fieldMessages) detail = `${detail} — ${fieldMessages}`;
     }
 
+    // `detail` includes error.message, which can be a raw JS/axios error
+    // string ("Request failed with status code 422") rather than Shiprocket's
+    // own text — sanitize rather than assume it's always their API's wording.
+    const clientDetail = sanitizeClientMessage(detail);
     return {
       success: false,
-      message: detail,
-      error: detail,
+      message: clientDetail,
+      error: clientDetail,
     };
   }
 };

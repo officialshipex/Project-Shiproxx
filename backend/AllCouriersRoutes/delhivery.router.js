@@ -7,6 +7,7 @@ const {
 } = require("../AllCouriers/Delhivery/Courier/couriers.controller");
 
 const{saveDelhivery,isEnabeled,getCourierList,enable,disable,addService, getToken}=require("../AllCouriers/Delhivery/Authorize/saveCourierContoller");
+const { sanitizeJsonResponses } = require("../utils/sanitizeResponseMiddleware");
 
 const router = express.Router();
 router.post('/getToken', getToken )
@@ -18,7 +19,7 @@ router.get('/getCourierList',getCourierList);
 
 router.post('/addService',addService);
 
-router.post("/createShipment",createOrder);
+router.post("/createShipment", sanitizeJsonResponses, createOrder);
 
 // Route to check pincode serviceability
 // router.get("/serviceability/:pincode", checkPincodeServiceability);

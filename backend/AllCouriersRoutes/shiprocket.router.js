@@ -12,6 +12,7 @@ const {
   getAllPickupLocations,
   generateLabel,
 } = require("../AllCouriers/ShipRocket/Courier/couriers.controller");
+const { sanitizeJsonResponses } = require("../utils/sanitizeResponseMiddleware");
 
 // ── Auth / Courier Setup ──────────────────────────────────────────────────────
 router.post("/getAuthToken", saveShipRocket);
@@ -20,7 +21,7 @@ router.post("/getAuthToken", saveShipRocket);
 router.get("/getAllActiveCourierServices", getAllActiveCourierServices);
 
 // ── Shipment ──────────────────────────────────────────────────────────────────
-router.post("/createShipment", createCustomOrder);
+router.post("/createShipment", sanitizeJsonResponses, createCustomOrder);
 
 // ── Pickup ────────────────────────────────────────────────────────────────────
 router.get("/pickupLocations", async (req, res) => {

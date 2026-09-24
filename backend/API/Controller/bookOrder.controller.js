@@ -1,4 +1,5 @@
 const Joi = require("joi");
+const { sanitizeClientMessage, sanitizeClientPayload } = require("../../utils/sanitizeClientMessage");
 const {
   checkServiceabilityAll,
 } = require("../../Orders/shipment.controller");
@@ -456,10 +457,13 @@ const bookOrder = async (req, res) => {
 
     if (!shipmentResult?.success) {
       console.error("Shipment creation failed:", shipmentResult);
+      // This external API is used by third-party integrators, same as the
+      // seller's own "Ship Now" — the message must not name whichever
+      // internal aggregator handled the booking (see sanitizeClientMessage).
       return res.status(400).json({
         status: "failure",
-        message: shipmentResult?.error || shipmentResult?.message || "Shipment creation failed.",
-        details: shipmentResult?.details || null,
+        message: sanitizeClientMessage(shipmentResult?.error || shipmentResult?.message || "Shipment creation failed."),
+        details: sanitizeClientPayload(shipmentResult?.details || null),
       });
     }
 
