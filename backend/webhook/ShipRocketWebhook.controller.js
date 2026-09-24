@@ -164,6 +164,12 @@ const ShipRocketWebhook = async (req, res) => {
       pickupExceptionText.includes("pickup") &&
       (pickupExceptionText.includes("cancel") || pickupExceptionText.includes("exception") || pickupExceptionText.includes("wrongly") || pickupExceptionText.includes("on hold") || pickupExceptionText.includes("reschedul") || pickupExceptionText.includes("not ready"));
 
+    const currentActivityLower = `${statusText} ${remark} ${lastScan?.status || ""}`.toLowerCase();
+    const isPrePickupScan =
+      currentActivityLower.includes("assigned_for_seller_pickup") ||
+      currentActivityLower.includes("item new") ||
+      (lastScan && (lastScan.status === "new" || lastScan.status === "assigned_for_seller_pickup") && lastScan["sr-status"] === "NA");
+
     /* ================================================================
        STATUS MAPPING
     ================================================================ */
@@ -201,7 +207,7 @@ const ShipRocketWebhook = async (req, res) => {
       case 57: // Custom Cleared Overseas
       case 68: // PROCESSED AT WAREHOUSE
       case 71: // HANDOVER EXCEPTION
-        if (isPickupException) break; // see isPickupException comment above — leave status as-is
+        if (isPickupException || isPrePickupScan) break; // leave status as-is if pre-pickup scan or pickup exception
         order.status = "In-transit";
         order.ndrStatus = "In-transit";
         order.reattempt = false;
@@ -326,13 +332,14 @@ const ShipRocketWebhook = async (req, res) => {
         const lastActionDate = lastNdr?.actions[lastNdr.actions.length - 1]?.date;
 
         if (!lastActionDate || new Date(timestamp).getTime() > new Date(lastActionDate).getTime()) {
+          const courierDisplayName = (order.provider && order.provider !== "Shiprocket") ? order.provider : (order.courierServiceName || "Courier");
           order.ndrHistory.push({
             actions: [
               {
                 action: `NDR ${attemptCount} Raised`,
-                actionBy: order.provider,
+                actionBy: courierDisplayName,
                 remark: remark,
-                source: order.provider,
+                source: courierDisplayName,
                 date: timestamp,
               },
             ],

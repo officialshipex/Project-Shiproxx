@@ -57,8 +57,16 @@ const runNdrTask = async (orderId, actionDetails) => {
 
     let apiResponse;
 
-    if (finalPlatform === "shiprocket") {
-      apiResponse = await callShiprocketNdrApi(order);
+    const isShiprocket =
+      String(finalPlatform || "").toLowerCase() === "shiprocket" ||
+      String(finalPartner || "").toLowerCase() === "shiprocket" ||
+      String(finalProvider || "").toLowerCase().includes("shiprocket") ||
+      String(order.courierServiceName || "").toLowerCase().includes("shiprocket") ||
+      String(partner || "").toLowerCase() === "shiprocket" ||
+      String(platform || "").toLowerCase() === "shiprocket";
+
+    if (isShiprocket) {
+      apiResponse = await callShiprocketNdrApi(order, actionDetails);
     } else if (finalPlatform === "nimbust") {
       apiResponse = await callNimbustNdrApi(order);
 

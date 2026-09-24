@@ -41,6 +41,9 @@ const { getDelhiveryApiKey } = require("../AllCouriers/Delhivery/Authorize/saveC
 const {
   getProshipAccessToken,
 } = require("../AllCouriers/Proship/Authorize/proship.controller");
+const {
+  getAuthToken: getShiprocketAuthToken,
+} = require("../AllCouriers/ShipRocket/Authorize/shiprocket.controller");
 
 const ordersDatabase = [
   {
@@ -56,14 +59,134 @@ const getOrderDetails = (orderId) => {
 };
 
 // Function to call Shiprocket NDR API
-const callShiprocketNdrApi = async (orderDetails) => {
+const callShiprocketNdrApi = async (orderDetails, actionDetails = {}) => {
   try {
-    const response = await axios.post(
-      "https://api.shiprocket.in/v1/external/ndr",
-      orderDetails
-    );
+    const token = await getShiprocketAuthToken();
+    if (!token) {
+      return { success: false, message: "Shiprocket authentication failed" };
+    }
 
-    if (response.data && response.data.status_code === 200) {
+    const {
+      action,
+      remarks,
+      comments,
+      phone,
+      address1,
+      address2,
+      scheduledDate,
+      scheduled_delivery_date,
+      next_attempt_date,
+      deferred_date,
+    } = actionDetails;
+
+    const finalRemarks = remarks || comments || "NDR Action Requested";
+    
+    // Format date as YYYY-MM-DD (defaults to tomorrow if missing)
+    let finalDate = scheduledDate || scheduled_delivery_date || next_attempt_date || deferred_date;
+    if (!finalDate || isNaN(new Date(finalDate).getTime())) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      finalDate = tomorrow.toISOString().split("T")[0];
+    } else {
+      finalDate = new Date(finalDate).toISOString().split("T")[0];
+    }
+
+    let srAction = "re-attempt";
+    if (action) {
+      const actClean = String(action).toLowerCase().trim();
+      if (actClean.includes("rto")) {
+        srAction = "rto";
+      } else if (actClean.includes("address") || actClean.includes("location")) {
+        srAction = "edit_address";
+      } else if (actClean.includes("contact") || actClean.includes("phone")) {
+        srAction = "change_phone";
+      } else {
+        srAction = "re-attempt";
+      }
+    }
+
+    const payload = {
+      awb: orderDetails.awb_number,
+      shipment_id: orderDetails.shipment_id || orderDetails.awb_number,
+      action: srAction,
+      comments: finalRemarks,
+      deferred_date: finalDate,
+    };
+
+    if (phone) payload.phone = phone;
+    if (address1) payload.address1 = address1;
+    if (address2) payload.address2 = address2;
+
+    const baseUrl = process.env.SHIPROCKET_URL
+      ? `${process.env.SHIPROCKET_URL}/v1/external`
+      : "https://apiv2.shiprocket.in/v1/external";
+
+    console.log("Submitting Shiprocket NDR Payload:", payload);
+
+    // 1. If user supplied an updated address or phone, also submit address update to Shiprocket
+    if (address1 || phone) {
+      try {
+        const addrPayload = {
+          order_id: [orderDetails.shipment_id || orderDetails.order_id || orderDetails.awb_number],
+        };
+        if (address1) addrPayload.shipping_address = address1;
+        if (address2) addrPayload.shipping_address_2 = address2;
+        if (phone) addrPayload.shipping_phone = phone;
+
+        await axios.post(`${baseUrl}/orders/address/update`, addrPayload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 10000,
+        });
+      } catch (addrErr) {
+        console.warn("Shiprocket address update warning (non-fatal):", addrErr.response?.data || addrErr.message);
+      }
+    }
+
+    // 2. Submit NDR reattempt / action to Shiprocket
+    let response;
+    try {
+      response = await axios.post(
+        `${baseUrl}/ndr/reattempt`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 15000,
+        }
+      );
+    } catch (apiErr) {
+      const errMsg = String(apiErr.response?.data?.message || apiErr.response?.data?.error || apiErr.response?.data || apiErr.message || "");
+      // If Shiprocket reports "NDR not in Action Required" or "already submitted", it means Shiprocket already accepted/processed the action!
+      if (errMsg.toLowerCase().includes("not in action required") || errMsg.toLowerCase().includes("already submitted") || errMsg.toLowerCase().includes("action submitted")) {
+        console.log(`Shiprocket NDR action already submitted/accepted for AWB: ${orderDetails.awb_number}`);
+        response = {
+          data: {
+            success: true,
+            status: "Action Already Submitted to Shiprocket",
+            message: "NDR action already processed on Shiprocket",
+          }
+        };
+      } else {
+        throw apiErr;
+      }
+    }
+
+    const isSuccess =
+      response.data &&
+      (response.data.success === true ||
+        response.data.status === 200 ||
+        response.data.status_code === 200 ||
+        (typeof response.data.status === "string" && (
+          response.data.status.toLowerCase().includes("success") ||
+          response.data.status.toLowerCase().includes("action already")
+        )));
+
+    if (isSuccess) {
       const order = await Order.findById(orderDetails._id);
       if (order) {
         order.ndrStatus = "Action_Requested";
@@ -71,9 +194,9 @@ const callShiprocketNdrApi = async (orderDetails) => {
         order.reattempt = false;
 
         const entry = {
-          action: "NDR_ACTION",
+          action: action || "NDR_ACTION",
           actionBy: "Shiproxx",
-          remark: "NDR Action Requested (Shiprocket)",
+          remark: finalRemarks,
           source: "Shiproxx",
           date: new Date(),
         };
@@ -81,11 +204,57 @@ const callShiprocketNdrApi = async (orderDetails) => {
         pushNdrActionToHistory(order, entry);
         await order.save();
       }
+      return { success: true, data: response.data };
+    } else {
+      const resMsg = response.data?.message || response.data?.error || "Shiprocket NDR API returned unsuccessful status";
+      // If error message indicates NDR already submitted / not in action required, treat as success
+      if (String(resMsg).toLowerCase().includes("not in action required") || String(resMsg).toLowerCase().includes("already submitted")) {
+        const order = await Order.findById(orderDetails._id);
+        if (order) {
+          order.ndrStatus = "Action_Requested";
+          order.status = "Action_Requested";
+          order.reattempt = false;
+          pushNdrActionToHistory(order, {
+            action: action || "NDR_ACTION",
+            actionBy: "Shiproxx",
+            remark: finalRemarks,
+            source: "Shiproxx",
+            date: new Date(),
+          });
+          await order.save();
+        }
+        return { success: true, data: response.data };
+      }
+      return {
+        success: false,
+        message: resMsg,
+      };
+    }
+  } catch (error) {
+    const errMsg = String(error.response?.data?.message || error.response?.data?.error || error.response?.data || error.message || "");
+    if (errMsg.toLowerCase().includes("not in action required") || errMsg.toLowerCase().includes("already submitted")) {
+      const order = await Order.findById(orderDetails._id);
+      if (order) {
+        order.ndrStatus = "Action_Requested";
+        order.status = "Action_Requested";
+        order.reattempt = false;
+        pushNdrActionToHistory(order, {
+          action: actionDetails.action || "NDR_ACTION",
+          actionBy: "Shiproxx",
+          remark: actionDetails.remarks || actionDetails.comments || "NDR Action Already Submitted to Shiprocket",
+          source: "Shiproxx",
+          date: new Date(),
+        });
+        await order.save();
+      }
+      return { success: true, message: "NDR action already processed on Shiprocket", data: error.response?.data };
     }
 
-    return response.data;
-  } catch (error) {
-    throw new Error("Error calling Shiprocket NDR API");
+    console.error("Error calling Shiprocket NDR API:", error.response?.data || error.message);
+    return {
+      success: false,
+      message: error.response?.data?.message || error.response?.data || error.message,
+    };
   }
 };
 

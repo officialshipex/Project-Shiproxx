@@ -1824,19 +1824,18 @@ const trackSingleOrder = async (order) => {
             : null;
           const currentStatusDate = new Date(normalizedData.StatusDateTime).getTime();
 
-          if (order.ndrHistory.length === 0 || !lastEntryDate || currentStatusDate > lastEntryDate) {
             const attemptCount = order.ndrHistory.length + 1;
+            const courierName = (order.provider && order.provider !== "Shiprocket") ? order.provider : (order.courierServiceName || "Courier");
             order.reattempt = true;
             order.ndrHistory.push({
               actions: [{
                 action: `NDR ${attemptCount} Raised`,
-                actionBy: order.courierServiceName || "Shiprocket",
+                actionBy: courierName,
                 remark: normalizedData.Instructions || "Delivery Failed",
-                source: "Shiprocket",
+                source: courierName,
                 date: normalizedData.StatusDateTime,
               }],
             });
-          }
         }
 
         if (order.ndrHistory.length >= 4) order.reattempt = false;
@@ -1935,13 +1934,14 @@ const trackSingleOrder = async (order) => {
 
           if (order.ndrHistory.length === 0 || !lastEntryDate || currentStatusDate > lastEntryDate) {
             const attemptCount = order.ndrHistory.length + 1;
+            const courierName = (order.provider && order.provider !== "Shiprocket") ? order.provider : (order.courierServiceName || "Courier");
             order.reattempt = true;
             order.ndrHistory.push({
               actions: [{
                 action: `NDR ${attemptCount} Raised`,
-                actionBy: order.courierServiceName || "Shiprocket",
+                actionBy: courierName,
                 remark: normalizedData.Instructions || "Delivery Failed",
-                source: "Shiprocket",
+                source: courierName,
                 date: normalizedData.StatusDateTime,
               }],
             });
@@ -1949,14 +1949,18 @@ const trackSingleOrder = async (order) => {
 
           if (order.ndrHistory.length >= 4) order.reattempt = false;
         } else if (["Ready To Ship", "Booked", "new"].includes(order.status)) {
-          // No terminal-state keyword matched, but the order has moved past
-          // booking with genuine new scan activity (pickup, hub scan,
-          // bagging, inter-hub transit, etc.) — treat it as in-transit
-          // rather than leaving it frozen at an early stage indefinitely.
-          order.status = "In-transit";
-          order.ndrStatus = "In-transit";
-          order.reattempt = false;
-          if (!order.invoiceDate) order.invoiceDate = normalizedData.StatusDateTime;
+          // Check if scan text indicates a pre-pickup scan (e.g. "Item New...", "assigned_for_seller_pickup")
+          const isPrePickupScanText = text.includes("assigned_for_seller_pickup") || text.includes("item new") || text.includes("item_new");
+          if (!isPrePickupScanText) {
+            // No terminal-state keyword matched, but the order has moved past
+            // booking with genuine new scan activity (pickup, hub scan,
+            // bagging, inter-hub transit, etc.) — treat it as in-transit
+            // rather than leaving it frozen at an early stage indefinitely.
+            order.status = "In-transit";
+            order.ndrStatus = "In-transit";
+            order.reattempt = false;
+            if (!order.invoiceDate) order.invoiceDate = normalizedData.StatusDateTime;
+          }
         }
       }
     }
