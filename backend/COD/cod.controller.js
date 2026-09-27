@@ -2948,7 +2948,7 @@ const getCODTransferData = async (req, res) => {
 
   try {
     const { id } = req.params;
-    let { selectedRemittanceIds } = req.query;
+    let selectedRemittanceIds = req.query.selectedRemittanceIds || req.query["selectedRemittanceIds[]"];
 
     if (!id) {
       return res.status(400).json({ message: "User ID is required." });
@@ -2956,12 +2956,18 @@ const getCODTransferData = async (req, res) => {
 
     // Ensure selectedRemittanceIds is an array
     if (selectedRemittanceIds) {
-      if (!Array.isArray(selectedRemittanceIds)) {
+      if (typeof selectedRemittanceIds === "string") {
+        selectedRemittanceIds = selectedRemittanceIds.includes(",")
+          ? selectedRemittanceIds.split(",").map((s) => s.trim()).filter(Boolean)
+          : [selectedRemittanceIds];
+      } else if (!Array.isArray(selectedRemittanceIds)) {
         selectedRemittanceIds = [selectedRemittanceIds];
       }
     } else {
       return res.status(400).json({ message: "selectedRemittanceIds are required." });
     }
+
+    selectedRemittanceIds = selectedRemittanceIds.map(String);
 
     if (selectedRemittanceIds.length === 0) {
       return res
@@ -2982,7 +2988,7 @@ const getCODTransferData = async (req, res) => {
     const filteredRemittance = remittanceRecords
       .map((record) => ({
         ...record,
-        remittanceData: record.remittanceData.filter((r) =>
+        remittanceData: (record.remittanceData || []).filter((r) =>
           selectedRemittanceIds.includes(String(r.remittanceId))
         ),
       }))
@@ -2995,36 +3001,34 @@ const getCODTransferData = async (req, res) => {
       });
     }
 
-    // Fetch bank details
+    // Fetch bank details (may be null if user hasn't added bank account yet)
     const bankDetails = await bankAccount.findOne({ user: id }).lean();
 
-    if (!bankDetails) {
-      return res
-        .status(404)
-        .json({ message: "Bank details not found for this user." });
-    }
-
-    // 🔥 Fetch Wallet Balance & Hold Amount
+    // Fetch Wallet Balance & Hold Amount
     const user = await User.findById(id).lean();
-    if (!user || !user.Wallet) {
+    if (!user) {
       return res
         .status(404)
-        .json({ message: "Wallet not found for this user." });
+        .json({ message: "User not found." });
     }
 
-    const wallet = await Wallet.findById(user.Wallet).lean().select("balance holdAmount creditLimit");
-    if (!wallet) {
-      return res.status(404).json({ message: "Wallet data not found." });
-    }
+    let walletBalance = 0;
+    let holdAmount = 0;
+    let creditLimit = 0;
 
-    const walletBalance = wallet.balance || 0;
-    const holdAmount = wallet.holdAmount || 0; // adjust field name if different
-    const creditLimit = wallet.creditLimit || 0;
+    if (user.Wallet) {
+      const wallet = await Wallet.findById(user.Wallet).lean().select("balance holdAmount creditLimit");
+      if (wallet) {
+        walletBalance = wallet.balance || 0;
+        holdAmount = wallet.holdAmount || 0;
+        creditLimit = wallet.creditLimit || 0;
+      }
+    }
 
     // Return only selected remittance entries
     return res.status(200).json({
       message: "Selected remittance data & bank details fetched successfully",
-      bankDetails,
+      bankDetails: bankDetails || null,
       walletBalance,
       holdAmount,
       creditLimit,
