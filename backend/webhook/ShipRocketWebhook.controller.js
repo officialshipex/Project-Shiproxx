@@ -1,4 +1,5 @@
 const Order = require("../models/newOrder.model");
+const { hasLeftOrigin } = require("../utils/shipmentProgress");
 const Wallet = require("../models/wallet");
 const User = require("../models/User.model");
 const WalletTransaction = require("../models/WalletTransaction.model");
@@ -237,6 +238,16 @@ const ShipRocketWebhook = async (req, res) => {
       case 8:  // Canceled
       case 16: // Cancellation Requested
       case 45: // CANCELLED_BEFORE_DISPATCHED
+        // A cancellation signal that arrives after the parcel has been picked
+        // up does not mean the shipment stopped — couriers send these
+        // mid-journey on parcels that keep moving (see
+        // utils/shipmentProgress.js). Acting on it would wrongly cancel a live
+        // shipment and refund the seller's freight. Pre-pickup cancellations
+        // still go through.
+        if (hasLeftOrigin(oldStatus)) {
+          console.warn(`ShipRocket Webhook: ignoring cancellation for AWB ${awb} — order is "${oldStatus}" (already picked up).`);
+          break;
+        }
         order.status = "Cancelled";
         order.ndrStatus = "Cancelled";
         // Handle Wallet Refund

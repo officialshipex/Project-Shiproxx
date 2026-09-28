@@ -141,3 +141,6 @@ node_modules
 /.env
 >>>>>>> f0121380762613f8092dfeb43a4957355f9477e8
 node_modules
+
+# Data-repair rollback snapshots (contain customer data — never commit)
+fix_backup_*.json

@@ -67,6 +67,7 @@ const {
 const { markWooOrderAsShipped } = require("../Channels/WooCommerce/woocommerce.controller");
 
 const statusMap = require("../statusMap/StatusMap.model");
+const { hasLeftOrigin } = require("../utils/shipmentProgress");
 
 const limiter = new Bottleneck({
   minTime: 1000, // 10 requests per second (1000ms delay between each)
@@ -164,6 +165,10 @@ const trackSingleOrder = async (order) => {
     }
     let shouldUpdateWallet = false;
     let balanceTobeAdded = 0;
+    // Remembered before any courier block runs, so the post-pickup
+    // cancellation guard further down can tell what the order actually was.
+    const statusBeforeTracking = order.status;
+    const ndrStatusBeforeTracking = order.ndrStatus;
 
     if (provider === "EcomExpress") {
       const instruction = normalizedData.Instructions?.toLowerCase();
@@ -2107,6 +2112,23 @@ const trackSingleOrder = async (order) => {
           }
         }
       }
+    }
+
+    // ── Guard: a courier "cancelled" signal after pickup is not a cancellation ──
+    // Every courier block above can set status to "Cancelled" (and queue a
+    // freight refund) off a cancellation-flavoured scan. Couriers emit those
+    // mid-journey on parcels that keep moving — see utils/shipmentProgress.js.
+    // Checked once here, after all of them, so every courier is covered rather
+    // than guarding ~15 separate branches. A cancellation before pickup is
+    // still honoured.
+    if (order.status === "Cancelled" && statusBeforeTracking !== "Cancelled" && hasLeftOrigin(statusBeforeTracking)) {
+      console.warn(
+        `[tracking] Ignoring courier cancellation for ${order.awb_number}: order was "${statusBeforeTracking}" (already picked up). Keeping that status and skipping the freight refund.`
+      );
+      order.status = statusBeforeTracking;
+      order.ndrStatus = ndrStatusBeforeTracking;
+      shouldUpdateWallet = false;
+      balanceTobeAdded = 0;
     }
 
     const scansArray = (partner === "Losung360" || provider === "Losung360" || partner === "ShipMaxx")
