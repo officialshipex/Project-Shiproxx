@@ -163,7 +163,16 @@ const ShipRocketWebhook = async (req, res) => {
     const pickupExceptionText = `${statusText.toLowerCase()} ${(remark || "").toLowerCase()}`;
     const isPickupException =
       pickupExceptionText.includes("pickup") &&
-      (pickupExceptionText.includes("cancel") || pickupExceptionText.includes("exception") || pickupExceptionText.includes("wrongly") || pickupExceptionText.includes("on hold") || pickupExceptionText.includes("reschedul") || pickupExceptionText.includes("not ready"));
+      (pickupExceptionText.includes("cancel") ||
+        pickupExceptionText.includes("exception") ||
+        pickupExceptionText.includes("wrongly") ||
+        pickupExceptionText.includes("on hold") ||
+        pickupExceptionText.includes("reschedul") ||
+        pickupExceptionText.includes("not ready") ||
+        pickupExceptionText.includes("not attempted") ||
+        pickupExceptionText.includes("failed") ||
+        pickupExceptionText.includes("pending") ||
+        pickupExceptionText.includes("error"));
 
     const currentActivityLower = `${statusText} ${remark} ${lastScan?.status || ""}`.toLowerCase();
     const isPrePickupScan =
@@ -181,8 +190,10 @@ const ShipRocketWebhook = async (req, res) => {
         order.status = "Ready To Ship";
         break;
 
+      case 13: // Pickup Error
       case 15: // Pickup Rescheduled
       case 19: // Out For Pickup
+      case 20: // Pickup Exception
       case 27: // Pickup Booked
       case 52: // Shipment Booked
       case 59: // Box Packing
@@ -190,6 +201,8 @@ const ShipRocketWebhook = async (req, res) => {
       case 61: // Picklist Generated
       case 72: // PACKED EXCEPTION
         order.status = "Ready To Ship";
+        order.ndrStatus = "Ready To Ship";
+        order.reattempt = false;
         break;
 
       case 6:  // Shipped
@@ -327,10 +340,17 @@ const ShipRocketWebhook = async (req, res) => {
         order.reattempt = false;
         break;
 
-      case 13: // Pickup Error
-      case 20: // Pickup Exception
       case 21: // Undelivered
       case 77: // ISSUE_RELATED_TO_THE_RECIPIENT
+        // Safety guard: If this event is a pickup exception or the shipment has not left origin yet,
+        // it must NEVER be marked as Undelivered / NDR.
+        if (isPickupException || !hasLeftOrigin(oldStatus)) {
+          order.status = "Ready To Ship";
+          order.ndrStatus = "Ready To Ship";
+          order.reattempt = false;
+          break;
+        }
+
         order.status = "Undelivered";
         order.ndrStatus = "Undelivered";
         order.reattempt = true;

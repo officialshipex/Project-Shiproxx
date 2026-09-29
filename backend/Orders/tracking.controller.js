@@ -1799,12 +1799,22 @@ const trackSingleOrder = async (order) => {
       const pickupExceptionText = `${(normalizedData.Status || "").toLowerCase()} ${(normalizedData.Instructions || "").toLowerCase()}`;
       const isPickupException =
         pickupExceptionText.includes("pickup") &&
-        (pickupExceptionText.includes("cancel") || pickupExceptionText.includes("exception") || pickupExceptionText.includes("wrongly") || pickupExceptionText.includes("on hold") || pickupExceptionText.includes("reschedul") || pickupExceptionText.includes("not ready"));
+        (pickupExceptionText.includes("cancel") ||
+          pickupExceptionText.includes("exception") ||
+          pickupExceptionText.includes("wrongly") ||
+          pickupExceptionText.includes("on hold") ||
+          pickupExceptionText.includes("reschedul") ||
+          pickupExceptionText.includes("not ready") ||
+          pickupExceptionText.includes("not attempted") ||
+          pickupExceptionText.includes("failed") ||
+          pickupExceptionText.includes("pending") ||
+          pickupExceptionText.includes("error"));
 
-      if ([1, 2, 3].includes(statusCode)) {
+      if ([1, 2, 3].includes(statusCode) || isPickupException) {
         order.status = "Ready To Ship";
         order.ndrStatus = "Ready To Ship";
-      } else if ((statusCode === 4 || statusCode === 5) && !isPickupException) {
+        order.reattempt = false;
+      } else if ((statusCode === 4 || statusCode === 5)) {
         order.status = "In-transit";
         order.ndrStatus = "In-transit";
         order.reattempt = false;
