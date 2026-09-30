@@ -1092,7 +1092,7 @@ const trackSingleOrder = async (order) => {
         order.ndrStatus = "Ready To Ship";
 
       } else if (statusCode === "SPD" || statusCode === "OFP" || statusCode === "CTR") {
-        order.status = "Booked";
+        order.status = "Ready To Ship";
 
       } else if (statusCode === "PKD" || statusCode === "INT" || statusCode === "DAC") {
         order.status = "In-transit";
@@ -1313,7 +1313,7 @@ const trackSingleOrder = async (order) => {
     if (partner === "Jiffy") {
       const statusCode = normalizedData.Instructions?.toLowerCase(); // raw `status` value
 
-      if (statusCode === "booked" || statusCode === "pending pickup") {
+      if (statusCode === "Ready To Ship" || statusCode === "pending pickup") {
         order.status = "Ready To Ship";
       }
 
@@ -1535,13 +1535,13 @@ const trackSingleOrder = async (order) => {
         }
       } else {
         if ([1, 28, 33].includes(statusCode)) {
-          order.status = "Booked";
+          order.status = "Ready To Ship";
         } else if ([25, 2].includes(statusCode)) {
           order.status = "Ready To Ship";
           order.ndrStatus = "Ready To Ship";
         }
         else if (statusCode === 3) {
-          order.status = "Booked";
+          order.status = "Ready To Ship";
         } else if (statusCode === 4) {
           order.status = "In-transit";
           order.ndrStatus = "In-transit";
@@ -1609,7 +1609,7 @@ const trackSingleOrder = async (order) => {
 
       // ── Forward journey ────────────────────────────────────────────────────
       if (sfxStatusId === "new" || sfxStatusId === "assigned_for_seller_pickup") {
-        order.status = "Booked";
+        order.status = "Ready To Ship";
       }
 
       if (
@@ -1963,7 +1963,7 @@ const trackSingleOrder = async (order) => {
           }
 
           if (order.ndrHistory.length >= 4) order.reattempt = false;
-        } else if (["Ready To Ship", "Booked", "new"].includes(order.status)) {
+        } else if (["Ready To Ship", "Ready To Ship", "new"].includes(order.status)) {
           // Check if scan text indicates a pre-pickup scan (e.g. "Item New...", "assigned_for_seller_pickup")
           const isPrePickupScanText = text.includes("assigned_for_seller_pickup") || text.includes("item new") || text.includes("item_new");
           if (!isPrePickupScanText) {

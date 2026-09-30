@@ -354,7 +354,7 @@ const createZipypostOrder = async (req, res) => {
       const result = response.data.RESULT;
 
       // ✅ Update order + wallet atomically
-      currentOrder.status = "Booked";
+      currentOrder.status = "Ready To Ship";
       currentOrder.awb_number = result.awb;
       currentOrder.shipment_id = currentOrder.orderId;
       currentOrder.provider = result.courier.replace(/\+/g, "").trim();
@@ -366,7 +366,7 @@ const createZipypostOrder = async (req, res) => {
       currentOrder.estimatedDeliveryDate = estimatedDeliveryDate || "";
       currentOrder.priceBreakup = priceBreakup;
       currentOrder.tracking.push({
-        status: "Booked",
+        status: "Ready To Ship",
         StatusLocation: currentOrder.pickupAddress.city,
         StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
         Instructions: "Order booked successfully",

@@ -79,7 +79,7 @@ const ShadowfaxWebhook = async (req, res) => {
 
       // ── Forward journey ──
       if (sfxStatusId === "new" || sfxStatusId === "assigned_for_seller_pickup") {
-        order.status = "Booked";
+        order.status = "Ready To Ship";
       }
 
       if (

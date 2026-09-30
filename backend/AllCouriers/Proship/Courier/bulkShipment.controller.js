@@ -164,7 +164,7 @@ const createOrderProship = async (
     /* --------------------------------------------------
        7️⃣ UPDATE ORDER
     -------------------------------------------------- */
-    currentOrder.status = "Booked";
+    currentOrder.status = "Ready To Ship";
     currentOrder.cancelledAtStage = null;
     currentOrder.awb_number = awb;
     currentOrder.shipment_id = response.data.result.id || String(currentOrder.orderId);
@@ -178,7 +178,7 @@ const createOrderProship = async (
     currentOrder.priceBreakup = priceBreakup;
 
     currentOrder.tracking.push({
-      status: "Booked",
+      status: "Ready To Ship",
       StatusLocation: currentOrder.pickupAddress.city || "N/A",
       StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
       Instructions: "Order booked successfully",

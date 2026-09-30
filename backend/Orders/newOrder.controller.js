@@ -1741,7 +1741,7 @@ const cancelOrdersAtBooked = async (req, res) => {
     if (currentOrder.status === "Cancelled") {
       return res.status(400).send({ error: "Order is already Cancelled" });
     }
-    const cancellableStatuses = ["Ready To Ship", "Booked", "Not Picked"];
+    const cancellableStatuses = ["Ready To Ship"];
 
     if (!cancellableStatuses.includes(currentOrder.status)) {
       return res.status(400).send({ error: "Order is not ready to Cancelled" });
@@ -2189,11 +2189,11 @@ const bulkCancelOrder = async (req, res) => {
 
     // Filter out orders that are not in cancellable statuses immediately
     const eligibleOrders = orders.filter(o =>
-      ["Booked", "Not Picked", "Ready To Ship"].includes(o.status)
+      ["Ready To Ship"].includes(o.status)
     );
 
     const skippedOrders = orders.filter(o =>
-      !["Booked", "Not Picked", "Ready To Ship"].includes(o.status)
+      !["Ready To Ship"].includes(o.status)
     );
 
     // 1. Immediately return success response to user

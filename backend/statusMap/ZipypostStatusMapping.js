@@ -1,7 +1,7 @@
 const ZipyPostScanCodeMapping = {
-  0: "Booked", 
+  0: "Ready To Ship", 
   1: "Ready To Ship", 
-  2: "Not Picked", 
+  2: "Ready To Ship", 
   3: "In-transit", 
   4: "Out for Delivery", 
   5: "Delivered", 

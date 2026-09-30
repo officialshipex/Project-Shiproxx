@@ -277,10 +277,10 @@ const createOrderZipypost = async (
     if (response.data.success && response.data.booking === true) {
       const result = response.data.RESULT;
       const awb = result.awb || "";
-      //   const mappedStatus = ZipyPostScanCodeMapping[0] || "Booked";
+      //   const mappedStatus = ZipyPostScanCodeMapping[0] || "Ready To Ship";
 
       // Update order
-      currentOrder.status = "Booked";
+      currentOrder.status = "Ready To Ship";
       currentOrder.awb_number = awb;
       currentOrder.shipment_id = currentOrder.orderId;
       currentOrder.provider = result.courier.replace(/\+/g, "").trim();
@@ -292,7 +292,7 @@ const createOrderZipypost = async (
       currentOrder.estimatedDeliveryDate = estimateDate;
       currentOrder.priceBreakup = priceBreakup;
       currentOrder.tracking.push({
-        status: "Booked",
+        status: "Ready To Ship",
         StatusLocation: currentOrder.pickupAddress.city,
         StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
         Instructions: "Shipment booked successfully",

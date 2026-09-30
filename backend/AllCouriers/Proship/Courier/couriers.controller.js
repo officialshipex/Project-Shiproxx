@@ -214,7 +214,7 @@ const createProshipOrder = async (req, res) => {
     const { awb_number } = response.data.result;
 
     // 8. Update Order inside transaction
-    currentOrder.status = "Booked";
+    currentOrder.status = "Ready To Ship";
     currentOrder.awb_number = awb_number;
     const sNameForProv = courierServiceName?.toLowerCase() || "";
     currentOrder.provider = sNameForProv.includes("dtdc") ? "Dtdc" : "Shadowfax";
@@ -227,7 +227,7 @@ const createProshipOrder = async (req, res) => {
     currentOrder.priceBreakup = priceBreakup;
     currentOrder.shipmentCreatedAt = new Date();
     currentOrder.tracking.push({
-      status: "Booked",
+      status: "Ready To Ship",
       StatusLocation: currentOrder.pickupAddress.city,
       StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
       Instructions: "Order booked successfully",

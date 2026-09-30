@@ -123,8 +123,8 @@ const ShreeMarutiWebhook = async (req, res) => {
       /* ========================================================
        ==============   FORWARD FLOW HANDLING   ===============
        ======================================================== */
-      if (status === "NEW") order.status = "Booked";
-      if (status === "NOT_PICKED_UP") order.status = "Not Picked";
+      if (status === "NEW") order.status = "Ready To Ship";
+      if (status === "NOT_PICKED_UP") order.status = "Ready To Ship";
       if (status === "READY_FOR_DISPATCH") order.status = "Ready To Ship";
 
       const isPickupCancelled =

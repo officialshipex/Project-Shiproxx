@@ -113,9 +113,9 @@ const initiateAiCall = async (req, res) => {
           }
         }
 
-        // For order_verification: order must be in "Booked" status
+        // For order_verification: order must be in "Ready To Ship" status
         if (serviceType === "order_verification") {
-          if (order.status !== "Booked") {
+          if (order.status !== "Ready To Ship") {
             results.push({ orderId: oid, awb: order.awb_number, success: false, message: "Order must be in Booked status for verification" });
             continue;
           }

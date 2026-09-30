@@ -230,13 +230,8 @@ const getUserPassbookTransactions = async (req, res) => {
 
 const statuses = [
   {
-    key: "Booked",
-    label: "Booked",
-    template: "Your order {order_id} has been successfully booked. Track: {tracking_link}",
-  },
-  {
     key: "Ready To Ship",
-    label: "Pickup Pending",
+    label: "Ready To Ship",
     template: "Dear Customer, your order has been created and is pending pickup. We'll notify you once it’s picked up. Track: {tracking_link}",
   },
   {
@@ -303,7 +298,7 @@ const sendWhatsAppMessage = async ({
     }
 
     const statusFieldMap = {
-      "Booked": "isWhatsAppBookedEnable",
+      // "Booked" is retired — no new orders will have this status.
       "Ready To Ship": "isWhatsAppPickupPendingEnable",
       "Pickup Completed": "isWhatsAppPickupCompletedEnable",
       "In-transit": "isWhatsAppIntransitEnable",
@@ -311,7 +306,7 @@ const sendWhatsAppMessage = async ({
       Delivered: "isWhatsAppDeliveredEnable",
       Undelivered: "isWhatsAppUndeliveredEnable",
       RTO: "isWhatsAppRTOEnable",
-      "Cancelled": "isWhatsAppCancelledEnable", // Need to add to model if not present
+      "Cancelled": "isWhatsAppCancelledEnable",
     };
 
     const fieldName = statusFieldMap[status];
@@ -440,7 +435,7 @@ const sendEmailMessage = async ({
     }
 
     const statusFieldMap = {
-      "Booked": "isEmailBookedEnable",
+      // "Booked" is retired — no new orders will have this status.
       "Ready To Ship": "isEmailPickupPendingEnable",
       "Pickup Completed": "isEmailPickupCompletedEnable",
       "In-transit": "isEmailIntransitEnable",
@@ -545,7 +540,7 @@ const sendSMSMessage = async ({
     }
 
     const statusFieldMap = {
-      "Booked": "isSMSBookedEnable",
+      // "Booked" is retired — no new orders will have this status.
       "Ready To Ship": "isSMSPickupPendingEnable",
       "Pickup Completed": "isSMSPickupCompletedEnable",
       "In-transit": "isSMSIntransitEnable",

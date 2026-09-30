@@ -231,7 +231,7 @@ const createOrder = async (req, res) => {
 
       // ── Update order document ─────────────────────────────────────────────
       currentOrder.awb_number = sfxData.data.awb_number;
-      currentOrder.status = "Booked";
+      currentOrder.status = "Ready To Ship";
       currentOrder.provider = "Shadowfax";
       currentOrder.courierName = courierName || provider || "Shadowfax";
       currentOrder.totalFreightCharges = balanceToBeDeducted;
@@ -240,7 +240,7 @@ const createOrder = async (req, res) => {
       currentOrder.priceBreakup = priceBreakup;
       currentOrder.shipmentCreatedAt = new Date();
       currentOrder.tracking.push({
-        status: "Booked",
+        status: "Ready To Ship",
         StatusLocation: sender.city || "",
         Instructions: "Order booked successfully",
         StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),

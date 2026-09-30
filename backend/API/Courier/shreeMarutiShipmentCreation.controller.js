@@ -250,7 +250,7 @@ const createShreeMarutiShipment = async ({
 
         const balanceToBeDeducted = parseFloat(finalCharges);
 
-        currentOrder.status = "Booked";
+        currentOrder.status = "Ready To Ship";
         currentOrder.cancelledAtStage = null;
         currentOrder.awb_number = result.awbNumber;
         currentOrder.shipment_id = result.shipperOrderId;
@@ -262,7 +262,7 @@ const createShreeMarutiShipment = async ({
         currentOrder.zone = zone.zone;
         currentOrder.priceBreakup = priceBreakup;
         currentOrder.tracking.push({
-          status: "Booked",
+          status: "Ready To Ship",
           StatusLocation: currentOrder.pickupAddress?.city || "N/A",
           StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
           Instructions: "Order booked successfully",

@@ -99,8 +99,8 @@ async function _processDiscrepancyBatch(awbNumbers, chargeWeightMap, filePath) {
       const order = orderMap.get(awb);
       if (!order) continue;
       if (
-        order.status === "Booked" ||
-        order.status === "Not Picked" ||
+        order.status === "Ready To Ship" ||
+        order.status === "Ready To Ship" ||
         order.status === "Ready To Ship"
       ) continue;
 
@@ -178,8 +178,8 @@ async function _processDiscrepancyBatch(awbNumbers, chargeWeightMap, filePath) {
       const order = orderMap.get(awb);
       if (!order) continue;
       if (
-        order.status === "Booked" ||
-        order.status === "Not Picked" ||
+        order.status === "Ready To Ship" ||
+        order.status === "Ready To Ship" ||
         order.status === "Ready To Ship"
       ) continue;
 
@@ -1434,7 +1434,7 @@ const exportWeightDiscrepancy = async (req, res) => {
 //     for (const d of discrepancies) {
 //       const order = orderMap.get(d.awbNumber);
 
-//       if (!order || order.status === "Not Picked" || order.status==="Booked" || order.status==="Ready To Ship") {
+//       if (!order || order.status === "Ready To Ship" || order.status==="Ready To Ship" || order.status==="Ready To Ship") {
 //         nonDeliveredCount++;
 
 //         nonDeliveredDetails.push({

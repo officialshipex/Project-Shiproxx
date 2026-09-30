@@ -284,7 +284,7 @@ const orderRegistrationOneStep = async (req, res) => {
       currentOrder._id,
       {
         $set: {
-          status: "Booked",
+          status: "Ready To Ship",
           awb_number: result.awb_number,
           shipment_id: result.request_order_id || "",
           provider,
@@ -296,7 +296,7 @@ const orderRegistrationOneStep = async (req, res) => {
         },
         $push: {
           tracking: {
-            status: "Booked",
+            status: "Ready To Ship",
             StatusLocation: currentOrder.pickupAddress?.city || "N/A",
             StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
             Instructions: "Order booked successfully",

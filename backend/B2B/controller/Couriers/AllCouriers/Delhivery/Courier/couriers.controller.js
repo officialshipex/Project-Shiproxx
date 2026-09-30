@@ -171,7 +171,7 @@ const createDelhiveryB2BShipment = async (req, res) => {
       order._id,
       {
         $set: {
-          status: "Booked",
+          status: "Ready To Ship",
           provider: "Delhivery",
           manifestJobId: jobId,
           totalFreightCharges: finalCharges,
@@ -180,7 +180,7 @@ const createDelhiveryB2BShipment = async (req, res) => {
         },
         $push: {
           tracking: {
-            status: "Booked",
+            status: "Ready To Ship",
             Instructions: "Delhivery manifest created",
             StatusDateTime: new Date(),
           },

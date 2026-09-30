@@ -97,7 +97,7 @@ const createOrderJiffy = async (
       atsLabelUrl = await fetchJiffyLabelUrl(awb);
     }
 
-    currentOrder.status = "Booked";
+    currentOrder.status = "Ready To Ship";
     currentOrder.awb_number = awb;
     currentOrder.shipment_id = String(shipmentData.id || "");
     currentOrder.provider = providerWord;
@@ -109,7 +109,7 @@ const createOrderJiffy = async (
     currentOrder.zone = zone.zone;
     currentOrder.priceBreakup = priceBreakup;
     currentOrder.tracking.push({
-      status: "Booked",
+      status: "Ready To Ship",
       StatusLocation: currentOrder.pickupAddress?.city || "N/A",
       StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
       Instructions: "Shipment booked successfully via Jiffy",

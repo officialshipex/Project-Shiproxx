@@ -786,7 +786,11 @@ const getDashboardOverview = async (req, res) => {
                   $gte: new Date(startDate),
                   $lte: new Date(endDate),
                 },
-                status: "Booked",
+                // "Booked" status is retired — all such orders are now "Ready To Ship".
+                // Keep this aggregation bucket for backward compatibility but
+                // it will always return 0 for new data.
+                status: "Ready To Ship",
+                $comment: "booked-bucket-retired",
               },
             },
             { $count: "count" },
@@ -798,7 +802,7 @@ const getDashboardOverview = async (req, res) => {
                   $gte: new Date(startDate),
                   $lte: new Date(endDate),
                 },
-                status: { $in: ["Ready To Ship", "Booked", "Not Picked"] },
+                status: "Ready To Ship",
               },
             },
             { $count: "count" },
@@ -1435,15 +1439,8 @@ const getOrderSummary = async (req, res) => {
         percent: getPercent(statusMap["new"] || 0),
       },
       readyToShip: {
-        count:
-          (statusMap["Ready To Ship"] || 0) +
-          (statusMap["Booked"] || 0) +
-          (statusMap["Not Picked"] || 0),
-        percent: getPercent(
-          (statusMap["Ready To Ship"] || 0) +
-          (statusMap["Booked"] || 0) +
-          (statusMap["Not Picked"] || 0)
-        ),
+        count: statusMap["Ready To Ship"] || 0,
+        percent: getPercent(statusMap["Ready To Ship"] || 0),
       },
 
       inTransit: {

@@ -175,7 +175,7 @@ const testWebhook = async (req, res) => {
         },
         trackingHistory: [
           {
-            status: "Booked",
+            status: "Ready To Ship",
             StatusLocation: "Mumbai",
             StatusDateTime: new Date(Date.now() - 86400000).toISOString(),
             Instructions: "Order booked successfully",

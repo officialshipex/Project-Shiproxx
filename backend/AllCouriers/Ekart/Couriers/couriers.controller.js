@@ -442,7 +442,7 @@ const orderCreationEkart = async (req, res) => {
       id,
       {
         $set: {
-          status: "Booked",
+          status: "Ready To Ship",
           awb_number: response.data.tracking_id,
           shipment_id: currentOrder.orderId,
           provider,
@@ -455,7 +455,7 @@ const orderCreationEkart = async (req, res) => {
         },
         $push: {
           tracking: {
-            status: "Booked",
+            status: "Ready To Ship",
             StatusLocation: currentOrder.pickupAddress?.city || "N/A",
             StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
             Instructions: "Order booked successfully",

@@ -213,7 +213,7 @@ const createShipmentFunctionShreeMaruti = async (
     // Handle response
     if (response.status === 200) {
       const result = response.data.data;
-      currentOrder.status = "Booked";
+      currentOrder.status = "Ready To Ship";
       currentOrder.cancelledAtStage = null;
       currentOrder.awb_number = result.awbNumber;
       currentOrder.shipment_id = `${result.shipperOrderId}`;
@@ -225,7 +225,7 @@ const createShipmentFunctionShreeMaruti = async (
       currentOrder.estimatedDeliveryDate = estimateDate;
       currentOrder.priceBreakup = priceBreakup;
       currentOrder.tracking.push({
-        status: "Booked",
+        status: "Ready To Ship",
         StatusLocation: currentOrder.pickupAddress?.city || "N/A",
         StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
         Instructions: "Order booked successfully",

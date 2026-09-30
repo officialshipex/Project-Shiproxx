@@ -250,7 +250,7 @@ const createShipexIndiaShipment = async (req, res) => {
     const { awb_number, labelUrl } = bookingResponse.data.data;
 
     // 10. Update Order in DB
-    currentOrder.status = "Booked";
+    currentOrder.status = "Ready To Ship";
     currentOrder.awb_number = awb_number;
     currentOrder.label = labelUrl || "";
     const providerWord = shipexCourierName.split(" ")[0];
@@ -264,7 +264,7 @@ const createShipexIndiaShipment = async (req, res) => {
     currentOrder.priceBreakup = priceBreakup;
     currentOrder.shipmentCreatedAt = new Date();
     currentOrder.tracking.push({
-      status: "Booked",
+      status: "Ready To Ship",
       StatusLocation: currentOrder.pickupAddress.city,
       StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
       Instructions: "Order booked successfully",

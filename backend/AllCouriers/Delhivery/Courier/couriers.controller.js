@@ -406,7 +406,7 @@ const createOrder = async (req, res) => {
           id,
           {
             $set: {
-              status: "Booked",
+              status: "Ready To Ship",
               cancelledAtStage: null,
               awb_number: result.waybill,
               shipment_id: result.refnum,
@@ -421,7 +421,7 @@ const createOrder = async (req, res) => {
             },
             $push: {
               tracking: {
-                status: "Booked",
+                status: "Ready To Ship",
                 StatusLocation: currentOrder.pickupAddress?.city || "N/A",
                 StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
                 Instructions: "Order booked successfully",

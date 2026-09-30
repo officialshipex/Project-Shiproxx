@@ -431,7 +431,7 @@ const getWooCommerceProductDetails = async (
 // Stores with shipment plugins may also accept: shipped, in-transit, out-for-delivery, etc.
 const shiproxxToWooStatus = (shiproxxStatus) => {
   const map = {
-    "Booked":           "ready-to-ship",
+    "Ready To Ship":           "ready-to-ship",
     "Ready To Ship":    "ready-to-ship",
     "Pickup Completed": "in-transit",
     "In-transit":       "in-transit",
@@ -452,7 +452,7 @@ const markWooOrderAsShipped = async (
   orderId,
   trackingNumber,
   courierName,
-  shiproxxStatus   // Shiproxx order status (e.g. "In-transit", "Delivered", "Booked")
+  shiproxxStatus   // Shiproxx order status (e.g. "In-transit", "Delivered", "Ready To Ship")
 ) => {
   try {
     const baseUrl = storeUrl.replace(/\/$/, "");
@@ -531,7 +531,7 @@ const markWooOrderAsShipped = async (
     }
 
     // 7. Add tracking info to WooCommerce (only when Booked / first shipment scan)
-    const addTrackingStatuses = ["Booked", "Ready To Ship", "Pickup Completed"];
+    const addTrackingStatuses = ["Ready To Ship", "Ready To Ship", "Pickup Completed"];
     if (trackingNumber && addTrackingStatuses.includes(shiproxxStatus)) {
       try {
         // Check if tracking number is already added to avoid duplicates

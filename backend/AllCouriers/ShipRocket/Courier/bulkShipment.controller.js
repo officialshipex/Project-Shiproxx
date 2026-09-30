@@ -226,7 +226,7 @@ const createShipmentFunctionShipRocket = async (
       atsLabelUrl = await generateLabel(shipment_id);
     }
 
-    currentOrder.status = "Booked";
+    currentOrder.status = "Ready To Ship";
     currentOrder.awb_number = awb_number;
     currentOrder.shipment_id = String(shipment_id);
     currentOrder.provider = curatedCourier || courier_name || "Shiprocket";
@@ -239,7 +239,7 @@ const createShipmentFunctionShipRocket = async (
     currentOrder.priceBreakup = priceBreakup;
     currentOrder.shipmentCreatedAt = new Date();
     currentOrder.tracking.push({
-      status: "Booked",
+      status: "Ready To Ship",
       StatusLocation: currentOrder.pickupAddress.city || "N/A",
       StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
       Instructions: "Order booked successfully",

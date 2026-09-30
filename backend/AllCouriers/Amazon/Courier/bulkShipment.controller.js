@@ -168,7 +168,7 @@ const createShipmentAmazon = async (
     const labelUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${labelKey}`;
 
     // Update Order
-    currentOrder.status = "Booked";
+    currentOrder.status = "Ready To Ship";
     currentOrder.cancelledAtStage = null;
     currentOrder.awb_number = result.packageDocumentDetails[0].trackingId;
     currentOrder.shipment_id = `${result.shipmentId}`;
@@ -181,7 +181,7 @@ const createShipmentAmazon = async (
     currentOrder.estimatedDeliveryDate = estimateDate;
     currentOrder.priceBreakup = priceBreakup;
     currentOrder.tracking.push({
-      status: "Booked",
+      status: "Ready To Ship",
       StatusLocation: currentOrder.pickupAddress?.city || "N/A",
       StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
       Instructions: "Order booked successfully",

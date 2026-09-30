@@ -303,7 +303,7 @@ const createOrderEkart = async (
     /* --------------------------------------------------
        8️⃣ UPDATE ORDER (DTDC STYLE)
     -------------------------------------------------- */
-    currentOrder.status = "Booked";
+    currentOrder.status = "Ready To Ship";
     currentOrder.cancelledAtStage = null;
     currentOrder.awb_number = awb;
     currentOrder.shipment_id = String(currentOrder.orderId);
@@ -316,7 +316,7 @@ const createOrderEkart = async (
     currentOrder.priceBreakup = priceBreakup;
 
     currentOrder.tracking.push({
-      status: "Booked",
+      status: "Ready To Ship",
       StatusLocation: currentOrder.pickupAddress.city || "N/A",
       StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
       Instructions: "Order booked successfully",

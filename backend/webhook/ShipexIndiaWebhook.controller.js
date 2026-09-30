@@ -101,8 +101,8 @@ const ShipexIndiaWebhook = async (req, res) => {
       mappedStatus = "RTO";
     } else if (s.includes("MANIFEST") || s.includes("READY TO SHIP") || s.includes("READY_FOR_DISPATCH") || s.includes("READY TO DISPATCH")) {
       mappedStatus = "Ready To Ship";
-    } else if (s.includes("CONFIRMED") || s.includes("BOOKED")) {
-      mappedStatus = "Booked";
+    } else if (s.includes("CONFIRMED") || s.includes("Ready To Ship")) {
+      mappedStatus = "Ready To Ship";
     } else if (s.includes("DISPATCH") || s.includes("SHIPPED") || s.includes("TRANSIT")) {
       mappedStatus = "In-transit";
     } else if (s.includes("OUT_FOR_DELIVERY") || s.includes("OUT FOR DELIVERY")) {

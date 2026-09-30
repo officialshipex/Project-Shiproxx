@@ -162,7 +162,7 @@ const createShipmentFunctionDelhivery = async (
         const result = response.data.packages[0];
 
         // Update Order Details
-        currentOrder.status = "Booked";
+        currentOrder.status = "Ready To Ship";
         currentOrder.cancelledAtStage = null;
         currentOrder.awb_number = result.waybill;
         currentOrder.shipment_id = `${result.refnum}`;
@@ -176,7 +176,7 @@ const createShipmentFunctionDelhivery = async (
         currentOrder.zone = zone.zone;
         currentOrder.priceBreakup = priceBreakup;
         currentOrder.tracking.push({
-          status: "Booked",
+          status: "Ready To Ship",
           StatusLocation: currentOrder.pickupAddress?.city || "N/A",
           StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
           Instructions: "Order booked successfully",

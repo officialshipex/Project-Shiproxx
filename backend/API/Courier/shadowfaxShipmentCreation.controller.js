@@ -191,7 +191,7 @@ const createShadowfaxShipment = async ({
           id,
           {
             $set: {
-              status: "Booked",
+              status: "Ready To Ship",
               awb_number: sfxData.data.awb_number,
               provider: "Shadowfax",
               courierName: courierName || "Shadowfax",
@@ -204,7 +204,7 @@ const createShadowfaxShipment = async ({
             },
             $push: {
               tracking: {
-                status: "Booked",
+                status: "Ready To Ship",
                 StatusLocation: sender.city || "N/A",
                 StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
                 Instructions: "Order booked successfully",

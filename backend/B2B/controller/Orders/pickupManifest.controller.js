@@ -28,7 +28,7 @@ const schedulePickup = async (req, res) => {
                     continue;
                 }
 
-                if (order.status !== "Booked") {
+                if (order.status !== "Ready To Ship") {
                     failedOrders.push({ orderId, reason: `Order is in ${order.status} status, expected Booked` });
                     continue;
                 }

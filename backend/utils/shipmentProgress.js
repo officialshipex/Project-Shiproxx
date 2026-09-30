@@ -25,7 +25,7 @@ const POST_PICKUP_STATUSES = new Set([
 ]);
 
 // Pre-pickup states where a courier cancellation is legitimate and should
-// still go through: new, Booked, Ready To Ship, Not Picked, processing.
+// still go through: new, Ready To Ship, processing.
 const hasLeftOrigin = (status) => POST_PICKUP_STATUSES.has(String(status || "").trim());
 
 module.exports = { hasLeftOrigin, POST_PICKUP_STATUSES };

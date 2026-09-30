@@ -123,7 +123,7 @@ const createOrderShadowfax = async (
       const awb = response.data.data.awb_number;
 
       // Update Order
-      currentOrder.status = "Booked";
+      currentOrder.status = "Ready To Ship";
       currentOrder.awb_number = awb;
       currentOrder.provider = "Shadowfax";
       currentOrder.courierName = selectedServiceDetails.courierName || "Shadowfax";
@@ -134,7 +134,7 @@ const createOrderShadowfax = async (
       currentOrder.zone = zone?.zone;
       currentOrder.priceBreakup = priceBreakup;
       currentOrder.tracking.push({
-        status: "Booked",
+        status: "Ready To Ship",
         StatusLocation: sender.city || "N/A",
         StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
         Instructions: "Order booked successfully",

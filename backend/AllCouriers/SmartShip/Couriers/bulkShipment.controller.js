@@ -183,7 +183,7 @@ const orderRegistrationOneStep = async (
     const result = response.data?.data?.success_order_details?.orders?.[0];
 
     if (result?.awb_number) {
-      currentOrder.status = "Booked";
+      currentOrder.status = "Ready To Ship";
       currentOrder.awb_number = result.awb_number;
       currentOrder.shipment_id = result.request_order_id || "";
       currentOrder.provider = serviceDetails.provider;
@@ -193,7 +193,7 @@ const orderRegistrationOneStep = async (
       currentOrder.zone = zone.zone;
       currentOrder.estimatedDeliveryDate = estimateDate;
       currentOrder.tracking.push({
-        status: "Booked",
+        status: "Ready To Ship",
         StatusLocation: currentOrder.pickupAddress?.city || "N/A",
         StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
         Instructions: "Order booked successfully",

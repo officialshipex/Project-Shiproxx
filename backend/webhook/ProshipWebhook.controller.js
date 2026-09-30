@@ -174,7 +174,7 @@ const ProshipWebhook = async (req, res) => {
 
         if (statusCode === 1 || statusCode === 28 || statusCode === 33) {
           // ORDER_PLACED / AWB_REGISTERED / MANIFESTED
-          order.status = "Booked";
+          order.status = "Ready To Ship";
         }
 
         if (statusCode === 2 || statusCode === 25) {
@@ -184,7 +184,7 @@ const ProshipWebhook = async (req, res) => {
 
         if (statusCode === 3) {
           // PICKUP_FAILED
-          order.status = "Not Picked";
+          order.status = "Ready To Ship";
         }
 
         if (statusCode === 4) {

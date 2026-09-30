@@ -82,7 +82,7 @@ const createShipmentFunctionXpressBees = async (
     if (response.data.status) {
       const result = response.data.data;
 
-      currentOrder.status = "Booked";
+      currentOrder.status = "Ready To Ship";
       currentOrder.cancelledAtStage = null;
       currentOrder.awb_number = result.awb_number;
       currentOrder.shipment_id = `${result.awb_number}`;

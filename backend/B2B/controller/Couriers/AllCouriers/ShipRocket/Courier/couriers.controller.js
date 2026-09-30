@@ -200,7 +200,7 @@ exports.createShiprocketCargoShipment = async (req, res) => {
       id,
       {
         $set: {
-          status: "Booked",
+          status: "Ready To Ship",
           provider: "shiprocket",
           courierServiceName,
           shipment_id: shipmentRes.data.id,
@@ -211,7 +211,7 @@ exports.createShiprocketCargoShipment = async (req, res) => {
         },
         $push: {
           tracking: {
-            status: "Booked",
+            status: "Ready To Ship",
             Instructions: "Shipment booked, awaiting AWB",
             StatusDateTime: new Date(),
           },

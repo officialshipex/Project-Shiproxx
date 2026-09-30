@@ -78,7 +78,7 @@ const cancelOrdersAtBooked = async (req, res) => {
     }
 
     if (
-      !["Ready To Ship", "Booked", "Not Picked"].includes(currentOrder.status)
+      !["Ready To Ship"].includes(currentOrder.status)
     ) {
       return res.status(400).json({
         success: false,

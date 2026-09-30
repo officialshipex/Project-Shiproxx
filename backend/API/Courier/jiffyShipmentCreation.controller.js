@@ -94,7 +94,7 @@ const createJiffyShipment = async ({
                         id,
                         {
                             $set: {
-                                status: "Booked",
+                                status: "Ready To Ship",
                                 awb_number: awb,
                                 shipment_id: String(shipmentData.id || ""),
                                 provider: providerWord,
@@ -107,7 +107,7 @@ const createJiffyShipment = async ({
                             },
                             $push: {
                                 tracking: {
-                                    status: "Booked",
+                                    status: "Ready To Ship",
                                     StatusLocation: currentOrder.pickupAddress?.city || "N/A",
                                     StatusDateTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000),
                                     Instructions: "Order booked successfully",
