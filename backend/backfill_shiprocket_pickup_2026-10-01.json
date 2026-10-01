@@ -1,0 +1,5801 @@
+{
+ "takenAt": "2026-10-01T07:08:04.386Z",
+ "orders": [
+  {
+   "_id": "6ab22ec9c56c9869002e0a6c",
+   "orderId": 602303,
+   "awb_number": "153508460629562",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-22T13:01:00.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba4ffe324a8c13c0fea8c4",
+   "orderId": 472676,
+   "awb_number": "39505256305000",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba518f324a8c13c0feb70d",
+   "orderId": 946270,
+   "awb_number": "39505256305674",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba51a2324a8c13c0feb769",
+   "orderId": 840873,
+   "awb_number": "39505256305700",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5213324a8c13c0feb825",
+   "orderId": 928501,
+   "awb_number": "39505256305965",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5337324a8c13c0febbf1",
+   "orderId": 409899,
+   "awb_number": "39505256307612",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5413324a8c13c0febde8",
+   "orderId": 749031,
+   "awb_number": "39505256307984",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5446324a8c13c0febe9e",
+   "orderId": 169511,
+   "awb_number": "39505256308076",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5465324a8c13c0febefc",
+   "orderId": 917234,
+   "awb_number": "39505256308124",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5484324a8c13c0fec0c6",
+   "orderId": 315274,
+   "awb_number": "39505256308150",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba554b324a8c13c0fec591",
+   "orderId": 544017,
+   "awb_number": "39505256308485",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5761324a8c13c0fec8ba",
+   "orderId": 302333,
+   "awb_number": "39505256310530",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba578d324a8c13c0fec937",
+   "orderId": 447109,
+   "awb_number": "39505256310574",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba57f3324a8c13c0feca17",
+   "orderId": 151125,
+   "awb_number": "39505256310681",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba584d324a8c13c0feca73",
+   "orderId": 565787,
+   "awb_number": "39505256310832",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5860324a8c13c0fecacf",
+   "orderId": 691911,
+   "awb_number": "39505256310876",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5870324a8c13c0fecb2b",
+   "orderId": 103758,
+   "awb_number": "39505256310924",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba589a324a8c13c0fecb89",
+   "orderId": 650979,
+   "awb_number": "39505256310961",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba58ab324a8c13c0fecbe5",
+   "orderId": 845262,
+   "awb_number": "39505256310994",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5906324a8c13c0fecc8a",
+   "orderId": 936149,
+   "awb_number": "39505256311086",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5982324a8c13c0fecd12",
+   "orderId": 302663,
+   "awb_number": "39505256311370",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba599a324a8c13c0fecda4",
+   "orderId": 289231,
+   "awb_number": "39505256311392",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba59cf324a8c13c0fece55",
+   "orderId": 908961,
+   "awb_number": "39505256311451",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5a01324a8c13c0fed0cd",
+   "orderId": 297967,
+   "awb_number": "39505256311543",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5a86324a8c13c0fed2d2",
+   "orderId": 978574,
+   "awb_number": "39505256311683",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ada324a8c13c0fed4b1",
+   "orderId": 984624,
+   "awb_number": "39505256311893",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ada324a8c13c0fed4fd",
+   "orderId": 575655,
+   "awb_number": "39505256311904",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ade324a8c13c0fed56e",
+   "orderId": 687131,
+   "awb_number": "39505256311926",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5adf324a8c13c0fed5e9",
+   "orderId": 754861,
+   "awb_number": "39505256311952",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ae2324a8c13c0fed684",
+   "orderId": 395051,
+   "awb_number": "39505256311963",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ae4324a8c13c0fed72e",
+   "orderId": 573965,
+   "awb_number": "39505256311974",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ae6324a8c13c0fed78a",
+   "orderId": 766742,
+   "awb_number": "39505256311985",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ae7324a8c13c0fed7e6",
+   "orderId": 592672,
+   "awb_number": "39505256311996",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5aeb324a8c13c0fed8b1",
+   "orderId": 823633,
+   "awb_number": "39505256312000",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5aeb324a8c13c0fed8fd",
+   "orderId": 968116,
+   "awb_number": "39505256312011",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5aee324a8c13c0fed969",
+   "orderId": 626179,
+   "awb_number": "39505256312033",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b27324a8c13c0fedc5a",
+   "orderId": 575529,
+   "awb_number": "39505256312114",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b28324a8c13c0fedcd5",
+   "orderId": 912917,
+   "awb_number": "39505256312125",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b2a324a8c13c0fedd41",
+   "orderId": 404126,
+   "awb_number": "39505256312136",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b2c324a8c13c0feddbc",
+   "orderId": 480224,
+   "awb_number": "39505256312140",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b2f324a8c13c0fede6f",
+   "orderId": 765753,
+   "awb_number": "39505256312151",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b30324a8c13c0fedeea",
+   "orderId": 923430,
+   "awb_number": "39505256312173",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b32324a8c13c0fedf46",
+   "orderId": 317794,
+   "awb_number": "39505256312184",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b33324a8c13c0fedfa2",
+   "orderId": 632622,
+   "awb_number": "39505256312195",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b37324a8c13c0fee06c",
+   "orderId": 799946,
+   "awb_number": "39505256312206",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b37324a8c13c0fee0b8",
+   "orderId": 959095,
+   "awb_number": "39505256312210",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b3b324a8c13c0fee153",
+   "orderId": 384946,
+   "awb_number": "39505256312221",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b3b324a8c13c0fee19f",
+   "orderId": 389382,
+   "awb_number": "39505256312232",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b3f324a8c13c0fee20b",
+   "orderId": 385304,
+   "awb_number": "39505256312243",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b41324a8c13c0fee2b5",
+   "orderId": 952131,
+   "awb_number": "39505256312265",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b43324a8c13c0fee340",
+   "orderId": 170615,
+   "awb_number": "39505256312276",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b45324a8c13c0fee3cb",
+   "orderId": 652785,
+   "awb_number": "39505256312291",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b47324a8c13c0fee427",
+   "orderId": 770923,
+   "awb_number": "39505256312302",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b48324a8c13c0fee483",
+   "orderId": 470479,
+   "awb_number": "39505256312313",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b4b324a8c13c0fee528",
+   "orderId": 495800,
+   "awb_number": "39505256312324",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b4d324a8c13c0fee5a3",
+   "orderId": 571414,
+   "awb_number": "39505256312335",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b50324a8c13c0fee66d",
+   "orderId": 549630,
+   "awb_number": "39505256312346",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b51324a8c13c0fee6e8",
+   "orderId": 814973,
+   "awb_number": "39505256312350",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b55324a8c13c0fee783",
+   "orderId": 503587,
+   "awb_number": "39505256312361",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b55324a8c13c0fee7cf",
+   "orderId": 289104,
+   "awb_number": "39505256312372",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b5c324a8c13c0fee9d2",
+   "orderId": 493101,
+   "awb_number": "39505256312394",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b5d324a8c13c0feea1e",
+   "orderId": 993035,
+   "awb_number": "39505256312405",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b60324a8c13c0feea8a",
+   "orderId": 711717,
+   "awb_number": "39505256312486",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b61324a8c13c0feeb05",
+   "orderId": 678332,
+   "awb_number": "39505256312490",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b65324a8c13c0feebd4",
+   "orderId": 232294,
+   "awb_number": "39505256312501",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b66324a8c13c0feec4f",
+   "orderId": 956583,
+   "awb_number": "39505256312512",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b69324a8c13c0feecad",
+   "orderId": 926416,
+   "awb_number": "39505256312545",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b6a324a8c13c0feed09",
+   "orderId": 846622,
+   "awb_number": "39505256312556",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b6d324a8c13c0feeda4",
+   "orderId": 419597,
+   "awb_number": "39505256312560",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b6d324a8c13c0feedd3",
+   "orderId": 121121,
+   "awb_number": "39505256312571",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b71324a8c13c0feee64",
+   "orderId": 475622,
+   "awb_number": "39505256312582",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b72324a8c13c0feeed9",
+   "orderId": 506280,
+   "awb_number": "39505256312593",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b75324a8c13c0feef45",
+   "orderId": 106737,
+   "awb_number": "39505256312615",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b78324a8c13c0feeff1",
+   "orderId": 679275,
+   "awb_number": "39505256312630",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b79324a8c13c0fef04d",
+   "orderId": 375711,
+   "awb_number": "39505256312641",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b7c324a8c13c0fef0a9",
+   "orderId": 969725,
+   "awb_number": "39505256312663",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b7d324a8c13c0fef105",
+   "orderId": 636596,
+   "awb_number": "39505256312696",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b7f324a8c13c0fef171",
+   "orderId": 163943,
+   "awb_number": "39505256312711",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b83324a8c13c0fef25a",
+   "orderId": 942796,
+   "awb_number": "39505256312733",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b85324a8c13c0fef304",
+   "orderId": 635478,
+   "awb_number": "39505256312755",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b86324a8c13c0fef362",
+   "orderId": 919883,
+   "awb_number": "39505256312766",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b88324a8c13c0fef3be",
+   "orderId": 984896,
+   "awb_number": "39505256312781",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b8a324a8c13c0fef424",
+   "orderId": 642249,
+   "awb_number": "39505256312792",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b8d324a8c13c0fef4bf",
+   "orderId": 393636,
+   "awb_number": "39505256312814",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b8d324a8c13c0fef50b",
+   "orderId": 797447,
+   "awb_number": "39505256312836",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b90324a8c13c0fef577",
+   "orderId": 599090,
+   "awb_number": "39505256312840",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b92324a8c13c0fef5f2",
+   "orderId": 177848,
+   "awb_number": "39505256312862",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b94324a8c13c0fef64e",
+   "orderId": 238301,
+   "awb_number": "39505256312884",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b96324a8c13c0fef6ac",
+   "orderId": 267830,
+   "awb_number": "39505256312895",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b97324a8c13c0fef709",
+   "orderId": 673997,
+   "awb_number": "39505256312906",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b99324a8c13c0fef765",
+   "orderId": 568964,
+   "awb_number": "39505256312910",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b9b324a8c13c0fef7c1",
+   "orderId": 186551,
+   "awb_number": "39505256312921",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b9d324a8c13c0fef81d",
+   "orderId": 502602,
+   "awb_number": "39505256312932",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5b9e324a8c13c0fef879",
+   "orderId": 337854,
+   "awb_number": "39505256312954",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ba2324a8c13c0fef914",
+   "orderId": 227851,
+   "awb_number": "39505256312976",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ba2324a8c13c0fef943",
+   "orderId": 166682,
+   "awb_number": "39505256312965",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ba6324a8c13c0fef9ce",
+   "orderId": 697046,
+   "awb_number": "39505256313002",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ba8324a8c13c0fefa78",
+   "orderId": 522441,
+   "awb_number": "39505256313013",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5baa324a8c13c0fefad4",
+   "orderId": 830348,
+   "awb_number": "39505256313035",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bac324a8c13c0fefb5f",
+   "orderId": 249059,
+   "awb_number": "39505256313046",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bad324a8c13c0fefbbb",
+   "orderId": 896725,
+   "awb_number": "39505256313050",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bb0324a8c13c0fefc17",
+   "orderId": 991172,
+   "awb_number": "39505256313061",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bb2324a8c13c0fefca4",
+   "orderId": 521665,
+   "awb_number": "39505256313072",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bb5324a8c13c0fefd00",
+   "orderId": 136683,
+   "awb_number": "39505256313094",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bb6324a8c13c0fefd5c",
+   "orderId": 219385,
+   "awb_number": "39505256313105",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bb9324a8c13c0fefdc8",
+   "orderId": 231433,
+   "awb_number": "39505256313131",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bb9324a8c13c0fefe14",
+   "orderId": 507748,
+   "awb_number": "39505256313142",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bbc324a8c13c0fefe80",
+   "orderId": 556779,
+   "awb_number": "39505256313153",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bbd324a8c13c0fefecc",
+   "orderId": 296058,
+   "awb_number": "39505256313164",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bc0324a8c13c0feff38",
+   "orderId": 848987,
+   "awb_number": "39505256313175",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bc0324a8c13c0feff84",
+   "orderId": 843240,
+   "awb_number": "39505256313186",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bc3324a8c13c0fefff2",
+   "orderId": 841790,
+   "awb_number": "39505256313201",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bc4324a8c13c0ff003e",
+   "orderId": 857382,
+   "awb_number": "39505256313223",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bc7324a8c13c0ff00aa",
+   "orderId": 534126,
+   "awb_number": "39505256313234",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bc8324a8c13c0ff0125",
+   "orderId": 846639,
+   "awb_number": "39505256313245",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bcd324a8c13c0ff021e",
+   "orderId": 282426,
+   "awb_number": "39505256313256",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bcd324a8c13c0ff026a",
+   "orderId": 754673,
+   "awb_number": "39505256313293",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bd0324a8c13c0ff02e9",
+   "orderId": 740804,
+   "awb_number": "39505256313304",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bd1324a8c13c0ff0337",
+   "orderId": 772176,
+   "awb_number": "39505256313315",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bd4324a8c13c0ff0393",
+   "orderId": 845314,
+   "awb_number": "39505256313326",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bd6324a8c13c0ff041e",
+   "orderId": 174739,
+   "awb_number": "39505256313330",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bd7324a8c13c0ff047a",
+   "orderId": 842402,
+   "awb_number": "39505256313341",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bd9324a8c13c0ff04d6",
+   "orderId": 575355,
+   "awb_number": "39505256313363",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bdb324a8c13c0ff0532",
+   "orderId": 116239,
+   "awb_number": "39505256313374",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bdd324a8c13c0ff058e",
+   "orderId": 861233,
+   "awb_number": "39505256313385",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bde324a8c13c0ff05ea",
+   "orderId": 686075,
+   "awb_number": "39505256313396",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5be2324a8c13c0ff0677",
+   "orderId": 136268,
+   "awb_number": "39505256313400",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5be3324a8c13c0ff06d3",
+   "orderId": 481955,
+   "awb_number": "39505256313411",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5be5324a8c13c0ff072f",
+   "orderId": 243988,
+   "awb_number": "39505256313422",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5be6324a8c13c0ff078b",
+   "orderId": 101489,
+   "awb_number": "39505256313433",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5be9324a8c13c0ff0816",
+   "orderId": 282043,
+   "awb_number": "39505256313444",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5beb324a8c13c0ff0886",
+   "orderId": 191804,
+   "awb_number": "39505256313503",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bee324a8c13c0ff093d",
+   "orderId": 890029,
+   "awb_number": "39505256313525",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bef324a8c13c0ff099e",
+   "orderId": 293758,
+   "awb_number": "39505256313536",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bf2324a8c13c0ff09fa",
+   "orderId": 177581,
+   "awb_number": "39505256313540",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bf3324a8c13c0ff0a56",
+   "orderId": 636976,
+   "awb_number": "39505256313551",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bf5324a8c13c0ff0ab2",
+   "orderId": 298430,
+   "awb_number": "39505256313573",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bf6324a8c13c0ff0b0e",
+   "orderId": 959232,
+   "awb_number": "39505256313584",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bf9324a8c13c0ff0b7d",
+   "orderId": 586282,
+   "awb_number": "39505256313595",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bfa324a8c13c0ff0bd9",
+   "orderId": 321255,
+   "awb_number": "39505256313606",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bfd324a8c13c0ff0c35",
+   "orderId": 501072,
+   "awb_number": "39505256313610",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5bfe324a8c13c0ff0c93",
+   "orderId": 604753,
+   "awb_number": "39505256313621",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c02324a8c13c0ff0d49",
+   "orderId": 405851,
+   "awb_number": "39505256313632",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c02324a8c13c0ff0d95",
+   "orderId": 480359,
+   "awb_number": "39505256313643",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c06324a8c13c0ff0e01",
+   "orderId": 585111,
+   "awb_number": "39505256313665",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c07324a8c13c0ff0e30",
+   "orderId": 379485,
+   "awb_number": "39505256313676",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c0b324a8c13c0ff0eb9",
+   "orderId": 864565,
+   "awb_number": "39505256313713",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c0b324a8c13c0ff0f05",
+   "orderId": 817889,
+   "awb_number": "39505256313724",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c0e324a8c13c0ff0f66",
+   "orderId": 152319,
+   "awb_number": "39505256313735",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c0f324a8c13c0ff0fc2",
+   "orderId": 141212,
+   "awb_number": "39505256313746",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c12324a8c13c0ff101e",
+   "orderId": 164664,
+   "awb_number": "39505256313750",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c15324a8c13c0ff10df",
+   "orderId": 715760,
+   "awb_number": "39505256313761",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c17324a8c13c0ff112b",
+   "orderId": 287604,
+   "awb_number": "39505256313783",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c1a324a8c13c0ff11cb",
+   "orderId": 466169,
+   "awb_number": "39505256313794",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c1b324a8c13c0ff1217",
+   "orderId": 346968,
+   "awb_number": "39505256313805",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c1e324a8c13c0ff1285",
+   "orderId": 233016,
+   "awb_number": "39505256313816",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c1e324a8c13c0ff12d1",
+   "orderId": 251782,
+   "awb_number": "39505256313820",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c21324a8c13c0ff1342",
+   "orderId": 546438,
+   "awb_number": "39505256313831",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c23324a8c13c0ff13bd",
+   "orderId": 980096,
+   "awb_number": "39505256313842",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c27324a8c13c0ff1487",
+   "orderId": 392440,
+   "awb_number": "39505256313853",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c28324a8c13c0ff14d3",
+   "orderId": 997916,
+   "awb_number": "39505256313864",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c2b324a8c13c0ff1531",
+   "orderId": 435307,
+   "awb_number": "39505256313875",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c2c324a8c13c0ff158d",
+   "orderId": 365263,
+   "awb_number": "39505256313886",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c2e324a8c13c0ff15e9",
+   "orderId": 363378,
+   "awb_number": "39505256313901",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c2f324a8c13c0ff1645",
+   "orderId": 439271,
+   "awb_number": "39505256313912",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c32324a8c13c0ff16a1",
+   "orderId": 752145,
+   "awb_number": "39505256313923",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c33324a8c13c0ff16fd",
+   "orderId": 598777,
+   "awb_number": "39505256313945",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c35324a8c13c0ff1759",
+   "orderId": 888437,
+   "awb_number": "39505256313960",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c37324a8c13c0ff17b5",
+   "orderId": 951799,
+   "awb_number": "39505256313971",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c39324a8c13c0ff1811",
+   "orderId": 614581,
+   "awb_number": "39505256313982",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c3a324a8c13c0ff186f",
+   "orderId": 683475,
+   "awb_number": "39505256313993",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c3d324a8c13c0ff18dd",
+   "orderId": 934938,
+   "awb_number": "39505256314015",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c3e324a8c13c0ff195a",
+   "orderId": 565170,
+   "awb_number": "39505256314026",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c41324a8c13c0ff19b6",
+   "orderId": 521104,
+   "awb_number": "39505256314030",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c43324a8c13c0ff1a70",
+   "orderId": 410982,
+   "awb_number": "39505256314041",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c44324a8c13c0ff1acc",
+   "orderId": 641163,
+   "awb_number": "39505256314052",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c48324a8c13c0ff1bb3",
+   "orderId": 789403,
+   "awb_number": "39505256314074",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c49324a8c13c0ff1c00",
+   "orderId": 946690,
+   "awb_number": "39505256314085",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c4c324a8c13c0ff1c5c",
+   "orderId": 497716,
+   "awb_number": "39505256314100",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c4d324a8c13c0ff1cb8",
+   "orderId": 209143,
+   "awb_number": "39505256314111",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c4f324a8c13c0ff1d14",
+   "orderId": 609699,
+   "awb_number": "39505256314122",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c50324a8c13c0ff1d70",
+   "orderId": 215810,
+   "awb_number": "39505256314133",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c54324a8c13c0ff1e3a",
+   "orderId": 317844,
+   "awb_number": "39505256314155",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c57324a8c13c0ff1f13",
+   "orderId": 999935,
+   "awb_number": "39505256314166",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c59324a8c13c0ff1f6f",
+   "orderId": 117873,
+   "awb_number": "39505256314192",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c5b324a8c13c0ff1fcb",
+   "orderId": 310078,
+   "awb_number": "39505256314203",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c5c324a8c13c0ff2027",
+   "orderId": 986839,
+   "awb_number": "39505256314214",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c5e324a8c13c0ff2083",
+   "orderId": 887061,
+   "awb_number": "39505256314225",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c60324a8c13c0ff20df",
+   "orderId": 384118,
+   "awb_number": "39505256314236",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c62324a8c13c0ff213c",
+   "orderId": 495588,
+   "awb_number": "39505256314240",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c64324a8c13c0ff2198",
+   "orderId": 937995,
+   "awb_number": "39505256314251",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c67324a8c13c0ff2228",
+   "orderId": 423305,
+   "awb_number": "39505256314273",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c68324a8c13c0ff2284",
+   "orderId": 331424,
+   "awb_number": "39505256314284",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c6c324a8c13c0ff234e",
+   "orderId": 201589,
+   "awb_number": "39505256314310",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c6f324a8c13c0ff23d9",
+   "orderId": 625318,
+   "awb_number": "39505256314332",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c70324a8c13c0ff2425",
+   "orderId": 518588,
+   "awb_number": "39505256314343",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c74324a8c13c0ff251e",
+   "orderId": 199585,
+   "awb_number": "39505256314354",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c75324a8c13c0ff256a",
+   "orderId": 763904,
+   "awb_number": "39505256314365",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c7a324a8c13c0ff2605",
+   "orderId": 389564,
+   "awb_number": "39505256314402",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c7a324a8c13c0ff2634",
+   "orderId": 602920,
+   "awb_number": "39505256314391",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c7f324a8c13c0ff26ec",
+   "orderId": 176500,
+   "awb_number": "39505256314424",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c81324a8c13c0ff2738",
+   "orderId": 763607,
+   "awb_number": "39505256314435",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c83324a8c13c0ff2794",
+   "orderId": 421941,
+   "awb_number": "39505256314446",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c85324a8c13c0ff27f0",
+   "orderId": 237240,
+   "awb_number": "39505256314450",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c86324a8c13c0ff284c",
+   "orderId": 753035,
+   "awb_number": "39505256314461",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c8b324a8c13c0ff28e7",
+   "orderId": 168124,
+   "awb_number": "39505256314494",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c8b324a8c13c0ff2911",
+   "orderId": 574157,
+   "awb_number": "39505256314483",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c8f324a8c13c0ff29ce",
+   "orderId": 163671,
+   "awb_number": "39505256314505",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c91324a8c13c0ff2a1a",
+   "orderId": 474647,
+   "awb_number": "39505256314516",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c94324a8c13c0ff2aaa",
+   "orderId": 217946,
+   "awb_number": "39505256314520",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c95324a8c13c0ff2b06",
+   "orderId": 544980,
+   "awb_number": "39505256314531",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c98324a8c13c0ff2ba1",
+   "orderId": 726808,
+   "awb_number": "39505256314553",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c9b324a8c13c0ff2c8a",
+   "orderId": 340150,
+   "awb_number": "39505256314564",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c9c324a8c13c0ff2cd6",
+   "orderId": 797074,
+   "awb_number": "39505256314575",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5c9f324a8c13c0ff2d32",
+   "orderId": 360580,
+   "awb_number": "39505256314590",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ca1324a8c13c0ff2dbd",
+   "orderId": 408805,
+   "awb_number": "39505256314612",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ca4324a8c13c0ff2e87",
+   "orderId": 279735,
+   "awb_number": "39505256314623",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ca4324a8c13c0ff2ed3",
+   "orderId": 924176,
+   "awb_number": "39505256314634",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ca8324a8c13c0ff2f6e",
+   "orderId": 763542,
+   "awb_number": "39505256314660",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ca9324a8c13c0ff2fbb",
+   "orderId": 749370,
+   "awb_number": "39505256314671",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cac324a8c13c0ff3027",
+   "orderId": 329518,
+   "awb_number": "39505256314682",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cad324a8c13c0ff3073",
+   "orderId": 579729,
+   "awb_number": "39505256314704",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5caf324a8c13c0ff30cf",
+   "orderId": 402463,
+   "awb_number": "39505256314715",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cb2324a8c13c0ff318e",
+   "orderId": 367849,
+   "awb_number": "39505256314726",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cb3324a8c13c0ff31ea",
+   "orderId": 668374,
+   "awb_number": "39505256314730",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cb6324a8c13c0ff3256",
+   "orderId": 587367,
+   "awb_number": "39505256314741",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cb6324a8c13c0ff32b5",
+   "orderId": 441670,
+   "awb_number": "39505256314752",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cb9324a8c13c0ff3321",
+   "orderId": 827744,
+   "awb_number": "39505256314763",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cbb324a8c13c0ff33cb",
+   "orderId": 633318,
+   "awb_number": "39505256314774",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cbc324a8c13c0ff3427",
+   "orderId": 283287,
+   "awb_number": "39505256314785",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cbf324a8c13c0ff3483",
+   "orderId": 423343,
+   "awb_number": "39505256314800",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cc0324a8c13c0ff34df",
+   "orderId": 504503,
+   "awb_number": "39505256314822",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cc3324a8c13c0ff357a",
+   "orderId": 427080,
+   "awb_number": "39505256314833",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cc4324a8c13c0ff35c6",
+   "orderId": 405452,
+   "awb_number": "39505256314844",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cc7324a8c13c0ff3661",
+   "orderId": 872678,
+   "awb_number": "39505256314866",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cc7324a8c13c0ff36ad",
+   "orderId": 783448,
+   "awb_number": "39505256314870",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ccc324a8c13c0ff37d5",
+   "orderId": 203435,
+   "awb_number": "39505256314881",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ccf324a8c13c0ff387f",
+   "orderId": 204154,
+   "awb_number": "39505256314892",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cd1324a8c13c0ff38db",
+   "orderId": 285365,
+   "awb_number": "39505256314914",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cd3324a8c13c0ff3937",
+   "orderId": 879860,
+   "awb_number": "39505256314936",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cd4324a8c13c0ff3993",
+   "orderId": 364934,
+   "awb_number": "39505256314940",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cd6324a8c13c0ff39ef",
+   "orderId": 841459,
+   "awb_number": "39505256314962",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cd8324a8c13c0ff3a7a",
+   "orderId": 134552,
+   "awb_number": "39505256314973",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cda324a8c13c0ff3ad6",
+   "orderId": 493544,
+   "awb_number": "39505256314984",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cdc324a8c13c0ff3b32",
+   "orderId": 791334,
+   "awb_number": "39505256314995",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cdd324a8c13c0ff3b8e",
+   "orderId": 260681,
+   "awb_number": "39505256315006",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ce1324a8c13c0ff3c82",
+   "orderId": 423329,
+   "awb_number": "39505256315021",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ce1324a8c13c0ff3cce",
+   "orderId": 368268,
+   "awb_number": "39505256315032",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ce4324a8c13c0ff3d3a",
+   "orderId": 480442,
+   "awb_number": "39505256315043",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ce5324a8c13c0ff3db5",
+   "orderId": 763991,
+   "awb_number": "39505256315054",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ce9324a8c13c0ff3e50",
+   "orderId": 492730,
+   "awb_number": "39505256315080",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cea324a8c13c0ff3e9c",
+   "orderId": 682350,
+   "awb_number": "39505256315091",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ced324a8c13c0ff3f08",
+   "orderId": 931134,
+   "awb_number": "39505256315113",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ced324a8c13c0ff3f37",
+   "orderId": 299585,
+   "awb_number": "39505256315102",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cf1324a8c13c0ff3fc0",
+   "orderId": 942258,
+   "awb_number": "39505256315275",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cf2324a8c13c0ff3fef",
+   "orderId": 398174,
+   "awb_number": "39505256315286",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cf5324a8c13c0ff4078",
+   "orderId": 763612,
+   "awb_number": "39505256315301",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cf5324a8c13c0ff40c4",
+   "orderId": 697776,
+   "awb_number": "39505256315312",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cf9324a8c13c0ff415f",
+   "orderId": 566977,
+   "awb_number": "39505256315334",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cf9324a8c13c0ff41ab",
+   "orderId": 579757,
+   "awb_number": "39505256315345",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5cfd324a8c13c0ff4275",
+   "orderId": 861557,
+   "awb_number": "39505256315356",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d00324a8c13c0ff431f",
+   "orderId": 535759,
+   "awb_number": "39505256315360",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d02324a8c13c0ff437b",
+   "orderId": 954481,
+   "awb_number": "39505256315371",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d03324a8c13c0ff43d7",
+   "orderId": 230969,
+   "awb_number": "39505256315393",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d05324a8c13c0ff4433",
+   "orderId": 354477,
+   "awb_number": "39505256315404",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d08324a8c13c0ff44be",
+   "orderId": 338517,
+   "awb_number": "39505256315415",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d08324a8c13c0ff451a",
+   "orderId": 153267,
+   "awb_number": "39505256315426",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d0b324a8c13c0ff45b5",
+   "orderId": 275587,
+   "awb_number": "39505256315430",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d0e324a8c13c0ff469e",
+   "orderId": 822916,
+   "awb_number": "39505256315463",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d0f324a8c13c0ff46ea",
+   "orderId": 583809,
+   "awb_number": "39505256315474",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d12324a8c13c0ff4785",
+   "orderId": 375483,
+   "awb_number": "39505256315496",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d12324a8c13c0ff47d1",
+   "orderId": 961148,
+   "awb_number": "39505256315500",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d16324a8c13c0ff486c",
+   "orderId": 621270,
+   "awb_number": "39505256315522",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d17324a8c13c0ff48e7",
+   "orderId": 257395,
+   "awb_number": "39505256315533",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d1a324a8c13c0ff4953",
+   "orderId": 722810,
+   "awb_number": "39505256315544",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d1b324a8c13c0ff499f",
+   "orderId": 714826,
+   "awb_number": "39505256315555",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d1e324a8c13c0ff4a0b",
+   "orderId": 150459,
+   "awb_number": "39505256315566",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d1f324a8c13c0ff4a57",
+   "orderId": 639328,
+   "awb_number": "39505256315570",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d22324a8c13c0ff4b21",
+   "orderId": 413968,
+   "awb_number": "39505256315614",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d26324a8c13c0ff4c0a",
+   "orderId": 357728,
+   "awb_number": "39505256315625",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d26324a8c13c0ff4c42",
+   "orderId": 957241,
+   "awb_number": "39505256315636",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d2a324a8c13c0ff4cd8",
+   "orderId": 245903,
+   "awb_number": "39505256315640",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d2a324a8c13c0ff4d24",
+   "orderId": 149259,
+   "awb_number": "39505256315662",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d2e324a8c13c0ff4da7",
+   "orderId": 780504,
+   "awb_number": "39505256315673",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d2e324a8c13c0ff4dc2",
+   "orderId": 413456,
+   "awb_number": "39505256315684",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d32324a8c13c0ff4e63",
+   "orderId": 202606,
+   "awb_number": "39505256315706",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d33324a8c13c0ff4eda",
+   "orderId": 960504,
+   "awb_number": "39505256315710",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d35324a8c13c0ff4f36",
+   "orderId": 481436,
+   "awb_number": "39505256315743",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d36324a8c13c0ff4f97",
+   "orderId": 433943,
+   "awb_number": "39505256315754",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d39324a8c13c0ff4ff3",
+   "orderId": 836037,
+   "awb_number": "39505256315765",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d3a324a8c13c0ff5054",
+   "orderId": 265940,
+   "awb_number": "39505256315776",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d3e324a8c13c0ff511e",
+   "orderId": 947159,
+   "awb_number": "39505256315780",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d3e324a8c13c0ff514d",
+   "orderId": 606193,
+   "awb_number": "39505256315791",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d43324a8c13c0ff5234",
+   "orderId": 294551,
+   "awb_number": "39505256315813",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d44324a8c13c0ff52af",
+   "orderId": 117662,
+   "awb_number": "39505256315835",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d46324a8c13c0ff530b",
+   "orderId": 601683,
+   "awb_number": "39505256315846",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d49324a8c13c0ff53c5",
+   "orderId": 796164,
+   "awb_number": "39505256315861",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d4b324a8c13c0ff549e",
+   "orderId": 671210,
+   "awb_number": "39505256315872",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d4c324a8c13c0ff54fa",
+   "orderId": 360950,
+   "awb_number": "39505256315883",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d4f324a8c13c0ff5566",
+   "orderId": 608892,
+   "awb_number": "39505256315905",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d50324a8c13c0ff55b2",
+   "orderId": 692087,
+   "awb_number": "39505256315916",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d53324a8c13c0ff5618",
+   "orderId": 982648,
+   "awb_number": "39505256315920",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d54324a8c13c0ff566a",
+   "orderId": 384614,
+   "awb_number": "39505256315931",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d57324a8c13c0ff56db",
+   "orderId": 512045,
+   "awb_number": "39505256315942",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d58324a8c13c0ff5756",
+   "orderId": 819173,
+   "awb_number": "39505256315953",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d5a324a8c13c0ff57b2",
+   "orderId": 606830,
+   "awb_number": "39505256315964",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d5c324a8c13c0ff580e",
+   "orderId": 983324,
+   "awb_number": "39505256315975",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d5d324a8c13c0ff586a",
+   "orderId": 683788,
+   "awb_number": "39505256315986",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d5f324a8c13c0ff58c6",
+   "orderId": 882116,
+   "awb_number": "39505256315990",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d61324a8c13c0ff5932",
+   "orderId": 235888,
+   "awb_number": "39505256316001",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d64324a8c13c0ff599e",
+   "orderId": 950227,
+   "awb_number": "39505256316023",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d64324a8c13c0ff59ea",
+   "orderId": 719698,
+   "awb_number": "39505256316034",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d68324a8c13c0ff5a85",
+   "orderId": 198807,
+   "awb_number": "39505256316056",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d68324a8c13c0ff5ab4",
+   "orderId": 226453,
+   "awb_number": "39505256316060",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d6c324a8c13c0ff5b42",
+   "orderId": 585388,
+   "awb_number": "39505256316082",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d6c324a8c13c0ff5b5d",
+   "orderId": 294085,
+   "awb_number": "39505256316104",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d70324a8c13c0ff5bfa",
+   "orderId": 862764,
+   "awb_number": "39505256316126",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d70324a8c13c0ff5c46",
+   "orderId": 691401,
+   "awb_number": "39505256316141",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d73324a8c13c0ff5ca2",
+   "orderId": 730407,
+   "awb_number": "39505256316163",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d74324a8c13c0ff5cfe",
+   "orderId": 556888,
+   "awb_number": "39505256316185",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d77324a8c13c0ff5d5a",
+   "orderId": 123732,
+   "awb_number": "39505256316200",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d78324a8c13c0ff5db6",
+   "orderId": 178152,
+   "awb_number": "39505256316211",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d7a324a8c13c0ff5e12",
+   "orderId": 589031,
+   "awb_number": "39505256316233",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d7b324a8c13c0ff5e6e",
+   "orderId": 371450,
+   "awb_number": "39505256316244",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d7e324a8c13c0ff5eca",
+   "orderId": 757573,
+   "awb_number": "39505256316255",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d80324a8c13c0ff5f55",
+   "orderId": 242248,
+   "awb_number": "39505256316266",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d81324a8c13c0ff5fc4",
+   "orderId": 254631,
+   "awb_number": "39505256316270",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d83324a8c13c0ff6020",
+   "orderId": 207929,
+   "awb_number": "39505256316281",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d86324a8c13c0ff60c0",
+   "orderId": 936710,
+   "awb_number": "39505256316292",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d88324a8c13c0ff616a",
+   "orderId": 692282,
+   "awb_number": "39505256316303",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d8b324a8c13c0ff61db",
+   "orderId": 520182,
+   "awb_number": "39505256316314",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d8d324a8c13c0ff6285",
+   "orderId": 156861,
+   "awb_number": "39505256316336",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d8f324a8c13c0ff62e1",
+   "orderId": 173634,
+   "awb_number": "39505256316351",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d91324a8c13c0ff633d",
+   "orderId": 924130,
+   "awb_number": "39505256316373",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d92324a8c13c0ff6399",
+   "orderId": 389339,
+   "awb_number": "39505256316384",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d95324a8c13c0ff63fe",
+   "orderId": 676079,
+   "awb_number": "39505256316406",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d96324a8c13c0ff6451",
+   "orderId": 571438,
+   "awb_number": "39505256316410",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d98324a8c13c0ff64ad",
+   "orderId": 938842,
+   "awb_number": "39505256316432",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d9c324a8c13c0ff65a6",
+   "orderId": 693808,
+   "awb_number": "39505256316443",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5d9c324a8c13c0ff65f2",
+   "orderId": 274676,
+   "awb_number": "39505256316454",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5da0324a8c13c0ff668d",
+   "orderId": 345308,
+   "awb_number": "39505256316491",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5da1324a8c13c0ff66d9",
+   "orderId": 564079,
+   "awb_number": "39505256316502",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5da4324a8c13c0ff6745",
+   "orderId": 779463,
+   "awb_number": "39505256316513",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5da7324a8c13c0ff681e",
+   "orderId": 106008,
+   "awb_number": "39505256316535",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5da8324a8c13c0ff687a",
+   "orderId": 928127,
+   "awb_number": "39505256316546",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5dab324a8c13c0ff6944",
+   "orderId": 181167,
+   "awb_number": "39505256316550",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5dac324a8c13c0ff6990",
+   "orderId": 427368,
+   "awb_number": "39505256316561",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5daf324a8c13c0ff69fc",
+   "orderId": 988421,
+   "awb_number": "39505256316583",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5db0324a8c13c0ff6a48",
+   "orderId": 414863,
+   "awb_number": "39505256316605",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5db4324a8c13c0ff6af9",
+   "orderId": 354179,
+   "awb_number": "39505256316616",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5db8324a8c13c0ff6be2",
+   "orderId": 593393,
+   "awb_number": "39505256316631",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5dba324a8c13c0ff6c7b",
+   "orderId": 109694,
+   "awb_number": "39505256316653",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5dbc324a8c13c0ff6cd7",
+   "orderId": 403081,
+   "awb_number": "39505256316664",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5dbf324a8c13c0ff6dd1",
+   "orderId": 574791,
+   "awb_number": "39505256316686",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5dc0324a8c13c0ff6e1d",
+   "orderId": 102511,
+   "awb_number": "39505256316690",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5dc3324a8c13c0ff6e79",
+   "orderId": 374837,
+   "awb_number": "39505256316712",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5dc5324a8c13c0ff6f04",
+   "orderId": 629564,
+   "awb_number": "39505256316723",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5dc7324a8c13c0ff6f8f",
+   "orderId": 432593,
+   "awb_number": "39505256316734",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5dc9324a8c13c00006f0",
+   "orderId": 421956,
+   "awb_number": "39505256316756",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5dcd324a8c13c000075e",
+   "orderId": 386206,
+   "awb_number": "39505256316760",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5dd1324a8c13c00007fe",
+   "orderId": 522652,
+   "awb_number": "39505256316782",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5dd2324a8c13c0000851",
+   "orderId": 163055,
+   "awb_number": "39505256316793",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5e2f324a8c13c00044b4",
+   "orderId": 159272,
+   "awb_number": "39505256316885",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5e88324a8c13c0008804",
+   "orderId": 378179,
+   "awb_number": "39505256317025",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5e88324a8c13c0008833",
+   "orderId": 822924,
+   "awb_number": "39505256317036",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5e8d324a8c13c0008c19",
+   "orderId": 961370,
+   "awb_number": "39505256317040",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5e8e324a8c13c0008d0a",
+   "orderId": 338942,
+   "awb_number": "39505256317062",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5e92324a8c13c0008fc7",
+   "orderId": 172930,
+   "awb_number": "39505256317095",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5e94324a8c13c00091c2",
+   "orderId": 424029,
+   "awb_number": "39505256317106",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5e96324a8c13c00092ec",
+   "orderId": 683964,
+   "awb_number": "39505256317110",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5e98324a8c13c00094ad",
+   "orderId": 176797,
+   "awb_number": "39505256317121",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5e99324a8c13c000956f",
+   "orderId": 601003,
+   "awb_number": "39505256317132",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5e9e324a8c13c000988a",
+   "orderId": 784981,
+   "awb_number": "39505256317154",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ea0324a8c13c0009a97",
+   "orderId": 329209,
+   "awb_number": "39505256317165",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ea2324a8c13c0009c9f",
+   "orderId": 227683,
+   "awb_number": "39505256317176",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ea5324a8c13c0009ea7",
+   "orderId": 994350,
+   "awb_number": "39505256317180",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ea9324a8c13c000a13d",
+   "orderId": 852017,
+   "awb_number": "39505256317235",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ea9324a8c13c000a16c",
+   "orderId": 862308,
+   "awb_number": "39505256317224",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ead324a8c13c000a38a",
+   "orderId": 495677,
+   "awb_number": "39505256317250",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ead324a8c13c000a3b9",
+   "orderId": 555577,
+   "awb_number": "39505256317261",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5eb1324a8c13c000a500",
+   "orderId": 887074,
+   "awb_number": "39505256317294",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5eb2324a8c13c000a5af",
+   "orderId": 590939,
+   "awb_number": "39505256317305",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5eb5324a8c13c000a7c2",
+   "orderId": 490611,
+   "awb_number": "39505256317316",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5eb6324a8c13c000a84a",
+   "orderId": 656865,
+   "awb_number": "39505256317331",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5eb9324a8c13c000a95c",
+   "orderId": 699754,
+   "awb_number": "39505256317353",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ebc324a8c13c000ab0b",
+   "orderId": 586110,
+   "awb_number": "39505256317375",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ebd324a8c13c000abd9",
+   "orderId": 781852,
+   "awb_number": "39505256317386",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ec1324a8c13c000ae42",
+   "orderId": 108906,
+   "awb_number": "39505256317390",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ec1324a8c13c000ae8e",
+   "orderId": 645640,
+   "awb_number": "39505256317412",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ec5324a8c13c000b0e2",
+   "orderId": 362161,
+   "awb_number": "39505256317434",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ec6324a8c13c000b1bb",
+   "orderId": 204220,
+   "awb_number": "39505256317445",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ec9324a8c13c000b324",
+   "orderId": 995578,
+   "awb_number": "39505256317456",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ecb324a8c13c000b4a8",
+   "orderId": 614068,
+   "awb_number": "39505256317460",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ece324a8c13c000b67e",
+   "orderId": 915760,
+   "awb_number": "39505256317471",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ece324a8c13c000b6ca",
+   "orderId": 546632,
+   "awb_number": "39505256317482",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ed3324a8c13c000b91f",
+   "orderId": 588390,
+   "awb_number": "39505256317493",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ed3324a8c13c000b939",
+   "orderId": 795308,
+   "awb_number": "39505256317504",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ed7324a8c13c000bb3f",
+   "orderId": 598226,
+   "awb_number": "39505256317526",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ed8324a8c13c000bbcd",
+   "orderId": 704367,
+   "awb_number": "39505256317530",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5edb324a8c13c000bcf0",
+   "orderId": 879616,
+   "awb_number": "39505256317552",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ede324a8c13c000be65",
+   "orderId": 940696,
+   "awb_number": "39505256317563",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ee2324a8c13c000c094",
+   "orderId": 397219,
+   "awb_number": "39505256317596",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ee5324a8c13c000c277",
+   "orderId": 597182,
+   "awb_number": "39505256317600",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5eea324a8c13c000c5ff",
+   "orderId": 401284,
+   "awb_number": "39505256317633",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5eee324a8c13c000c8d2",
+   "orderId": 155519,
+   "awb_number": "39505256317655",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5eee324a8c13c000c910",
+   "orderId": 576806,
+   "awb_number": "39505256317666",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ef2324a8c13c000cb39",
+   "orderId": 167507,
+   "awb_number": "39505256317670",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ef3324a8c13c000cc48",
+   "orderId": 983294,
+   "awb_number": "39505256317692",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ef6324a8c13c000ce5d",
+   "orderId": 548676,
+   "awb_number": "39505256317703",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ef8324a8c13c000cf76",
+   "orderId": 144797,
+   "awb_number": "39505256317714",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5efb324a8c13c000d20a",
+   "orderId": 511386,
+   "awb_number": "39505256317740",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5efc324a8c13c000d282",
+   "orderId": 583270,
+   "awb_number": "39505256317751",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f00324a8c13c000d4d4",
+   "orderId": 868115,
+   "awb_number": "39505256317795",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f04324a8c13c000d6e2",
+   "orderId": 731097,
+   "awb_number": "39505256317810",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f07324a8c13c000d8ee",
+   "orderId": 967897,
+   "awb_number": "39505256317821",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f08324a8c13c000d9b9",
+   "orderId": 621522,
+   "awb_number": "39505256317843",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f0b324a8c13c000daf2",
+   "orderId": 242579,
+   "awb_number": "39505256317865",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f0e324a8c13c000dc6b",
+   "orderId": 982275,
+   "awb_number": "39505256317876",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f12324a8c13c000de8e",
+   "orderId": 994394,
+   "awb_number": "39505256317891",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f12324a8c13c000de92",
+   "orderId": 931624,
+   "awb_number": "39505256317902",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f17324a8c13c000e10d",
+   "orderId": 716303,
+   "awb_number": "39505256317935",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f19324a8c13c000e248",
+   "orderId": 404115,
+   "awb_number": "39505256317946",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f1a324a8c13c000e30d",
+   "orderId": 548012,
+   "awb_number": "39505256317950",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f1e324a8c13c000e59f",
+   "orderId": 120335,
+   "awb_number": "39505256317961",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f1f324a8c13c000e660",
+   "orderId": 363465,
+   "awb_number": "39505256317972",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f22324a8c13c000e7f6",
+   "orderId": 760154,
+   "awb_number": "39505256317994",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f23324a8c13c000e885",
+   "orderId": 790669,
+   "awb_number": "39505256318005",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f26324a8c13c000ea2b",
+   "orderId": 994622,
+   "awb_number": "39505256318016",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f2a324a8c13c000ec90",
+   "orderId": 363927,
+   "awb_number": "39505256318031",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f2d324a8c13c000eece",
+   "orderId": 242601,
+   "awb_number": "39505256318053",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f2f324a8c13c000f01f",
+   "orderId": 986391,
+   "awb_number": "39505256318064",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f31324a8c13c000f165",
+   "orderId": 230329,
+   "awb_number": "39505256318075",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f33324a8c13c000f28b",
+   "orderId": 706682,
+   "awb_number": "39505256318086",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f35324a8c13c000f3a0",
+   "orderId": 735082,
+   "awb_number": "39505256318090",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f38324a8c13c000f570",
+   "orderId": 619494,
+   "awb_number": "39505256318101",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f39324a8c13c000f62e",
+   "orderId": 706276,
+   "awb_number": "39505256318112",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f3d324a8c13c000f7dc",
+   "orderId": 198412,
+   "awb_number": "39505256318123",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f41324a8c13c000fa6e",
+   "orderId": 258021,
+   "awb_number": "39505256318160",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f41324a8c13c000fa9d",
+   "orderId": 774859,
+   "awb_number": "39505256318156",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f45324a8c13c000fcac",
+   "orderId": 462396,
+   "awb_number": "39505256318171",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f45324a8c13c000fcdb",
+   "orderId": 883336,
+   "awb_number": "39505256318182",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f49324a8c13c000ff0c",
+   "orderId": 680406,
+   "awb_number": "39505256318204",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f49324a8c13c000ff58",
+   "orderId": 799962,
+   "awb_number": "39505256318215",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f4d324a8c13c00101af",
+   "orderId": 828685,
+   "awb_number": "39505256318226",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f4f324a8c13c001030a",
+   "orderId": 868388,
+   "awb_number": "39505256318230",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f50324a8c13c00103b1",
+   "orderId": 281107,
+   "awb_number": "39505256318241",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f54324a8c13c0010617",
+   "orderId": 767355,
+   "awb_number": "39505256318252",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f55324a8c13c00106a1",
+   "orderId": 599237,
+   "awb_number": "39505256318263",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f59324a8c13c001093c",
+   "orderId": 903420,
+   "awb_number": "39505256318274",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f59324a8c13c001097f",
+   "orderId": 493320,
+   "awb_number": "39505256318285",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f5d324a8c13c0010b3e",
+   "orderId": 819467,
+   "awb_number": "39505256318300",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f5e324a8c13c0010c42",
+   "orderId": 526038,
+   "awb_number": "39505256318311",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f60324a8c13c0010d76",
+   "orderId": 167815,
+   "awb_number": "39505256318322",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f63324a8c13c0010f76",
+   "orderId": 981280,
+   "awb_number": "39505256318333",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f65324a8c13c00110c1",
+   "orderId": 978322,
+   "awb_number": "39505256318344",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f67324a8c13c00111d9",
+   "orderId": 343142,
+   "awb_number": "39505256318366",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f69324a8c13c0011313",
+   "orderId": 418895,
+   "awb_number": "39505256318381",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f6b324a8c13c001141b",
+   "orderId": 418560,
+   "awb_number": "39505256318392",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f70324a8c13c00116c8",
+   "orderId": 181747,
+   "awb_number": "39505256318414",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f70324a8c13c0011714",
+   "orderId": 281649,
+   "awb_number": "39505256318425",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f74324a8c13c0011917",
+   "orderId": 825910,
+   "awb_number": "39505256318436",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f74324a8c13c001192b",
+   "orderId": 917393,
+   "awb_number": "39505256318440",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f78324a8c13c0011b3f",
+   "orderId": 591887,
+   "awb_number": "39505256318451",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f78324a8c13c0011b8b",
+   "orderId": 790850,
+   "awb_number": "39505256318462",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f7b324a8c13c0011d28",
+   "orderId": 147657,
+   "awb_number": "39505256318484",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f7e324a8c13c0011f34",
+   "orderId": 436911,
+   "awb_number": "39505256318495",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f7f324a8c13c0011feb",
+   "orderId": 946779,
+   "awb_number": "39505256318506",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f84324a8c13c0012284",
+   "orderId": 193063,
+   "awb_number": "39505256318521",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f84324a8c13c00122b3",
+   "orderId": 777334,
+   "awb_number": "39505256318532",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f88324a8c13c0012514",
+   "orderId": 548904,
+   "awb_number": "39505256318554",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f8a324a8c13c001268e",
+   "orderId": 703507,
+   "awb_number": "39505256318565",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f8d324a8c13c0012849",
+   "orderId": 930455,
+   "awb_number": "39505256318580",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f8e324a8c13c0012924",
+   "orderId": 787223,
+   "awb_number": "39505256318591",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f91324a8c13c0012b24",
+   "orderId": 402100,
+   "awb_number": "39505256318624",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f94324a8c13c0012cdf",
+   "orderId": 534254,
+   "awb_number": "39505256318635",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f95324a8c13c0012d98",
+   "orderId": 710501,
+   "awb_number": "39505256318646",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f99324a8c13c001300d",
+   "orderId": 863063,
+   "awb_number": "39505256318650",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f9a324a8c13c00130c2",
+   "orderId": 829482,
+   "awb_number": "39505256318661",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5f9d324a8c13c0013213",
+   "orderId": 944299,
+   "awb_number": "39505256318672",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fa0324a8c13c0013471",
+   "orderId": 374574,
+   "awb_number": "39505256318683",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fa0324a8c13c00134bd",
+   "orderId": 743027,
+   "awb_number": "39505256318694",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fa5324a8c13c001375c",
+   "orderId": 766089,
+   "awb_number": "39505256318705",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fa5324a8c13c0013772",
+   "orderId": 577967,
+   "awb_number": "39505256318716",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5faa324a8c13c0013a77",
+   "orderId": 261778,
+   "awb_number": "39505256318720",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fac324a8c13c0013b4d",
+   "orderId": 615972,
+   "awb_number": "39505256318731",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fae324a8c13c0013c90",
+   "orderId": 350704,
+   "awb_number": "39505256318753",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fb1324a8c13c0013e7e",
+   "orderId": 440330,
+   "awb_number": "39505256318764",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fb2324a8c13c0013f27",
+   "orderId": 496441,
+   "awb_number": "39505256318786",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fb5324a8c13c00140b4",
+   "orderId": 768305,
+   "awb_number": "39505256318790",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fb9324a8c13c001434b",
+   "orderId": 311451,
+   "awb_number": "39505256318801",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fba324a8c13c00143fd",
+   "orderId": 711826,
+   "awb_number": "39505256318812",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fbe324a8c13c00145e3",
+   "orderId": 657195,
+   "awb_number": "39505256318834",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fc2324a8c13c0014801",
+   "orderId": 342480,
+   "awb_number": "39505256318845",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fc2324a8c13c001487a",
+   "orderId": 171221,
+   "awb_number": "39505256318856",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fc5324a8c13c0014a1a",
+   "orderId": 444057,
+   "awb_number": "39505256318860",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fca324a8c13c0014db1",
+   "orderId": 794299,
+   "awb_number": "39505256318915",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fce324a8c13c0015085",
+   "orderId": 706594,
+   "awb_number": "39505256318926",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fd0324a8c13c00151c0",
+   "orderId": 802943,
+   "awb_number": "39505256318930",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fd4324a8c13c0015596",
+   "orderId": 674772,
+   "awb_number": "39505256319055",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fd6324a8c13c001574b",
+   "orderId": 258323,
+   "awb_number": "39505256319066",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fd9324a8c13c0015928",
+   "orderId": 518754,
+   "awb_number": "39505256319070",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fdb324a8c13c0015ad3",
+   "orderId": 711795,
+   "awb_number": "39505256319081",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fde324a8c13c0015d2f",
+   "orderId": 819871,
+   "awb_number": "39505256319092",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fe0324a8c13c0015e6e",
+   "orderId": 612287,
+   "awb_number": "39505256319103",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fe3324a8c13c0016159",
+   "orderId": 634090,
+   "awb_number": "39505256319114",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fe7324a8c13c0016453",
+   "orderId": 376327,
+   "awb_number": "39505256319125",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fe9324a8c13c001654a",
+   "orderId": 436066,
+   "awb_number": "39505256319136",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fec324a8c13c00166f0",
+   "orderId": 903140,
+   "awb_number": "39505256319140",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5fed324a8c13c001676e",
+   "orderId": 981717,
+   "awb_number": "39505256319162",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ff0324a8c13c0016862",
+   "orderId": 229754,
+   "awb_number": "39505256319184",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ff4324a8c13c00169d9",
+   "orderId": 625597,
+   "awb_number": "39505256319195",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ff7324a8c13c0016b3d",
+   "orderId": 429932,
+   "awb_number": "39505256319210",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ff8324a8c13c0016baf",
+   "orderId": 254195,
+   "awb_number": "39505256319221",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ffc324a8c13c0016d41",
+   "orderId": 984625,
+   "awb_number": "39505256319232",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-28T18:09:32.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba5ffd324a8c13c0016dcb",
+   "orderId": 444592,
+   "awb_number": "39505256319243",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6000324a8c13c0016f0e",
+   "orderId": 307702,
+   "awb_number": "39505256319254",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6002324a8c13c0016fe2",
+   "orderId": 281003,
+   "awb_number": "39505256319265",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6007324a8c13c001722e",
+   "orderId": 536627,
+   "awb_number": "39505256319291",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6008324a8c13c00172af",
+   "orderId": 547090,
+   "awb_number": "39505256319302",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba600b324a8c13c00173e6",
+   "orderId": 603038,
+   "awb_number": "39505256319313",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba600d324a8c13c00174c8",
+   "orderId": 183033,
+   "awb_number": "39505256319324",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6010324a8c13c00175cf",
+   "orderId": 634282,
+   "awb_number": "39505256319335",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6012324a8c13c00176a1",
+   "orderId": 400149,
+   "awb_number": "39505256319346",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6014324a8c13c0017775",
+   "orderId": 780163,
+   "awb_number": "39505256319350",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6018324a8c13c00178cb",
+   "orderId": 703583,
+   "awb_number": "39505256319383",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba601c324a8c13c0017a68",
+   "orderId": 354198,
+   "awb_number": "39505256319405",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6020324a8c13c0017c5a",
+   "orderId": 187995,
+   "awb_number": "39505256319453",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6022324a8c13c0017d2b",
+   "orderId": 792466,
+   "awb_number": "39505256319464",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6026324a8c13c0017efa",
+   "orderId": 405401,
+   "awb_number": "39505256319475",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6027324a8c13c0017fb9",
+   "orderId": 535479,
+   "awb_number": "39505256319486",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba602c324a8c13c00181ba",
+   "orderId": 974066,
+   "awb_number": "39505256319534",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba602c324a8c13c00181e9",
+   "orderId": 864528,
+   "awb_number": "39505256319523",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6031324a8c13c00183ac",
+   "orderId": 864979,
+   "awb_number": "39505256319556",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6034324a8c13c0018502",
+   "orderId": 716240,
+   "awb_number": "39505256319571",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6036324a8c13c00185ff",
+   "orderId": 905951,
+   "awb_number": "39505256319604",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6038324a8c13c00186eb",
+   "orderId": 318937,
+   "awb_number": "39505256319615",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba603a324a8c13c00187c9",
+   "orderId": 740673,
+   "awb_number": "39505256319626",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba603d324a8c13c00188fa",
+   "orderId": 414287,
+   "awb_number": "39505256319630",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba603f324a8c13c0018a06",
+   "orderId": 800287,
+   "awb_number": "39505256319652",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6041324a8c13c0018ae4",
+   "orderId": 996875,
+   "awb_number": "39505256319663",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6043324a8c13c0018bfa",
+   "orderId": 700594,
+   "awb_number": "39505256319674",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6046324a8c13c0018d0e",
+   "orderId": 389495,
+   "awb_number": "39505256319685",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6048324a8c13c0018df2",
+   "orderId": 871996,
+   "awb_number": "39505256319696",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6049324a8c13c0018e9d",
+   "orderId": 740909,
+   "awb_number": "39505256319700",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba604c324a8c13c0018fc2",
+   "orderId": 618192,
+   "awb_number": "39505256319711",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba604d324a8c13c001905f",
+   "orderId": 261304,
+   "awb_number": "39505256319733",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba604f324a8c13c0019138",
+   "orderId": 326582,
+   "awb_number": "39505256319744",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6051324a8c13c001921b",
+   "orderId": 902733,
+   "awb_number": "39505256319755",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6054324a8c13c0019336",
+   "orderId": 470901,
+   "awb_number": "39505256319766",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6057324a8c13c00194cd",
+   "orderId": 244512,
+   "awb_number": "39505256319781",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6058324a8c13c0019550",
+   "orderId": 219093,
+   "awb_number": "39505256319792",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba605d324a8c13c00197ab",
+   "orderId": 901658,
+   "awb_number": "39505256319803",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6061324a8c13c0019959",
+   "orderId": 977705,
+   "awb_number": "39505256319825",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6062324a8c13c00199e8",
+   "orderId": 857243,
+   "awb_number": "39505256319836",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6066324a8c13c0019bae",
+   "orderId": 220321,
+   "awb_number": "39505256319840",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba606b324a8c13c0019e10",
+   "orderId": 523394,
+   "awb_number": "39505256319862",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba606b324a8c13c0019e5c",
+   "orderId": 657798,
+   "awb_number": "39505256319884",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba606f324a8c13c0019f9d",
+   "orderId": 700469,
+   "awb_number": "39505256319895",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6071324a8c13c001a0f6",
+   "orderId": 334563,
+   "awb_number": "39505256319906",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba61ed324a8c13c0021526",
+   "orderId": 520488,
+   "awb_number": "39505256320245",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba61ed324a8c13c0021555",
+   "orderId": 980742,
+   "awb_number": "39505256320256",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba61f2324a8c13c0021675",
+   "orderId": 640141,
+   "awb_number": "39505256320260",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba61f4324a8c13c0021720",
+   "orderId": 103645,
+   "awb_number": "39505256320271",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba61f6324a8c13c00217c4",
+   "orderId": 812146,
+   "awb_number": "39505256320282",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba61f7324a8c13c002182d",
+   "orderId": 765201,
+   "awb_number": "39505256320293",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba61fb324a8c13c002190d",
+   "orderId": 731249,
+   "awb_number": "39505256320304",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba61fb324a8c13c0021959",
+   "orderId": 280041,
+   "awb_number": "39505256320315",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba61ff324a8c13c0021a37",
+   "orderId": 601203,
+   "awb_number": "39505256320326",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba61ff324a8c13c0021a66",
+   "orderId": 548985,
+   "awb_number": "39505256320330",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6205324a8c13c0021bd2",
+   "orderId": 315744,
+   "awb_number": "39505256320352",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6207324a8c13c0021c89",
+   "orderId": 923318,
+   "awb_number": "39505256320363",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba620c324a8c13c0021dbb",
+   "orderId": 781793,
+   "awb_number": "39505256320374",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba620e324a8c13c0021e74",
+   "orderId": 960896,
+   "awb_number": "39505256320396",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6212324a8c13c0021f68",
+   "orderId": 852127,
+   "awb_number": "39505256320400",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6215324a8c13c0022011",
+   "orderId": 770007,
+   "awb_number": "39505256320411",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6218324a8c13c0022109",
+   "orderId": 919573,
+   "awb_number": "39505256320422",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba621e324a8c13c0022246",
+   "orderId": 205536,
+   "awb_number": "39505256320433",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6225324a8c13c0022440",
+   "orderId": 852309,
+   "awb_number": "39505256320444",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6227324a8c13c00224ac",
+   "orderId": 962449,
+   "awb_number": "39505256320455",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba622a324a8c13c0022589",
+   "orderId": 974459,
+   "awb_number": "39505256320466",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba622f324a8c13c00226c5",
+   "orderId": 185686,
+   "awb_number": "39505256320470",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6233324a8c13c00227c5",
+   "orderId": 659521,
+   "awb_number": "39505256320481",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6233324a8c13c0022822",
+   "orderId": 331395,
+   "awb_number": "39505256320492",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6237324a8c13c0022915",
+   "orderId": 651792,
+   "awb_number": "39505256320503",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6239324a8c13c0022991",
+   "orderId": 864289,
+   "awb_number": "39505256320514",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba623c324a8c13c0022a45",
+   "orderId": 865615,
+   "awb_number": "39505256320525",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6242324a8c13c0022b8f",
+   "orderId": 384259,
+   "awb_number": "39505256320540",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6242324a8c13c0022bc7",
+   "orderId": 919900,
+   "awb_number": "39505256320551",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6246324a8c13c0022ca7",
+   "orderId": 760188,
+   "awb_number": "39505256320562",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6248324a8c13c0022d54",
+   "orderId": 616817,
+   "awb_number": "39505256320573",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6252324a8c13c0022eaa",
+   "orderId": 451503,
+   "awb_number": "39505256320584",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6253324a8c13c0022f12",
+   "orderId": 746190,
+   "awb_number": "39505256320595",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6258324a8c13c0022fef",
+   "orderId": 893131,
+   "awb_number": "39505256320606",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba625e324a8c13c0023153",
+   "orderId": 534386,
+   "awb_number": "39505256320610",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba625f324a8c13c00231e2",
+   "orderId": 998831,
+   "awb_number": "39505256320621",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6264324a8c13c00232e1",
+   "orderId": 229461,
+   "awb_number": "39505256320632",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6265324a8c13c0023324",
+   "orderId": 374274,
+   "awb_number": "39505256320643",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6269324a8c13c00233fd",
+   "orderId": 805790,
+   "awb_number": "39505256320654",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6269324a8c13c002344a",
+   "orderId": 254731,
+   "awb_number": "39505256320665",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba626e324a8c13c002358b",
+   "orderId": 304442,
+   "awb_number": "39505256320676",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6270324a8c13c00235ff",
+   "orderId": 290829,
+   "awb_number": "39505256320680",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6273324a8c13c00236bb",
+   "orderId": 225760,
+   "awb_number": "39505256320713",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6275324a8c13c002372f",
+   "orderId": 751321,
+   "awb_number": "39505256320724",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6277324a8c13c00237b3",
+   "orderId": 543069,
+   "awb_number": "39505256320735",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba627b324a8c13c002389e",
+   "orderId": 741685,
+   "awb_number": "39505256320761",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba627c324a8c13c00238fe",
+   "orderId": 901228,
+   "awb_number": "39505256320772",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6280324a8c13c00239ba",
+   "orderId": 451412,
+   "awb_number": "39505256320783",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6282324a8c13c0023a62",
+   "orderId": 813419,
+   "awb_number": "39505256320794",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6286324a8c13c0023b4d",
+   "orderId": 341973,
+   "awb_number": "39505256320805",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6287324a8c13c0023bad",
+   "orderId": 150226,
+   "awb_number": "39505256320816",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba628b324a8c13c0023c4f",
+   "orderId": 345259,
+   "awb_number": "39505256320820",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba628b324a8c13c0023c9b",
+   "orderId": 417487,
+   "awb_number": "39505256320831",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba628f324a8c13c0023d23",
+   "orderId": 401658,
+   "awb_number": "39505256320842",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6290324a8c13c0023d76",
+   "orderId": 143719,
+   "awb_number": "39505256320853",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6294324a8c13c0023e5c",
+   "orderId": 481954,
+   "awb_number": "39505256320864",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6295324a8c13c0023eaf",
+   "orderId": 726106,
+   "awb_number": "39505256320875",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6298324a8c13c0023f30",
+   "orderId": 716349,
+   "awb_number": "39505256320886",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba6299324a8c13c0023f83",
+   "orderId": 859557,
+   "awb_number": "39505256320890",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba629c324a8c13c0024004",
+   "orderId": 266747,
+   "awb_number": "39505256320901",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba629d324a8c13c0024057",
+   "orderId": 260618,
+   "awb_number": "39505256320912",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62a1324a8c13c002413d",
+   "orderId": 787271,
+   "awb_number": "39505256320923",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62a2324a8c13c0024190",
+   "orderId": 332111,
+   "awb_number": "39505256320934",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62a5324a8c13c0024216",
+   "orderId": 247282,
+   "awb_number": "39505256320945",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62a5324a8c13c0024266",
+   "orderId": 605003,
+   "awb_number": "39505256320956",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62a9324a8c13c002434f",
+   "orderId": 536648,
+   "awb_number": "39505256320960",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62aa324a8c13c00243a2",
+   "orderId": 393123,
+   "awb_number": "39505256320971",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62ad324a8c13c0024413",
+   "orderId": 472726,
+   "awb_number": "39505256320982",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62af324a8c13c002447d",
+   "orderId": 281355,
+   "awb_number": "39505256320993",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62b0324a8c13c00244e0",
+   "orderId": 336004,
+   "awb_number": "39505256321004",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62b2324a8c13c002454a",
+   "orderId": 137825,
+   "awb_number": "39505256321015",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62b7324a8c13c00245d9",
+   "orderId": 522186,
+   "awb_number": "39505256321026",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62b8324a8c13c002462c",
+   "orderId": 375228,
+   "awb_number": "39505256321030",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62bb324a8c13c00246af",
+   "orderId": 322708,
+   "awb_number": "39505256321041",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62bd324a8c13c0024709",
+   "orderId": 908063,
+   "awb_number": "39505256321052",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62be324a8c13c002476c",
+   "orderId": 334532,
+   "awb_number": "39505256321063",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62c2324a8c13c00247f4",
+   "orderId": 831424,
+   "awb_number": "39505256321074",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62cc324a8c13c0024925",
+   "orderId": 578718,
+   "awb_number": "39505256321085",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62d0324a8c13c00249b7",
+   "orderId": 451268,
+   "awb_number": "39505256321096",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62d5324a8c13c0024a9e",
+   "orderId": 874412,
+   "awb_number": "39505256321100",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62d6324a8c13c0024af3",
+   "orderId": 144595,
+   "awb_number": "39505256321111",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62db324a8c13c0024b82",
+   "orderId": 785867,
+   "awb_number": "39505256321122",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62dc324a8c13c0024bd5",
+   "orderId": 991701,
+   "awb_number": "39505256321133",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62e0324a8c13c0024c8c",
+   "orderId": 980395,
+   "awb_number": "39505256321144",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  },
+  {
+   "_id": "6aba62e4324a8c13c0024d04",
+   "orderId": 122165,
+   "awb_number": "39505256321155",
+   "status": "In-transit",
+   "ndrStatus": "In-transit",
+   "invoiceDate": "2026-09-29T12:27:37.000Z",
+   "reattempt": false
+  }
+ ]
+}

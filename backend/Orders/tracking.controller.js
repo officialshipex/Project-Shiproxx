@@ -68,6 +68,7 @@ const { markWooOrderAsShipped } = require("../Channels/WooCommerce/woocommerce.c
 
 const statusMap = require("../statusMap/StatusMap.model");
 const { hasLeftOrigin } = require("../utils/shipmentProgress");
+const { classifyShiprocketScan } = require("../utils/shiprocketScanClass");
 
 const limiter = new Bottleneck({
   minTime: 1000, // 10 requests per second (1000ms delay between each)
@@ -1797,18 +1798,30 @@ const trackSingleOrder = async (order) => {
       // unmatched/null) so it also guards the numeric branch, not just the
       // fallback.
       const pickupExceptionText = `${(normalizedData.Status || "").toLowerCase()} ${(normalizedData.Instructions || "").toLowerCase()}`;
+      // Raw courier pickup-stage scans ("FMOFP-101 Manifested - Out for
+      // Pickup", "FMEOD-103 Manifested - Shipper unavailable", ...) carry a
+      // null shipment_status and none of the keywords above, so they used to
+      // fall into the "assume forward progress" fallback and flip the order to
+      // In-transit before the parcel was ever picked up (643 orders). Only
+      // applied while the order has not yet left origin, so a genuine
+      // in-transit parcel is never pulled back by a stray scan.
+      const scanClass = classifyShiprocketScan(
+        normalizedData.Status,
+        normalizedData.Instructions,
+      );
       const isPickupException =
-        pickupExceptionText.includes("pickup") &&
-        (pickupExceptionText.includes("cancel") ||
-          pickupExceptionText.includes("exception") ||
-          pickupExceptionText.includes("wrongly") ||
-          pickupExceptionText.includes("on hold") ||
-          pickupExceptionText.includes("reschedul") ||
-          pickupExceptionText.includes("not ready") ||
-          pickupExceptionText.includes("not attempted") ||
-          pickupExceptionText.includes("failed") ||
-          pickupExceptionText.includes("pending") ||
-          pickupExceptionText.includes("error"));
+        (pickupExceptionText.includes("pickup") &&
+          (pickupExceptionText.includes("cancel") ||
+            pickupExceptionText.includes("exception") ||
+            pickupExceptionText.includes("wrongly") ||
+            pickupExceptionText.includes("on hold") ||
+            pickupExceptionText.includes("reschedul") ||
+            pickupExceptionText.includes("not ready") ||
+            pickupExceptionText.includes("not attempted") ||
+            pickupExceptionText.includes("failed") ||
+            pickupExceptionText.includes("pending") ||
+            pickupExceptionText.includes("error"))) ||
+        (scanClass === "pickup_stage" && !hasLeftOrigin(statusBeforeTracking));
 
       if ([1, 2, 3].includes(statusCode) || isPickupException) {
         order.status = "Ready To Ship";
@@ -1963,14 +1976,12 @@ const trackSingleOrder = async (order) => {
           }
 
           if (order.ndrHistory.length >= 4) order.reattempt = false;
-        } else if (["Ready To Ship", "Ready To Ship", "new"].includes(order.status)) {
-          // Check if scan text indicates a pre-pickup scan (e.g. "Item New...", "assigned_for_seller_pickup")
-          const isPrePickupScanText = text.includes("assigned_for_seller_pickup") || text.includes("item new") || text.includes("item_new");
-          if (!isPrePickupScanText) {
-            // No terminal-state keyword matched, but the order has moved past
-            // booking with genuine new scan activity (pickup, hub scan,
-            // bagging, inter-hub transit, etc.) — treat it as in-transit
-            // rather than leaving it frozen at an early stage indefinitely.
+        } else if (["Ready To Ship", "new"].includes(order.status)) {
+          // Allow-list, not a guess: only a scan that positively shows the
+          // parcel was picked up / is moving (see utils/shiprocketScanClass.js)
+          // moves the order to In-transit. Pickup-stage scans (isPickupException
+          // above) and anything unrecognised leave the status untouched.
+          if (scanClass === "moved") {
             order.status = "In-transit";
             order.ndrStatus = "In-transit";
             order.reattempt = false;

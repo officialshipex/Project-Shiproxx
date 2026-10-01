@@ -1,5 +1,6 @@
 const Order = require("../models/newOrder.model");
 const { hasLeftOrigin } = require("../utils/shipmentProgress");
+const { classifyShiprocketScan } = require("../utils/shiprocketScanClass");
 const Wallet = require("../models/wallet");
 const User = require("../models/User.model");
 const WalletTransaction = require("../models/WalletTransaction.model");
@@ -178,6 +179,13 @@ const ShipRocketWebhook = async (req, res) => {
     const isPrePickupScan =
       currentActivityLower.includes("assigned_for_seller_pickup") ||
       currentActivityLower.includes("item new") ||
+      // Raw courier pickup-stage scans ("FMOFP-101 Manifested - Out for
+      // Pickup", "FMEOD-103 Manifested - Shipper unavailable", ...) — the
+      // parcel is not with the courier yet. Same rule as the polling path
+      // (utils/shiprocketScanClass.js); only while the order has not left
+      // origin so a genuine in-transit parcel is never pulled back.
+      (classifyShiprocketScan(statusText, remark, lastScan?.status) === "pickup_stage" &&
+        !hasLeftOrigin(oldStatus)) ||
       (lastScan && (lastScan.status === "new" || lastScan.status === "assigned_for_seller_pickup") && lastScan["sr-status"] === "NA");
 
     /* ================================================================
