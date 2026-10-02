@@ -8,21 +8,200 @@ const { PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const transporter = require("../notification/configEmailpass");
 
-// Finds the earliest tracking entry matching any of the given statuses and
-// returns its timestamp, or null if none exist. Used for milestone columns
-// (Delivered At, RTO Initiated At, RTO Delivered At) that have no dedicated
-// field on the order and can only be reconstructed from tracking history.
-const findTrackingDate = (tracking, statuses) => {
-  if (!Array.isArray(tracking) || tracking.length === 0) return null;
-  let earliest = null;
+// Helpers to identify RTO & delivery milestone scans across all supported couriers
+// (Delhivery, Shadowfax, Xpressbees, Shree Maruti, Shiprocket, Shipex, Ekart, Amazon, etc.)
+const isRtoDeliveredScan = (status = "", instructions = "") => {
+  const s = String(status || "").toLowerCase().trim();
+  const ins = String(instructions || "").toLowerCase().trim();
+
+  if (["rto delivered", "rto_delivered", "rts_d", "rto_d", "rts delivered"].includes(s)) return true;
+  if (s.includes("rto") && (s.includes("deliver") || s.includes("delivered"))) return true;
+  if (s.includes("rts") && (s.includes("deliver") || s.includes("delivered"))) return true;
+
+  if (ins.includes("return accepted") || ins.includes("rto - return accepted")) return true;
+  if (ins.includes("return to seller delivered") || ins.includes("returned to shipper")) return true;
+  if (ins.includes("rto delivered") || ins.includes("returned to origin")) return true;
+
+  return false;
+};
+
+const isRtoInTransitScan = (status = "", instructions = "") => {
+  const s = String(status || "").toLowerCase().trim();
+  const ins = String(instructions || "").toLowerCase().trim();
+
+  if (isRtoDeliveredScan(status, instructions)) return false;
+
+  const inTransitStatuses = [
+    "rto in transit",
+    "rto_in_transit",
+    "rto in-transit",
+    "rto-it",
+    "rto in intransit",
+    "bag_in_transit_return",
+    "in_transit_return",
+    "recd_at_dc_rts",
+    "received_at_rts_hub",
+    "oto_in_process",
+    "rto_in_process",
+    "rts_in_process",
+    "rts_ofd",
+    "rto_ofd",
+    "rto_out_for_delivery",
+    "reached back at seller city"
+  ];
+
+  if (inTransitStatuses.includes(s)) return true;
+  if (s.includes("in-transit") || s.includes("in transit") || s.includes("intransit")) {
+    if (s.includes("rto") || s.includes("rts") || s.includes("return")) return true;
+  }
+
+  if (ins.includes("rto in transit") || ins.includes("bag in transit in return") || ins.includes("return journey")) return true;
+  if (ins.includes("rto/rts in progress") || ins.includes("rts destination hub") || ins.includes("dispatched for rto")) return true;
+
+  return false;
+};
+
+const isRtoInitiatedScan = (status = "", instructions = "") => {
+  const s = String(status || "").toLowerCase().trim();
+  const ins = String(instructions || "").toLowerCase().trim();
+
+  if (isRtoDeliveredScan(status, instructions)) return false;
+
+  const initStatuses = [
+    "rto",
+    "rto initiated",
+    "rto_initiated",
+    "rto requested",
+    "rto_requested",
+    "rts",
+    "rto_ndr",
+    "rto_lock",
+    "rto acknowledged"
+  ];
+
+  if (initStatuses.includes(s)) return true;
+  if (ins.includes("return to origin") || ins.includes("return to seller") || ins.includes("returninitiated")) return true;
+  if (ins.includes("returned as per security instructions")) return true;
+
+  // An in-transit return scan also implies RTO was initiated
+  if (isRtoInTransitScan(status, instructions)) return true;
+
+  if (s.startsWith("rto") || s.startsWith("rts")) return true;
+
+  return false;
+};
+
+const extractMilestoneDates = (order) => {
+  const tracking = Array.isArray(order.tracking) ? order.tracking : [];
+
+  let deliveredAt = null;
+  let rtoInitiatedAt = null;
+  let rtoInTransitAt = null;
+  let rtoDeliveredAt = null;
+
   for (const entry of tracking) {
-    if (statuses.includes(entry.status) && entry.StatusDateTime) {
-      if (!earliest || new Date(entry.StatusDateTime) < new Date(earliest)) {
-        earliest = entry.StatusDateTime;
+    if (!entry.StatusDateTime) continue;
+    const dt = new Date(entry.StatusDateTime);
+    if (isNaN(dt.getTime())) continue;
+
+    const s = entry.status || "";
+    const ins = entry.Instructions || "";
+
+    // Forward Delivered
+    if (!deliveredAt && String(s).toLowerCase() === "delivered" && !s.toLowerCase().includes("rto")) {
+      deliveredAt = entry.StatusDateTime;
+    }
+
+    // RTO Delivered
+    if (isRtoDeliveredScan(s, ins)) {
+      if (!rtoDeliveredAt || dt < new Date(rtoDeliveredAt)) {
+        rtoDeliveredAt = entry.StatusDateTime;
+      }
+    }
+
+    // RTO In-transit
+    if (isRtoInTransitScan(s, ins)) {
+      if (!rtoInTransitAt || dt < new Date(rtoInTransitAt)) {
+        rtoInTransitAt = entry.StatusDateTime;
+      }
+    }
+
+    // RTO Initiated
+    if (isRtoInitiatedScan(s, ins)) {
+      if (!rtoInitiatedAt || dt < new Date(rtoInitiatedAt)) {
+        rtoInitiatedAt = entry.StatusDateTime;
       }
     }
   }
-  return earliest;
+
+  // Fallback for forward delivered:
+  if (!deliveredAt && order.status === "Delivered" && tracking.length > 0) {
+    const latest = tracking.reduce((a, b) =>
+      new Date(a.StatusDateTime || 0) > new Date(b.StatusDateTime || 0) ? a : b
+    );
+    deliveredAt = latest?.StatusDateTime || null;
+  }
+
+  const isRtoOrder = /rto/i.test(order.status || "");
+  const isRtoDelivered = String(order.status || "").toLowerCase() === "rto delivered";
+  const isRtoInTransit = String(order.status || "").toLowerCase().includes("transit");
+
+  // Fallback for RTO Delivered:
+  if (isRtoDelivered && !rtoDeliveredAt) {
+    if (tracking.length > 0) {
+      const latest = tracking.reduce((a, b) =>
+        new Date(a.StatusDateTime || 0) > new Date(b.StatusDateTime || 0) ? a : b
+      );
+      rtoDeliveredAt = latest?.StatusDateTime || order.updatedAt;
+    } else {
+      rtoDeliveredAt = order.updatedAt;
+    }
+  }
+
+  // If in-transit date was found but no prior explicit initiation scan,
+  // the in-transit event is also when RTO journey was active:
+  if (rtoInTransitAt && !rtoInitiatedAt) {
+    rtoInitiatedAt = rtoInTransitAt;
+  }
+
+  // Fallback for RTO In-transit if status is RTO In-transit or RTO Delivered:
+  if ((isRtoInTransit || isRtoDelivered) && !rtoInTransitAt) {
+    if (rtoInitiatedAt) {
+      rtoInTransitAt = rtoInitiatedAt;
+    } else if (rtoDeliveredAt) {
+      rtoInTransitAt = rtoDeliveredAt;
+    }
+  }
+
+  // Fallback for RTO Initiated if order is RTO status:
+  if (isRtoOrder && !rtoInitiatedAt) {
+    if (rtoInTransitAt) {
+      rtoInitiatedAt = rtoInTransitAt;
+    } else if (rtoDeliveredAt) {
+      rtoInitiatedAt = rtoDeliveredAt;
+    } else {
+      const cancelScan = tracking.find(t =>
+        /eod-6|cancelled|customer refused|refused|ndr/i.test(`${t.status || ""} ${t.Instructions || ""}`)
+      );
+      if (cancelScan?.StatusDateTime) {
+        rtoInitiatedAt = cancelScan.StatusDateTime;
+      } else if (tracking.length > 0) {
+        const nonDelivered = tracking.filter(t => !isRtoDeliveredScan(t.status, t.Instructions));
+        if (nonDelivered.length > 0) {
+          const latest = nonDelivered.reduce((a, b) =>
+            new Date(a.StatusDateTime || 0) > new Date(b.StatusDateTime || 0) ? a : b
+          );
+          rtoInitiatedAt = latest?.StatusDateTime || order.updatedAt;
+        } else {
+          rtoInitiatedAt = order.updatedAt;
+        }
+      } else {
+        rtoInitiatedAt = order.updatedAt;
+      }
+    }
+  }
+
+  return { deliveredAt, rtoInitiatedAt, rtoInTransitAt, rtoDeliveredAt };
 };
 
 exports.generateMisReport = async (req, res) => {
@@ -100,7 +279,11 @@ exports.generateMisReport = async (req, res) => {
         }
 
         if (dateFilterType === "Pickup Date") {
-          orderQuery.invoiceDate = { $gte: start, $lte: end };
+          orderQuery.$or = [
+            { invoiceDate: { $gte: start, $lte: end } },
+            { invoiceDate: null, pickupDate: { $gte: start, $lte: end } },
+            { invoiceDate: { $exists: false }, pickupDate: { $gte: start, $lte: end } }
+          ];
         } else {
           orderQuery.createdAt = { $gte: start, $lte: end };
         }
@@ -144,6 +327,7 @@ exports.generateMisReport = async (req, res) => {
           { header: "Applicable Weight (kg)", key: "applicableWeight", width: 18 },
           { header: "Zone", key: "zone", width: 12 },
           { header: "RTO Initiated At", key: "rtoInitiatedAt", width: 20 },
+          { header: "RTO In-transit At", key: "rtoInTransitAt", width: 20 },
           { header: "RTO Delivered At", key: "rtoDeliveredAt", width: 20 },
           { header: "Product Details", key: "productDetails", width: 40 },
           { header: "Freight Charge", key: "freightCharge", width: 15 },
@@ -160,6 +344,8 @@ exports.generateMisReport = async (req, res) => {
           { header: "Receiver Phone", key: "receiverPhone", width: 20 },
           { header: "Receiver Email", key: "receiverEmail", width: 25 },
           { header: "Receiver Address", key: "receiverAddress", width: 40 },
+          { header: "Receiver City", key: "receiverCity", width: 15 },
+          { header: "Receiver State", key: "receiverState", width: 15 },
           { header: "Receiver Pincode", key: "receiverPincode", width: 15 },
           { header: "isNDR", key: "isNDR", width: 10 },
           { header: "NDR Reason", key: "ndrReason", width: 25 },
@@ -188,35 +374,20 @@ exports.generateMisReport = async (req, res) => {
           emailMap[u._id.toString()] = u.email || "N/A";
         });
 
-        // tracking is needed now for Delivered At / RTO Initiated At / RTO Delivered At
         const cursor = Shipment.find(orderQuery).cursor();
 
-        const fmtDate = (d) => (d ? new Date(d).toLocaleDateString() : "N/A");
+        const fmtDate = (d) => {
+          if (!d) return "N/A";
+          const dateObj = new Date(d);
+          return isNaN(dateObj.getTime()) ? "N/A" : dateObj.toLocaleDateString();
+        };
 
         for await (const order of cursor) {
           const isNDR = (order.ndrHistory && order.ndrHistory.length > 0) || ["undelivered", "ndr"].includes(String(order.ndrStatus || '').toLowerCase()) ? "Yes" : "No";
           const isRTO = String(order.status || '').toLowerCase().includes("rto") ? "Yes" : "No";
 
-          // Delivered/RTO milestones have no dedicated field — reconstruct
-          // from tracking history. "RTO In-transit" is included for RTO
-          // Initiated because some couriers (e.g. Amazon) never emit a bare
-          // "RTO" status and jump straight to "RTO In-transit".
-          let deliveredAt = findTrackingDate(order.tracking, ["Delivered"]);
-          const rtoInitiatedAt = findTrackingDate(order.tracking, ["RTO", "RTO In-transit"]);
-          const rtoDeliveredAt = findTrackingDate(order.tracking, ["RTO Delivered"]);
-
-          // Some couriers push a raw tracking status that doesn't exactly
-          // match the literal "Delivered" (case/wording differs per
-          // provider's webhook payload) even though order.status was
-          // correctly normalized to "Delivered" elsewhere. Rather than show
-          // a blank cell for an order that's unambiguously delivered, fall
-          // back to the latest tracking entry's timestamp.
-          if (!deliveredAt && order.status === "Delivered" && Array.isArray(order.tracking) && order.tracking.length > 0) {
-            const latest = order.tracking.reduce((a, b) =>
-              new Date(a.StatusDateTime || 0) > new Date(b.StatusDateTime || 0) ? a : b
-            );
-            deliveredAt = latest?.StatusDateTime || null;
-          }
+          // Extract all forward and RTO milestone timestamps
+          const { deliveredAt, rtoInitiatedAt, rtoInTransitAt, rtoDeliveredAt } = extractMilestoneDates(order);
 
           // invoiceDate (the exact pickup date) is only set by courier
           // webhooks reaching an "In-transit"-equivalent status — if that
@@ -265,6 +436,7 @@ exports.generateMisReport = async (req, res) => {
             applicableWeight: order.packageDetails?.applicableWeight || 0,
             zone: order.zone || "N/A",
             rtoInitiatedAt: fmtDate(rtoInitiatedAt),
+            rtoInTransitAt: fmtDate(rtoInTransitAt),
             rtoDeliveredAt: fmtDate(rtoDeliveredAt),
             productDetails: productDetailsStr,
             freightCharge: order.priceBreakup?.freight || 0,
@@ -277,10 +449,12 @@ exports.generateMisReport = async (req, res) => {
             pickupCity: order.pickupAddress?.city || "N/A",
             pickupState: order.pickupAddress?.state || "N/A",
             pickupPincode: order.pickupAddress?.pinCode || "N/A",
-            receiverName: "*****",
-            receiverPhone: "*****",
-            receiverEmail: "*****",
+            receiverName: order.receiverAddress?.contactName || "N/A",
+            receiverPhone: order.receiverAddress?.phoneNumber || "N/A",
+            receiverEmail: order.receiverAddress?.email || "N/A",
             receiverAddress: order.receiverAddress?.address || "N/A",
+            receiverCity: order.receiverAddress?.city || "N/A",
+            receiverState: order.receiverAddress?.state || "N/A",
             receiverPincode: order.receiverAddress?.pinCode || "N/A",
             isNDR,
             ndrReason: order.ndrReason?.reason || "N/A",
